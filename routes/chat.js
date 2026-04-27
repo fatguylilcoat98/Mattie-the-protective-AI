@@ -63,18 +63,10 @@ async function saveMemoryFromExchange(userId, userMessage, assistantResponse) {
     // SAVE EVERYTHING - no filtering, Chris wants every conversation remembered
     console.log(`[MEMORY DEBUG] Saving complete user message: "${userMessage}"`);
 
-    // Save the complete user message as memory
-    const { data: savedMemory, error } = await supabase
-      .from('memories')
-      .insert({
-        user_id: userId,
-        content: `User said: "${userMessage}"`,
-        memory_type: 'conversation'
-      })
-      .select()
-      .single();
+    // Save the complete user message as memory using proper storeMemory function
+    const savedMemory = await storeMemory(userId, `User said: "${userMessage}"`, 'conversation');
 
-    if (!error && savedMemory) {
+    if (savedMemory) {
       // Also save to Pinecone if available
       if (process.env.PINECONE_API_KEY) {
         try {
@@ -90,7 +82,7 @@ async function saveMemoryFromExchange(userId, userMessage, assistantResponse) {
       }
       console.log(`[MEMORY DEBUG] FULL conversation saved: "${userMessage}"`);
     } else {
-      console.log(`[MEMORY DEBUG] Failed to save to Supabase:`, error);
+      console.log(`[MEMORY DEBUG] Failed to save to Supabase - storeMemory returned null`);
     }
 
   } catch (err) {
