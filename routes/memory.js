@@ -10,6 +10,38 @@ const router = express.Router();
 const { getMemoriesForUser, storeMemory, verifyUser, supabase } = require('../lib/supabase');
 const { storeMemory: storePineconeMemory, deleteMemory: deletePineconeMemory } = require('../lib/pinecone');
 
+// GET /api/memory/check — returns all memories for current user (test endpoint)
+router.get('/check', async (req, res) => {
+  try {
+    const { userid: userId, authtoken: authToken } = req.headers;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'userId header required' });
+    }
+
+    // Verify user if token provided
+    if (authToken) {
+      const user = await verifyUser(authToken);
+      if (!user || user.id !== userId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+    }
+
+    const { data, error } = await supabase
+      .from('memories')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (error) throw error;
+    res.json({ count: data.length, memories: data });
+  } catch (err) {
+    console.error('Memory check error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Get user's memories
 router.get('/:userId', async (req, res) => {
   try {
