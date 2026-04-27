@@ -1,0 +1,22 @@
+{
+  "name": "Splendor — The Remarkable AI",
+  "short_name": "Splendor",
+  "description": "Your AI partner that remembers, thinks with you, and tells the truth.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0e1a",
+  "theme_color": "#0a0e1a",
+  "orientation": "portrait-primary",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/icons/splendor-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "scope": "/",
+  "lang": "en-US",
+  "dir": "ltr"
+}

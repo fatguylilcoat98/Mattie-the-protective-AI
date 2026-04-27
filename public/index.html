@@ -1,0 +1,710 @@
+<!--
+  Splendor — The Remarkable AI · The Good Neighbor Guard
+  Built by Christopher Hughes · Sacramento, CA
+  Created with the help of AI collaborators (Claude · GPT · Gemini · Groq)
+  Truth · Safety · We Got Your Back
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Splendor — The Remarkable AI</title>
+  <meta name="description" content="Your AI partner that remembers, thinks with you, and tells the truth.">
+
+  <!-- PWA Configuration -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0a0e1a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Splendor">
+
+  <!-- Icons -->
+  <link rel="icon" type="image/svg+xml" href="/icons/splendor-icon.svg">
+  <link rel="apple-touch-icon" href="/icons/splendor-icon.svg">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+
+  <style>
+    /* Reset and Base */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg: #0a0e1a;
+      --bg-light: #0f1421;
+      --bg-card: #141927;
+      --teal: #00c9b1;
+      --teal-dim: #008f7f;
+      --text: #e8edf5;
+      --text-muted: #8899aa;
+      --text-dim: #6c7a89;
+      --border: #1a2332;
+      --border-light: #2a3441;
+    }
+
+    html {
+      font-size: 16px;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      font-family: 'Rajdhani', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      min-height: 100vh;
+      min-height: 100dvh;
+    }
+
+    /* App Container */
+    .app {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      min-height: 100dvh;
+      max-width: 100vw;
+      overflow: hidden;
+    }
+
+    /* Header */
+    .header {
+      padding: 1rem;
+      background: var(--bg-light);
+      border-bottom: 1px solid var(--border);
+      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(10px);
+    }
+
+    .header h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text);
+      text-shadow: 0 0 10px rgba(0, 201, 177, 0.3);
+      letter-spacing: 0.05em;
+    }
+
+    .header .tagline {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+      font-weight: 400;
+      letter-spacing: 0.02em;
+    }
+
+    /* Chat Container */
+    .chat-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+      padding-bottom: 0;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Message Styles */
+    .message {
+      margin-bottom: 1rem;
+      animation: messageIn 0.3s ease-out;
+    }
+
+    @keyframes messageIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .message.splendor {
+      display: flex;
+      justify-content: flex-start;
+    }
+
+    .message.user {
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .message-bubble {
+      max-width: 85%;
+      padding: 0.875rem 1rem;
+      border-radius: 1rem;
+      font-size: 0.95rem;
+      line-height: 1.5;
+      word-wrap: break-word;
+      font-weight: 400;
+    }
+
+    .message.splendor .message-bubble {
+      background: var(--bg-card);
+      border-left: 3px solid var(--teal);
+      color: var(--text);
+      border-radius: 1rem 1rem 1rem 0.25rem;
+    }
+
+    .message.user .message-bubble {
+      background: var(--bg-light);
+      border: 1px solid var(--border-light);
+      color: var(--text);
+      border-radius: 1rem 1rem 0.25rem 1rem;
+    }
+
+    .message-time {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      margin-top: 0.25rem;
+      text-align: right;
+    }
+
+    .message.splendor .message-time {
+      text-align: left;
+    }
+
+    /* Loading Indicator */
+    .loading {
+      display: flex;
+      justify-content: flex-start;
+      margin-bottom: 1rem;
+    }
+
+    .loading-bubble {
+      background: var(--bg-card);
+      border-left: 3px solid var(--teal);
+      padding: 1rem;
+      border-radius: 1rem 1rem 1rem 0.25rem;
+      max-width: 85%;
+    }
+
+    .loading-dots {
+      display: flex;
+      gap: 0.25rem;
+      align-items: center;
+    }
+
+    .loading-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--teal);
+      border-radius: 50%;
+      animation: loadingDot 1.4s ease-in-out infinite both;
+    }
+
+    .loading-dot:nth-child(1) { animation-delay: -0.32s; }
+    .loading-dot:nth-child(2) { animation-delay: -0.16s; }
+
+    @keyframes loadingDot {
+      0%, 80%, 100% {
+        opacity: 0.3;
+        transform: scale(0.8);
+      }
+      40% {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    /* Input Area */
+    .input-area {
+      padding: 1rem;
+      background: var(--bg-light);
+      border-top: 1px solid var(--border);
+      position: sticky;
+      bottom: 0;
+      z-index: 100;
+    }
+
+    .input-container {
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-end;
+    }
+
+    .input-field {
+      flex: 1;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 1.25rem;
+      padding: 0.875rem 1rem;
+      color: var(--text);
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 0.95rem;
+      resize: none;
+      min-height: 44px;
+      max-height: 120px;
+      line-height: 1.4;
+      transition: border-color 0.2s ease;
+    }
+
+    .input-field:focus {
+      outline: none;
+      border-color: var(--teal);
+    }
+
+    .input-field::placeholder {
+      color: var(--text-muted);
+    }
+
+    .input-buttons {
+      display: flex;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+
+    .btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: none;
+      background: var(--teal);
+      color: var(--bg);
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      font-weight: 600;
+    }
+
+    .btn:hover {
+      background: var(--teal-dim);
+      transform: translateY(-1px);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-voice {
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      color: var(--text-muted);
+    }
+
+    .btn-voice:hover {
+      border-color: var(--teal);
+      color: var(--teal);
+      background: var(--bg-card);
+    }
+
+    .btn-voice.recording {
+      background: var(--teal);
+      color: var(--bg);
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+
+    /* Empty State */
+    .empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-muted);
+    }
+
+    .empty-state h2 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.25rem;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+      font-weight: 700;
+    }
+
+    .empty-state p {
+      font-size: 0.9rem;
+      line-height: 1.6;
+      max-width: 300px;
+    }
+
+    /* Responsive */
+    @media (max-width: 480px) {
+      .header {
+        padding: 0.75rem;
+      }
+
+      .header h1 {
+        font-size: 1.25rem;
+      }
+
+      .chat-messages {
+        padding: 0.75rem;
+      }
+
+      .message-bubble {
+        font-size: 0.9rem;
+        padding: 0.75rem;
+      }
+
+      .input-area {
+        padding: 0.75rem;
+      }
+
+      .input-field {
+        font-size: 0.9rem;
+        padding: 0.75rem;
+      }
+    }
+
+    /* Accessibility */
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <!-- Header -->
+    <header class="header">
+      <h1>Splendor</h1>
+      <div class="tagline">Truth · Memory · Growth</div>
+    </header>
+
+    <!-- Chat Container -->
+    <div class="chat-container">
+      <div class="chat-messages" id="chatMessages">
+        <!-- Empty State -->
+        <div class="empty-state" id="emptyState">
+          <h2>I'm Splendor</h2>
+          <p>Your AI partner that remembers, thinks with you, and tells the truth.</p>
+        </div>
+      </div>
+
+      <!-- Input Area -->
+      <div class="input-area">
+        <div class="input-container">
+          <textarea
+            id="messageInput"
+            class="input-field"
+            placeholder="What's on your mind?"
+            rows="1"
+          ></textarea>
+          <div class="input-buttons">
+            <button id="voiceBtn" class="btn btn-voice" title="Voice input">🎤</button>
+            <button id="sendBtn" class="btn" title="Send message">→</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /*
+      Splendor — The Remarkable AI · The Good Neighbor Guard
+      Built by Christopher Hughes · Sacramento, CA
+      Created with the help of AI collaborators (Claude · GPT · Gemini · Groq)
+      Truth · Safety · We Got Your Back
+    */
+
+    class SplendorApp {
+      constructor() {
+        this.userId = this.getUserId();
+        this.isRecording = false;
+        this.recognition = null;
+        this.lastMessageToday = this.getLastMessageDate();
+
+        this.initElements();
+        this.initEventListeners();
+        this.initVoiceRecognition();
+        this.checkMorningGreeting();
+      }
+
+      initElements() {
+        this.chatMessages = document.getElementById('chatMessages');
+        this.messageInput = document.getElementById('messageInput');
+        this.sendBtn = document.getElementById('sendBtn');
+        this.voiceBtn = document.getElementById('voiceBtn');
+        this.emptyState = document.getElementById('emptyState');
+      }
+
+      initEventListeners() {
+        this.sendBtn.addEventListener('click', () => this.sendMessage());
+        this.voiceBtn.addEventListener('click', () => this.toggleVoiceInput());
+
+        this.messageInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            this.sendMessage();
+          }
+        });
+
+        this.messageInput.addEventListener('input', () => {
+          this.adjustTextareaHeight();
+        });
+      }
+
+      adjustTextareaHeight() {
+        this.messageInput.style.height = 'auto';
+        this.messageInput.style.height = Math.min(this.messageInput.scrollHeight, 120) + 'px';
+      }
+
+      getUserId() {
+        let userId = localStorage.getItem('splendor_user_id');
+        if (!userId) {
+          userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+          localStorage.setItem('splendor_user_id', userId);
+        }
+        return userId;
+      }
+
+      getLastMessageDate() {
+        const lastDate = localStorage.getItem('splendor_last_message');
+        return lastDate ? new Date(lastDate) : null;
+      }
+
+      setLastMessageDate() {
+        localStorage.setItem('splendor_last_message', new Date().toISOString());
+      }
+
+      isFirstMessageToday() {
+        const now = new Date();
+        const today = now.toDateString();
+
+        if (!this.lastMessageToday) return true;
+
+        const lastDateString = this.lastMessageToday.toDateString();
+        return lastDateString !== today;
+      }
+
+      async checkMorningGreeting() {
+        const now = new Date();
+        const hour = now.getHours();
+
+        // Check if it's morning (5am-10am) and first visit today
+        if (hour >= 5 && hour <= 10 && this.isFirstMessageToday()) {
+          try {
+            const response = await fetch(`/api/chat/morning/${this.userId}`);
+            const data = await response.json();
+
+            if (data.message) {
+              this.addMessage(data.message, 'splendor');
+              this.hideEmptyState();
+            }
+          } catch (error) {
+            console.error('Morning greeting error:', error);
+          }
+        }
+      }
+
+      initVoiceRecognition() {
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+          const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+          this.recognition = new SpeechRecognition();
+
+          this.recognition.continuous = false;
+          this.recognition.interimResults = false;
+          this.recognition.lang = 'en-US';
+
+          this.recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            this.messageInput.value = transcript;
+            this.adjustTextareaHeight();
+            this.stopVoiceInput();
+          };
+
+          this.recognition.onerror = (event) => {
+            console.error('Speech recognition error:', event.error);
+            this.stopVoiceInput();
+          };
+
+          this.recognition.onend = () => {
+            this.stopVoiceInput();
+          };
+        } else {
+          this.voiceBtn.style.display = 'none';
+        }
+      }
+
+      toggleVoiceInput() {
+        if (!this.recognition) return;
+
+        if (this.isRecording) {
+          this.stopVoiceInput();
+        } else {
+          this.startVoiceInput();
+        }
+      }
+
+      startVoiceInput() {
+        if (!this.recognition || this.isRecording) return;
+
+        try {
+          this.recognition.start();
+          this.isRecording = true;
+          this.voiceBtn.classList.add('recording');
+          this.voiceBtn.textContent = '⏹️';
+        } catch (error) {
+          console.error('Voice recognition start error:', error);
+        }
+      }
+
+      stopVoiceInput() {
+        if (!this.recognition || !this.isRecording) return;
+
+        this.recognition.stop();
+        this.isRecording = false;
+        this.voiceBtn.classList.remove('recording');
+        this.voiceBtn.textContent = '🎤';
+      }
+
+      async sendMessage() {
+        const message = this.messageInput.value.trim();
+        if (!message) return;
+
+        this.addMessage(message, 'user');
+        this.messageInput.value = '';
+        this.adjustTextareaHeight();
+        this.hideEmptyState();
+        this.setLastMessageDate();
+
+        this.showLoading();
+        this.sendBtn.disabled = true;
+
+        try {
+          const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              message,
+              userId: this.userId
+            }),
+          });
+
+          const data = await response.json();
+
+          if (data.error) {
+            this.addMessage('Something went wrong — try again in a moment.', 'splendor');
+          } else {
+            this.addMessage(data.message, 'splendor');
+          }
+        } catch (error) {
+          console.error('Chat error:', error);
+          this.addMessage('I\'m having trouble connecting right now — try again in a moment.', 'splendor');
+        } finally {
+          this.hideLoading();
+          this.sendBtn.disabled = false;
+          this.messageInput.focus();
+        }
+      }
+
+      addMessage(content, sender) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${sender}`;
+
+        const bubbleDiv = document.createElement('div');
+        bubbleDiv.className = 'message-bubble';
+        bubbleDiv.textContent = content;
+
+        const timeDiv = document.createElement('div');
+        timeDiv.className = 'message-time';
+        timeDiv.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        messageDiv.appendChild(bubbleDiv);
+        messageDiv.appendChild(timeDiv);
+        this.chatMessages.appendChild(messageDiv);
+
+        this.scrollToBottom();
+      }
+
+      showLoading() {
+        const loadingDiv = document.createElement('div');
+        loadingDiv.className = 'loading';
+        loadingDiv.id = 'loadingIndicator';
+
+        const bubbleDiv = document.createElement('div');
+        bubbleDiv.className = 'loading-bubble';
+
+        const dotsDiv = document.createElement('div');
+        dotsDiv.className = 'loading-dots';
+
+        for (let i = 0; i < 3; i++) {
+          const dot = document.createElement('div');
+          dot.className = 'loading-dot';
+          dotsDiv.appendChild(dot);
+        }
+
+        bubbleDiv.appendChild(dotsDiv);
+        loadingDiv.appendChild(bubbleDiv);
+        this.chatMessages.appendChild(loadingDiv);
+
+        this.scrollToBottom();
+      }
+
+      hideLoading() {
+        const loading = document.getElementById('loadingIndicator');
+        if (loading) {
+          loading.remove();
+        }
+      }
+
+      hideEmptyState() {
+        if (this.emptyState) {
+          this.emptyState.style.display = 'none';
+        }
+      }
+
+      scrollToBottom() {
+        setTimeout(() => {
+          this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+        }, 100);
+      }
+    }
+
+    // Service Worker Registration
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then((registration) => {
+            console.log('SW registered: ', registration);
+          })
+          .catch((registrationError) => {
+            console.log('SW registration failed: ', registrationError);
+          });
+      });
+    }
+
+    // Initialize App
+    document.addEventListener('DOMContentLoaded', () => {
+      window.splendorApp = new SplendorApp();
+    });
+  </script>
+</body>
+</html>

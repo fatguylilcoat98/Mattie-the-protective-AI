@@ -1,0 +1,71 @@
+<!--
+  Splendor — The Remarkable AI · The Good Neighbor Guard
+  Built by Christopher Hughes · Sacramento, CA
+  Created with the help of AI collaborators (Claude · GPT · Gemini · Groq)
+  Truth · Safety · We Got Your Back
+-->
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="112" fill="#0a0e1a"/>
+  <circle cx="256" cy="256" r="200" fill="none" stroke="#00c9b1" stroke-width="4" opacity="0.3"/>
+  <circle cx="256" cy="256" r="140" fill="none" stroke="#00c9b1" stroke-width="3" opacity="0.5"/>
+  <circle cx="256" cy="256" r="80" fill="none" stroke="#00c9b1" stroke-width="2" opacity="0.7"/>
+
+  <!-- S Letter -->
+  <path d="M 180 200
+           Q 180 160, 220 160
+           L 280 160
+           Q 320 160, 320 200
+           Q 320 220, 300 230
+           L 240 250
+           Q 220 260, 220 280
+           Q 220 300, 240 300
+           L 300 300
+           Q 320 300, 320 320
+           Q 320 340, 300 340
+           L 220 340
+           Q 180 340, 180 300
+           Q 180 280, 200 270
+           L 260 250
+           Q 280 240, 280 220
+           Q 280 200, 260 200
+           L 200 200
+           Q 180 200, 180 180"
+        fill="#00c9b1"
+        stroke="#00c9b1"
+        stroke-width="2"/>
+
+  <!-- Subtle glow effect -->
+  <defs>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feMorphology operator="dilate" radius="2"/>
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <path d="M 180 200
+           Q 180 160, 220 160
+           L 280 160
+           Q 320 160, 320 200
+           Q 320 220, 300 230
+           L 240 250
+           Q 220 260, 220 280
+           Q 220 300, 240 300
+           L 300 300
+           Q 320 300, 320 320
+           Q 320 340, 300 340
+           L 220 340
+           Q 180 340, 180 300
+           Q 180 280, 200 270
+           L 260 250
+           Q 280 240, 280 220
+           Q 280 200, 260 200
+           L 200 200
+           Q 180 200, 180 180"
+        fill="#00c9b1"
+        filter="url(#glow)"
+        opacity="0.8"/>
+</svg>
