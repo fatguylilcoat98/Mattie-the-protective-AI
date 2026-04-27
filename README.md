@@ -23,7 +23,8 @@ Splendor is not a chatbot. It's a reciprocal mind — an AI partner built to gro
 - **Frontend:** PWA (Progressive Web App) - installable on phone home screen
 - **Backend:** Node.js + Express
 - **AI:** Anthropic Claude Sonnet 4
-- **Memory:** Supabase (PostgreSQL)
+- **Memory:** Supabase (PostgreSQL) + Pinecone (Vector/Semantic Search)
+- **Web Search:** Tavily (Real-time Information)
 - **Auth:** Supabase JWT
 - **Hosting:** Render
 
@@ -46,6 +47,9 @@ Fill in your environment variables:
 - `SUPABASE_URL` - Your Supabase project URL
 - `SUPABASE_ANON_KEY` - Your Supabase anonymous key
 - `SUPABASE_JWT_SECRET` - Your Supabase JWT secret
+- `PINECONE_API_KEY` - Your Pinecone API key (optional - semantic memory)
+- `PINECONE_INDEX` - Your Pinecone index name (default: splendor-memory)
+- `TAVILY_API_KEY` - Your Tavily API key (optional - web search)
 
 ### 3. Database Setup
 
@@ -84,7 +88,24 @@ ON memories FOR INSERT
 WITH CHECK (auth.uid() = user_id);
 ```
 
-### 4. Run the Application
+### 4. Enhanced Capabilities Setup (Optional)
+
+**Pinecone Setup (Semantic Memory):**
+1. Create account at [pinecone.io](https://pinecone.io)
+2. Create a new index:
+   - Name: `splendor-memory`
+   - Dimensions: `1024`
+   - Metric: `cosine`
+3. Add your API key to `.env`
+
+**Tavily Setup (Web Search):**
+1. Create account at [tavily.com](https://tavily.com)
+2. Get your API key from the dashboard
+3. Add your API key to `.env`
+
+Both services are optional - Splendor will work without them but with reduced capabilities.
+
+### 5. Run the Application
 
 **Development:**
 ```bash
@@ -115,13 +136,24 @@ The app will be available at `http://localhost:3000`
 
 ## Features
 
-### ✅ MVP v0.1 Features
+### ✅ Core Features
 - Mobile-first PWA installable on home screen
 - Clean chat interface with Splendor's personality
 - Memory system that stores key facts, commitments, decisions
 - Morning check-ins (5am-10am first visit)
 - Voice input support
 - Offline shell with service worker
+
+### ✅ Enhanced Capabilities
+- **Semantic Memory** (Pinecone): Find memories by meaning, not just keywords
+  - "What did I say about work stress?" finds all relevant memories
+  - Automatic relevance scoring and ranking
+  - Fallback to Supabase when Pinecone unavailable
+- **Web Search** (Tavily): Access current information when needed
+  - Automatic detection of time-sensitive queries
+  - Current prices, recent events, live data
+  - Always cites sources and indicates when search was used
+  - Only searches when genuinely needed
 
 ### 🚧 Planned Features
 - Memory Console (view/edit stored memories)
@@ -159,7 +191,9 @@ splendor/
 │   └── memory.js    # Memory management
 ├── lib/             # Core libraries
 │   ├── anthropic.js # AI integration + soul document
-│   └── supabase.js  # Database and auth
+│   ├── supabase.js  # Database and auth
+│   ├── pinecone.js  # Semantic memory (vector search)
+│   └── tavily.js    # Web search capabilities
 └── server.js        # Express server
 ```
 

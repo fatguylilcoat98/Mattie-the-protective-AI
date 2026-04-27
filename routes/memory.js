@@ -8,6 +8,7 @@
 const express = require('express');
 const router = express.Router();
 const { getMemoriesForUser, storeMemory, verifyUser, supabase } = require('../lib/supabase');
+const { storeMemory: storePineconeMemory, deleteMemory: deletePineconeMemory } = require('../lib/pinecone');
 
 // Get user's memories
 router.get('/:userId', async (req, res) => {
@@ -59,6 +60,16 @@ router.post('/:userId', async (req, res) => {
 
     const memory = await storeMemory(userId, content, type);
 
+    // Also store in Pinecone for semantic search
+    if (memory) {
+      try {
+        await storePineconeMemory(memory.id, content, userId, type);
+      } catch (error) {
+        console.error('Failed to store memory in Pinecone:', error);
+        // Don't fail the request if Pinecone storage fails
+      }
+    }
+
     res.json({
       success: true,
       memory: {
@@ -95,6 +106,14 @@ router.delete('/:userId/:memoryId', async (req, res) => {
       .eq('user_id', userId);
 
     if (error) throw error;
+
+    // Also delete from Pinecone
+    try {
+      await deletePineconeMemory(memoryId);
+    } catch (error) {
+      console.error('Failed to delete memory from Pinecone:', error);
+      // Don't fail the request if Pinecone deletion fails
+    }
 
     res.json({ success: true });
 

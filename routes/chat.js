@@ -9,14 +9,27 @@ const express = require('express');
 const router = express.Router();
 const { generateSplendorResponse, extractMemory } = require('../lib/anthropic');
 const { getMemoriesForUser, storeMemory, logConversation, verifyUser } = require('../lib/supabase');
+const { retrieveMemories, storeMemory: storePineconeMemory, isPineconeConfigured } = require('../lib/pinecone');
+const { search: tavilySearch, needsWebSearch, isTavilyConfigured } = require('../lib/tavily');
 
 // Morning check-in - proactive greeting
 router.get('/morning/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
 
-    // Get recent memories for context
-    const memories = await getMemoriesForUser(userId, 5);
+    // Get recent memories for context - prefer semantic if available
+    let memories = [];
+    if (isPineconeConfigured()) {
+      try {
+        const semanticMemories = await retrieveMemories('morning check-in context', userId, 5);
+        memories = semanticMemories.length > 0 ? semanticMemories : await getMemoriesForUser(userId, 5);
+      } catch (error) {
+        console.error('Semantic memory error for morning check-in:', error);
+        memories = await getMemoriesForUser(userId, 5);
+      }
+    } else {
+      memories = await getMemoriesForUser(userId, 5);
+    }
 
     // Generate morning question
     const greeting = await generateSplendorResponse('', memories, true);
@@ -49,10 +62,41 @@ router.post('/', async (req, res) => {
     }
 
     // Get user's memories for context
-    const memories = await getMemoriesForUser(userId, 10);
+    let memories = [];
+    let searchResults = null;
 
-    // Generate Splendor's response
-    const splendorResponse = await generateSplendorResponse(message, memories);
+    // Try semantic memory retrieval first
+    if (isPineconeConfigured()) {
+      try {
+        const semanticMemories = await retrieveMemories(message, userId, 8);
+        if (semanticMemories.length > 0) {
+          memories = semanticMemories;
+        } else {
+          // Fallback to Supabase if no semantic matches
+          memories = await getMemoriesForUser(userId, 10);
+        }
+      } catch (error) {
+        console.error('Semantic memory error, falling back to Supabase:', error);
+        memories = await getMemoriesForUser(userId, 10);
+      }
+    } else {
+      // Fallback to Supabase when Pinecone not configured
+      memories = await getMemoriesForUser(userId, 10);
+    }
+
+    // Check if web search is needed
+    if (isTavilyConfigured() && needsWebSearch(message)) {
+      try {
+        searchResults = await tavilySearch(message);
+        console.log(`Web search performed for: "${message}"`);
+      } catch (error) {
+        console.error('Web search error:', error);
+        // Continue without search results
+      }
+    }
+
+    // Generate Splendor's response with enhanced context
+    const splendorResponse = await generateSplendorResponse(message, memories, false, searchResults);
 
     // Log the conversation (background task)
     Promise.all([
@@ -76,7 +120,14 @@ router.post('/', async (req, res) => {
             memoryType = 'insight';
           }
 
-          return storeMemory(userId, memory, memoryType);
+          return storeMemory(userId, memory, memoryType).then(storedMemory => {
+            // Also store in Pinecone for semantic search
+            if (storedMemory) {
+              storePineconeMemory(storedMemory.id, memory, userId, memoryType)
+                .catch(err => console.error('Pinecone storage error:', err));
+            }
+            return storedMemory;
+          });
         }
       })
       .catch(err => console.error('Memory storage error:', err));
