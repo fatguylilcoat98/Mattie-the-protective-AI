@@ -230,7 +230,7 @@ async function saveMemoryFromExchange(userId, userMessage, assistantResponse) {
     } else {
       console.log(`[MEMORY DEBUG] Failed to save to Supabase:`, error);
     }
-    }
+
   } catch (err) {
     console.error('Memory save error:', err.message);
     // Never crash the main conversation on memory errors
