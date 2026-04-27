@@ -64,7 +64,7 @@ async function saveMemoryFromExchange(userId, userMessage, assistantResponse) {
     console.log(`[MEMORY DEBUG] Saving complete user message: "${userMessage}"`);
 
     // Save the complete user message as memory using proper storeMemory function
-    const savedMemory = await storeMemory(userId, `User said: "${userMessage}"`, 'conversation');
+    const savedMemory = await storeMemory(userId, `User said: "${userMessage}"`, 'general');
 
     if (savedMemory) {
       // Also save to Pinecone if available
