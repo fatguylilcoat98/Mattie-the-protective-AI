@@ -182,11 +182,8 @@ router.post('/', async (req, res) => {
     // STEP 5: Save memory async (never block on this)
     saveMemoryFromExchange(userId, message, assistantMessage);
 
-    // STEP 6: Log conversation (background task)
-    Promise.all([
-      logConversation(userId, 'user', message),
-      logConversation(userId, 'assistant', assistantMessage)
-    ]).catch(err => console.error('Logging error:', err));
+    // STEP 6: Skip conversation logging for now (has constraint issues)
+    // TODO: Fix conversation logging constraints later
 
     res.json({
       message: assistantMessage,
