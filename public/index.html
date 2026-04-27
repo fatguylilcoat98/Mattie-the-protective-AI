@@ -26,7 +26,7 @@
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@300;400;500;600;700&family=Lora:wght@400;500;600&display=swap" rel="stylesheet">
 
   <style>
     /* Reset and Base */
@@ -37,33 +37,43 @@
     }
 
     :root {
-      --bg: #0a0e1a;
-      --bg-light: #0f1421;
-      --bg-card: #141927;
+      --navy: #0a0e1a;
+      --navy-mid: #111827;
+      --navy-light: #1a2236;
       --teal: #00c9b1;
-      --teal-dim: #008f7f;
-      --text: #e8edf5;
-      --text-muted: #8899aa;
-      --text-dim: #6c7a89;
-      --border: #1a2332;
-      --border-light: #2a3441;
+      --teal-dim: #00c9b140;
+      --teal-glow: #00c9b120;
+      --white: #f0f4f8;
+      --white-dim: #a0aec0;
+      --gold: #f6c90e;
     }
 
     html {
       font-size: 16px;
       -webkit-text-size-adjust: 100%;
+      -webkit-tap-highlight-color: transparent;
     }
 
     body {
-      font-family: 'Rajdhani', sans-serif;
-      background: var(--bg);
-      color: var(--text);
+      background: var(--navy);
+      color: var(--white);
       line-height: 1.6;
       overflow-x: hidden;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
       min-height: 100vh;
       min-height: 100dvh;
+      position: relative;
+    }
+
+    /* Subtle background texture */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
     }
 
     /* App Container */
@@ -74,13 +84,15 @@
       min-height: 100dvh;
       max-width: 100vw;
       overflow: hidden;
+      position: relative;
+      z-index: 1;
     }
 
     /* Header */
     .header {
-      padding: 1rem;
-      background: var(--bg-light);
-      border-bottom: 1px solid var(--border);
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--teal-dim);
+      background: var(--navy);
       text-align: center;
       position: sticky;
       top: 0;
@@ -88,21 +100,23 @@
       backdrop-filter: blur(10px);
     }
 
-    .header h1 {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 1.5rem;
+    .splendor-name {
+      font-family: 'Orbitron', monospace;
+      font-size: 22px;
       font-weight: 700;
-      color: var(--text);
-      text-shadow: 0 0 10px rgba(0, 201, 177, 0.3);
-      letter-spacing: 0.05em;
+      color: var(--teal);
+      letter-spacing: 4px;
+      text-shadow: 0 0 20px var(--teal-dim);
+      margin-bottom: 2px;
     }
 
-    .header .tagline {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      margin-top: 0.25rem;
-      font-weight: 400;
-      letter-spacing: 0.02em;
+    .splendor-tagline {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 11px;
+      color: var(--white-dim);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      font-weight: 500;
     }
 
     /* Chat Container */
@@ -116,21 +130,24 @@
     .chat-messages {
       flex: 1;
       overflow-y: auto;
-      padding: 1rem;
+      padding: 20px;
       padding-bottom: 0;
       -webkit-overflow-scrolling: touch;
+      scroll-behavior: smooth;
     }
 
     /* Message Styles */
     .message {
-      margin-bottom: 1rem;
-      animation: messageIn 0.3s ease-out;
+      margin-bottom: 16px;
+      animation: messageSlide 0.4s ease-out;
+      display: flex;
+      flex-direction: column;
     }
 
-    @keyframes messageIn {
+    @keyframes messageSlide {
       from {
         opacity: 0;
-        transform: translateY(10px);
+        transform: translateY(20px);
       }
       to {
         opacity: 1;
@@ -138,189 +155,89 @@
       }
     }
 
-    .message.splendor {
-      display: flex;
-      justify-content: flex-start;
-    }
-
-    .message.user {
-      display: flex;
-      justify-content: flex-end;
-    }
-
-    .message-bubble {
-      max-width: 85%;
-      padding: 0.875rem 1rem;
-      border-radius: 1rem;
-      font-size: 0.95rem;
-      line-height: 1.5;
-      word-wrap: break-word;
-      font-weight: 400;
-    }
-
-    .message.splendor .message-bubble {
-      background: var(--bg-card);
+    .splendor-message {
+      background: var(--navy-light);
       border-left: 3px solid var(--teal);
-      color: var(--text);
-      border-radius: 1rem 1rem 1rem 0.25rem;
+      border-radius: 0 12px 12px 0;
+      padding: 16px 20px;
+      margin: 8px 0 8px 0;
+      max-width: 85%;
+      font-family: 'Lora', serif;
+      font-size: 15px;
+      line-height: 1.7;
+      color: var(--white);
+      box-shadow: 0 0 20px var(--teal-glow);
+      align-self: flex-start;
     }
 
-    .message.user .message-bubble {
-      background: var(--bg-light);
-      border: 1px solid var(--border-light);
-      color: var(--text);
-      border-radius: 1rem 1rem 0.25rem 1rem;
+    .user-message {
+      background: var(--navy-mid);
+      border-right: 3px solid var(--white-dim);
+      border-radius: 12px 0 0 12px;
+      padding: 12px 16px;
+      margin: 8px 0 8px auto;
+      max-width: 75%;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 15px;
+      color: var(--white-dim);
+      text-align: right;
+      font-weight: 500;
+      align-self: flex-end;
     }
 
     .message-time {
-      font-size: 0.7rem;
-      color: var(--text-dim);
-      margin-top: 0.25rem;
+      font-size: 10px;
+      color: var(--white-dim);
+      opacity: 0.6;
+      margin-top: 4px;
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 400;
+      letter-spacing: 0.5px;
+    }
+
+    .splendor-message + .message-time {
+      align-self: flex-start;
+      margin-left: 8px;
+    }
+
+    .user-message + .message-time {
+      align-self: flex-end;
+      margin-right: 8px;
       text-align: right;
     }
 
-    .message.splendor .message-time {
-      text-align: left;
-    }
-
-    /* Loading Indicator */
-    .loading {
+    /* Thinking Indicator */
+    .thinking-container {
       display: flex;
-      justify-content: flex-start;
-      margin-bottom: 1rem;
+      align-self: flex-start;
+      margin: 8px 0;
     }
 
-    .loading-bubble {
-      background: var(--bg-card);
-      border-left: 3px solid var(--teal);
-      padding: 1rem;
-      border-radius: 1rem 1rem 1rem 0.25rem;
-      max-width: 85%;
-    }
-
-    .loading-dots {
+    .thinking {
       display: flex;
-      gap: 0.25rem;
+      gap: 6px;
+      padding: 16px 20px;
       align-items: center;
+      background: var(--navy-light);
+      border-left: 3px solid var(--teal);
+      border-radius: 0 12px 12px 0;
+      box-shadow: 0 0 20px var(--teal-glow);
     }
 
-    .loading-dot {
+    .thinking-dot {
       width: 6px;
       height: 6px;
       background: var(--teal);
       border-radius: 50%;
-      animation: loadingDot 1.4s ease-in-out infinite both;
+      animation: think 1.4s infinite;
     }
 
-    .loading-dot:nth-child(1) { animation-delay: -0.32s; }
-    .loading-dot:nth-child(2) { animation-delay: -0.16s; }
+    .thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+    .thinking-dot:nth-child(3) { animation-delay: 0.4s; }
 
-    @keyframes loadingDot {
-      0%, 80%, 100% {
-        opacity: 0.3;
-        transform: scale(0.8);
-      }
-      40% {
-        opacity: 1;
-        transform: scale(1);
-      }
-    }
-
-    /* Input Area */
-    .input-area {
-      padding: 1rem;
-      background: var(--bg-light);
-      border-top: 1px solid var(--border);
-      position: sticky;
-      bottom: 0;
-      z-index: 100;
-    }
-
-    .input-container {
-      display: flex;
-      gap: 0.75rem;
-      align-items: flex-end;
-    }
-
-    .input-field {
-      flex: 1;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 1.25rem;
-      padding: 0.875rem 1rem;
-      color: var(--text);
-      font-family: 'Rajdhani', sans-serif;
-      font-size: 0.95rem;
-      resize: none;
-      min-height: 44px;
-      max-height: 120px;
-      line-height: 1.4;
-      transition: border-color 0.2s ease;
-    }
-
-    .input-field:focus {
-      outline: none;
-      border-color: var(--teal);
-    }
-
-    .input-field::placeholder {
-      color: var(--text-muted);
-    }
-
-    .input-buttons {
-      display: flex;
-      gap: 0.5rem;
-      flex-shrink: 0;
-    }
-
-    .btn {
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      border: none;
-      background: var(--teal);
-      color: var(--bg);
-      font-size: 1.1rem;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.2s ease;
-      font-weight: 600;
-    }
-
-    .btn:hover {
-      background: var(--teal-dim);
-      transform: translateY(-1px);
-    }
-
-    .btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    .btn-voice {
-      background: var(--bg-card);
-      border: 1px solid var(--border-light);
-      color: var(--text-muted);
-    }
-
-    .btn-voice:hover {
-      border-color: var(--teal);
-      color: var(--teal);
-      background: var(--bg-card);
-    }
-
-    .btn-voice.recording {
-      background: var(--teal);
-      color: var(--bg);
-      animation: pulse 1.5s ease-in-out infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.7; }
+    @keyframes think {
+      0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+      40% { opacity: 1; transform: scale(1); }
     }
 
     /* Empty State */
@@ -332,49 +249,165 @@
       justify-content: center;
       text-align: center;
       padding: 2rem;
-      color: var(--text-muted);
+      color: var(--white-dim);
     }
 
     .empty-state h2 {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 1.25rem;
-      color: var(--text);
-      margin-bottom: 0.5rem;
-      font-weight: 700;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 1.4rem;
+      color: var(--white);
+      margin-bottom: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 1px;
     }
 
     .empty-state p {
-      font-size: 0.9rem;
-      line-height: 1.6;
+      font-family: 'Lora', serif;
+      font-size: 0.95rem;
+      line-height: 1.7;
       max-width: 300px;
+      opacity: 0.8;
+    }
+
+    /* Input Area */
+    .input-bar {
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      padding: 16px;
+      background: var(--navy);
+      border-top: 1px solid var(--teal-dim);
+      position: sticky;
+      bottom: 0;
+      z-index: 100;
+    }
+
+    .message-input {
+      flex: 1;
+      background: var(--navy-light);
+      border: 1px solid var(--teal-dim);
+      border-radius: 12px;
+      padding: 12px 16px;
+      color: var(--white);
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      resize: none;
+      min-height: 44px;
+      max-height: 120px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      line-height: 1.4;
+    }
+
+    .message-input:focus {
+      border-color: var(--teal);
+      box-shadow: 0 0 12px var(--teal-glow);
+    }
+
+    .message-input::placeholder {
+      color: var(--white-dim);
+      opacity: 0.7;
+    }
+
+    .send-button {
+      width: 44px;
+      height: 44px;
+      background: var(--teal);
+      border: none;
+      border-radius: 50%;
+      color: var(--navy);
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      flex-shrink: 0;
+      font-weight: 700;
+    }
+
+    .send-button:hover {
+      transform: scale(1.08);
+      box-shadow: 0 0 16px var(--teal-dim);
+    }
+
+    .send-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .mic-button {
+      width: 44px;
+      height: 44px;
+      background: transparent;
+      border: 1px solid var(--teal-dim);
+      border-radius: 50%;
+      color: var(--teal);
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+
+    .mic-button:hover {
+      border-color: var(--teal);
+      background: var(--teal-glow);
+    }
+
+    .mic-button.listening {
+      background: var(--teal);
+      color: var(--navy);
+      border-color: var(--teal);
+      box-shadow: 0 0 20px var(--teal);
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 20px var(--teal); }
+      50% { box-shadow: 0 0 35px var(--teal); }
     }
 
     /* Responsive */
     @media (max-width: 480px) {
       .header {
-        padding: 0.75rem;
+        padding: 16px 20px 12px;
       }
 
-      .header h1 {
-        font-size: 1.25rem;
+      .splendor-name {
+        font-size: 20px;
+        letter-spacing: 3px;
+      }
+
+      .splendor-tagline {
+        font-size: 10px;
       }
 
       .chat-messages {
-        padding: 0.75rem;
+        padding: 16px;
       }
 
-      .message-bubble {
-        font-size: 0.9rem;
-        padding: 0.75rem;
+      .splendor-message {
+        padding: 14px 18px;
+        font-size: 14px;
       }
 
-      .input-area {
-        padding: 0.75rem;
+      .user-message {
+        padding: 10px 14px;
+        font-size: 14px;
       }
 
-      .input-field {
-        font-size: 0.9rem;
-        padding: 0.75rem;
+      .input-bar {
+        padding: 12px;
+      }
+
+      .message-input {
+        font-size: 14px;
+        padding: 10px 14px;
       }
     }
 
@@ -386,14 +419,35 @@
         transition-duration: 0.01ms !important;
       }
     }
+
+    /* Status indicators */
+    .status-indicator {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--teal);
+      box-shadow: 0 0 8px var(--teal);
+      z-index: 1000;
+      animation: statusPulse 2s infinite;
+    }
+
+    @keyframes statusPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
   </style>
 </head>
 <body>
+  <div class="status-indicator" id="statusIndicator"></div>
+
   <div class="app" id="app">
     <!-- Header -->
     <header class="header">
-      <h1>Splendor</h1>
-      <div class="tagline">Truth · Memory · Growth</div>
+      <div class="splendor-name">SPLENDOR</div>
+      <div class="splendor-tagline">The Remarkable AI</div>
     </header>
 
     <!-- Chat Container -->
@@ -401,25 +455,21 @@
       <div class="chat-messages" id="chatMessages">
         <!-- Empty State -->
         <div class="empty-state" id="emptyState">
-          <h2>I'm Splendor</h2>
+          <h2>I'm present</h2>
           <p>Your AI partner that remembers, thinks with you, and tells the truth.</p>
         </div>
       </div>
 
       <!-- Input Area -->
-      <div class="input-area">
-        <div class="input-container">
-          <textarea
-            id="messageInput"
-            class="input-field"
-            placeholder="What's on your mind?"
-            rows="1"
-          ></textarea>
-          <div class="input-buttons">
-            <button id="voiceBtn" class="btn btn-voice" title="Voice input">🎤</button>
-            <button id="sendBtn" class="btn" title="Send message">→</button>
-          </div>
-        </div>
+      <div class="input-bar">
+        <textarea
+          id="messageInput"
+          class="message-input"
+          placeholder="What's on your mind?"
+          rows="1"
+        ></textarea>
+        <button id="micButton" class="mic-button" title="Voice input">🎤</button>
+        <button id="sendButton" class="send-button" title="Send message">→</button>
       </div>
     </div>
   </div>
@@ -448,15 +498,17 @@
       initElements() {
         this.chatMessages = document.getElementById('chatMessages');
         this.messageInput = document.getElementById('messageInput');
-        this.sendBtn = document.getElementById('sendBtn');
-        this.voiceBtn = document.getElementById('voiceBtn');
+        this.sendButton = document.getElementById('sendButton');
+        this.micButton = document.getElementById('micButton');
         this.emptyState = document.getElementById('emptyState');
+        this.statusIndicator = document.getElementById('statusIndicator');
       }
 
       initEventListeners() {
-        this.sendBtn.addEventListener('click', () => this.sendMessage());
-        this.voiceBtn.addEventListener('click', () => this.toggleVoiceInput());
+        // Send button
+        this.sendButton.addEventListener('click', () => this.sendMessage());
 
+        // Enter key
         this.messageInput.addEventListener('keydown', (e) => {
           if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -464,9 +516,13 @@
           }
         });
 
+        // Auto-resize textarea
         this.messageInput.addEventListener('input', () => {
           this.adjustTextareaHeight();
         });
+
+        // Microphone
+        this.micButton.addEventListener('click', () => this.toggleVoiceInput());
       }
 
       adjustTextareaHeight() {
@@ -513,7 +569,7 @@
             const data = await response.json();
 
             if (data.message) {
-              this.addMessage(data.message, 'splendor');
+              this.appendMessage('splendor', data.message);
               this.hideEmptyState();
             }
           } catch (error) {
@@ -523,31 +579,41 @@
       }
 
       initVoiceRecognition() {
-        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-          const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-          this.recognition = new SpeechRecognition();
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
+        if (SpeechRecognition) {
+          this.recognition = new SpeechRecognition();
           this.recognition.continuous = false;
-          this.recognition.interimResults = false;
+          this.recognition.interimResults = true;
           this.recognition.lang = 'en-US';
 
+          let isListening = false;
+
           this.recognition.onresult = (event) => {
-            const transcript = event.results[0][0].transcript;
+            const transcript = Array.from(event.results)
+              .map(result => result[0].transcript)
+              .join('');
             this.messageInput.value = transcript;
             this.adjustTextareaHeight();
-            this.stopVoiceInput();
-          };
-
-          this.recognition.onerror = (event) => {
-            console.error('Speech recognition error:', event.error);
-            this.stopVoiceInput();
           };
 
           this.recognition.onend = () => {
-            this.stopVoiceInput();
+            isListening = false;
+            this.micButton.classList.remove('listening');
+            // Auto-send if there's content
+            if (this.messageInput.value.trim()) {
+              setTimeout(() => this.sendMessage(), 500);
+            }
+          };
+
+          this.recognition.onerror = (event) => {
+            console.error('Speech error:', event.error);
+            isListening = false;
+            this.micButton.classList.remove('listening');
           };
         } else {
-          this.voiceBtn.style.display = 'none';
+          // Hide mic button if not supported
+          this.micButton.style.display = 'none';
         }
       }
 
@@ -555,47 +621,37 @@
         if (!this.recognition) return;
 
         if (this.isRecording) {
-          this.stopVoiceInput();
+          this.recognition.stop();
+          this.isRecording = false;
+          this.micButton.classList.remove('listening');
         } else {
-          this.startVoiceInput();
+          try {
+            this.recognition.start();
+            this.isRecording = true;
+            this.micButton.classList.add('listening');
+          } catch (error) {
+            console.error('Voice recognition start error:', error);
+          }
         }
       }
 
-      startVoiceInput() {
-        if (!this.recognition || this.isRecording) return;
-
-        try {
-          this.recognition.start();
-          this.isRecording = true;
-          this.voiceBtn.classList.add('recording');
-          this.voiceBtn.textContent = '⏹️';
-        } catch (error) {
-          console.error('Voice recognition start error:', error);
-        }
-      }
-
-      stopVoiceInput() {
-        if (!this.recognition || !this.isRecording) return;
-
-        this.recognition.stop();
-        this.isRecording = false;
-        this.voiceBtn.classList.remove('recording');
-        this.voiceBtn.textContent = '🎤';
-      }
-
-      async sendMessage() {
+      sendMessage() {
         const message = this.messageInput.value.trim();
         if (!message) return;
 
-        this.addMessage(message, 'user');
+        this.appendMessage('user', message);
         this.messageInput.value = '';
         this.adjustTextareaHeight();
         this.hideEmptyState();
         this.setLastMessageDate();
 
-        this.showLoading();
-        this.sendBtn.disabled = true;
+        this.showThinking();
+        this.sendButton.disabled = true;
 
+        this.fetchSplendorResponse(message);
+      }
+
+      async fetchSplendorResponse(message) {
         try {
           const response = await fetch('/api/chat', {
             method: 'POST',
@@ -611,26 +667,26 @@
           const data = await response.json();
 
           if (data.error) {
-            this.addMessage('Something went wrong — try again in a moment.', 'splendor');
+            this.appendMessage('splendor', 'Something went wrong — try again in a moment.');
           } else {
-            this.addMessage(data.message, 'splendor');
+            this.appendMessage('splendor', data.message);
           }
         } catch (error) {
           console.error('Chat error:', error);
-          this.addMessage('I\'m having trouble connecting right now — try again in a moment.', 'splendor');
+          this.appendMessage('splendor', 'I\'m having trouble connecting right now — try again in a moment.');
         } finally {
-          this.hideLoading();
-          this.sendBtn.disabled = false;
+          this.hideThinking();
+          this.sendButton.disabled = false;
           this.messageInput.focus();
         }
       }
 
-      addMessage(content, sender) {
+      appendMessage(sender, content) {
         const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${sender}`;
+        messageDiv.className = 'message';
 
         const bubbleDiv = document.createElement('div');
-        bubbleDiv.className = 'message-bubble';
+        bubbleDiv.className = sender === 'splendor' ? 'splendor-message' : 'user-message';
         bubbleDiv.textContent = content;
 
         const timeDiv = document.createElement('div');
@@ -644,34 +700,30 @@
         this.scrollToBottom();
       }
 
-      showLoading() {
-        const loadingDiv = document.createElement('div');
-        loadingDiv.className = 'loading';
-        loadingDiv.id = 'loadingIndicator';
+      showThinking() {
+        const thinkingDiv = document.createElement('div');
+        thinkingDiv.className = 'thinking-container';
+        thinkingDiv.id = 'thinkingIndicator';
 
         const bubbleDiv = document.createElement('div');
-        bubbleDiv.className = 'loading-bubble';
-
-        const dotsDiv = document.createElement('div');
-        dotsDiv.className = 'loading-dots';
+        bubbleDiv.className = 'thinking';
 
         for (let i = 0; i < 3; i++) {
           const dot = document.createElement('div');
-          dot.className = 'loading-dot';
-          dotsDiv.appendChild(dot);
+          dot.className = 'thinking-dot';
+          bubbleDiv.appendChild(dot);
         }
 
-        bubbleDiv.appendChild(dotsDiv);
-        loadingDiv.appendChild(bubbleDiv);
-        this.chatMessages.appendChild(loadingDiv);
+        thinkingDiv.appendChild(bubbleDiv);
+        this.chatMessages.appendChild(thinkingDiv);
 
         this.scrollToBottom();
       }
 
-      hideLoading() {
-        const loading = document.getElementById('loadingIndicator');
-        if (loading) {
-          loading.remove();
+      hideThinking() {
+        const thinking = document.getElementById('thinkingIndicator');
+        if (thinking) {
+          thinking.remove();
         }
       }
 
