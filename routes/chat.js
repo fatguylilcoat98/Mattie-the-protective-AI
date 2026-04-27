@@ -195,60 +195,41 @@ async function buildMemoryContext(userId, userMessage) {
 // Save memory from exchange (background task)
 async function saveMemoryFromExchange(userId, userMessage, assistantResponse) {
   try {
-    // Ask Claude: what from this exchange is worth remembering?
-    const memoryCheck = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 200,
-      system: `You extract memory-worthy information from AI conversations.
-Return a JSON object with:
-- "worth_saving": true or false
-- "content": one clear sentence of what to remember (if worth saving)
-- "type": one of: "general", "commitment", "correction", "insight", "identity"
+    console.log(`[MEMORY DEBUG] Analyzing exchange for user ${userId}`);
+    console.log(`[MEMORY DEBUG] User message: "${userMessage}"`);
 
-Only return worth_saving: true if there is genuinely new information about:
-- Who the user is (name, job, location, relationships)
-- What they are building or working on
-- Commitments they made
-- Important corrections they gave
-- Key insights that emerged
+    // SAVE EVERYTHING - no filtering, Chris wants every conversation remembered
+    console.log(`[MEMORY DEBUG] Saving complete user message: "${userMessage}"`);
 
-Return ONLY valid JSON. No other text.`,
-      messages: [{
-        role: 'user',
-        content: `User said: "${userMessage}"\n\nSplendor responded: "${assistantResponse.substring(0, 500)}"`
-      }]
-    });
+    // Save the complete user message as memory
+    const { data: savedMemory, error } = await supabase
+      .from('memories')
+      .insert({
+        user_id: userId,
+        content: `User said: "${userMessage}"`,
+        memory_type: 'conversation'
+      })
+      .select()
+      .single();
 
-    const result = JSON.parse(memoryCheck.content[0].text);
-
-    if (result.worth_saving && result.content) {
-      // Save to Supabase
-      const { data: savedMemory, error } = await supabase
-        .from('memories')
-        .insert({
-          user_id: userId,
-          content: result.content,
-          memory_type: result.type || 'general'
-        })
-        .select()
-        .single();
-
-      if (!error && savedMemory) {
-        // Also save to Pinecone if available
-        if (process.env.PINECONE_API_KEY) {
-          try {
-            await storePineconeMemory(
-              savedMemory.id,
-              result.content,
-              userId,
-              result.type || 'general'
-            );
-          } catch (pineconeErr) {
-            console.log('Pinecone save skipped:', pineconeErr.message);
-          }
+    if (!error && savedMemory) {
+      // Also save to Pinecone if available
+      if (process.env.PINECONE_API_KEY) {
+        try {
+          await storePineconeMemory(
+            savedMemory.id,
+            `User said: "${userMessage}"`,
+            userId,
+            'conversation'
+          );
+        } catch (pineconeErr) {
+          console.log('Pinecone save skipped:', pineconeErr.message);
         }
-        console.log(`Memory saved: [${result.type}] ${result.content}`);
       }
+      console.log(`[MEMORY DEBUG] FULL conversation saved: "${userMessage}"`);
+    } else {
+      console.log(`[MEMORY DEBUG] Failed to save to Supabase:`, error);
+    }
     }
   } catch (err) {
     console.error('Memory save error:', err.message);
