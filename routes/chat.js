@@ -32,27 +32,24 @@ function shouldSearch(message) {
   return SEARCH_TRIGGERS.some(trigger => lower.includes(trigger));
 }
 
-// Get search context using lib/tavily
-async function getSearchContext(query) {
+// Get search results using lib/tavily - return object format
+async function getSearchResults(query) {
   try {
     const results = await tavilySearch(query);
-    if (!results) return '';
+    if (!results) return null;
 
-    let context = '\n\n--- WEB SEARCH RESULTS (Splendor searched the web for this) ---\n';
-    if (results.answer) {
-      context += `Summary: ${results.answer}\n\n`;
-    }
-    if (results.results) {
-      results.results.forEach((r, i) => {
-        context += `Source ${i + 1}: ${r.title}\n${r.content.substring(0, 300)}...\nURL: ${r.url}\n\n`;
-      });
-    }
-    context += '--- END SEARCH RESULTS ---\n';
-    context += 'When responding, cite that you searched the web and reference the sources above.\n';
-    return context;
+    return {
+      query: query,
+      answer: results.answer || 'No direct answer found.',
+      sources: results.results?.map(r => ({
+        title: r.title || 'Untitled',
+        url: r.url,
+        content: (r.content || '').substring(0, 300) // Limit content length
+      })) || []
+    };
   } catch (err) {
     console.error('Tavily search error:', err.message);
-    return '';
+    return null;
   }
 }
 
@@ -177,8 +174,10 @@ router.post('/', async (req, res) => {
     // STEP 2: Check if web search is needed
     if (shouldSearch(message)) {
       try {
-        searchResults = await getSearchContext(message);
-        console.log(`Web search performed for: "${message}"`);
+        searchResults = await getSearchResults(message);
+        if (searchResults) {
+          console.log(`Web search performed for: "${message}"`);
+        }
       } catch (error) {
         console.error('Web search error:', error);
         // Continue without search results

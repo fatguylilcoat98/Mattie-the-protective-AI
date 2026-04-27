@@ -19,6 +19,10 @@ router.get('/check', async (req, res) => {
       return res.status(400).json({ error: 'userId header required' });
     }
 
+    // Convert to UUID format
+    const { stringToUUID } = require('../lib/supabase');
+    const uuid = stringToUUID(userId);
+
     // Verify user if token provided
     if (authToken) {
       const user = await verifyUser(authToken);
@@ -30,12 +34,12 @@ router.get('/check', async (req, res) => {
     const { data, error } = await supabase
       .from('memories')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_id', uuid)
       .order('created_at', { ascending: false })
       .limit(20);
 
     if (error) throw error;
-    res.json({ count: data.length, memories: data });
+    res.json({ count: data.length, memories: data, userId: userId, uuid: uuid });
   } catch (err) {
     console.error('Memory check error:', err);
     res.status(500).json({ error: err.message });
