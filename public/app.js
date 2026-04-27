@@ -11,6 +11,17 @@ let isRecording = false;
 let recognition = null;
 let chatMessages, messageInput, sendButton, micButton, emptyState;
 
+// Camera state
+let cameraButton, cameraPreview, cameraPreviewWrap;
+let cameraStream = null;
+let cameraActive = false;
+const captureCanvas = document.createElement('canvas');
+
+// Voice playback state
+let speakerButton;
+let speakerActive = false;
+let currentAudio = null;
+
 // Helper functions
 function getUserId() {
   let id = localStorage.getItem('splendor_user_id');
@@ -104,7 +115,7 @@ function hideThinking() {
   }
 }
 
-async function fetchSplendorResponse(message) {
+async function fetchSplendorResponse(message, imageData = null) {
   try {
     const response = await fetch('/api/chat', {
       method: 'POST',
@@ -113,7 +124,8 @@ async function fetchSplendorResponse(message) {
       },
       body: JSON.stringify({
         message,
-        userId: userId
+        userId: userId,
+        imageData
       }),
     });
 
@@ -123,6 +135,9 @@ async function fetchSplendorResponse(message) {
       appendMessage('splendor', 'Something went wrong — try again in a moment.');
     } else {
       appendMessage('splendor', data.message);
+      if (speakerActive) {
+        playSpoken(data.message);
+      }
     }
   } catch (error) {
     console.error('Chat error:', error);
@@ -134,16 +149,34 @@ async function fetchSplendorResponse(message) {
   }
 }
 
+function captureCameraFrame() {
+  if (!cameraActive || !cameraStream || !cameraPreview) return null;
+  try {
+    const w = cameraPreview.videoWidth;
+    const h = cameraPreview.videoHeight;
+    if (!w || !h) return null;
+    captureCanvas.width = w;
+    captureCanvas.height = h;
+    captureCanvas.getContext('2d').drawImage(cameraPreview, 0, 0, w, h);
+    return captureCanvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+  } catch (err) {
+    console.error('captureCameraFrame error:', err);
+    return null;
+  }
+}
+
 function sendMessage() {
   const message = messageInput.value.trim();
-  if (!message) {
-    console.log('No message to send');
+  const imageData = captureCameraFrame();
+
+  if (!message && !imageData) {
+    console.log('No message or image to send');
     return;
   }
 
-  console.log('Sending message:', message);
+  console.log('Sending message:', message, imageData ? '(with image)' : '');
 
-  appendMessage('user', message);
+  appendMessage('user', message || (imageData ? '(image)' : ''));
   messageInput.value = '';
   adjustTextareaHeight();
   hideEmptyState();
@@ -152,7 +185,76 @@ function sendMessage() {
   showThinking();
   sendButton.disabled = true;
 
-  fetchSplendorResponse(message);
+  fetchSplendorResponse(message, imageData);
+}
+
+async function toggleCamera() {
+  if (!cameraButton || !cameraPreview || !cameraPreviewWrap) return;
+
+  if (cameraActive) {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(t => t.stop());
+      cameraStream = null;
+    }
+    cameraActive = false;
+    cameraPreviewWrap.classList.remove('active');
+    cameraButton.classList.remove('active');
+    return;
+  }
+
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    appendMessage('splendor', 'This device does not expose a camera I can use.');
+    return;
+  }
+
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment' },
+      audio: false
+    });
+    cameraPreview.srcObject = cameraStream;
+    cameraActive = true;
+    cameraPreviewWrap.classList.add('active');
+    cameraButton.classList.add('active');
+  } catch (err) {
+    console.error('Camera error:', err);
+    appendMessage('splendor', "I can't access the camera. Please check your browser permissions.");
+    cameraActive = false;
+  }
+}
+
+function toggleSpeaker() {
+  speakerActive = !speakerActive;
+  if (speakerButton) speakerButton.classList.toggle('active', speakerActive);
+  if (!speakerActive && currentAudio) {
+    try { currentAudio.pause(); } catch {}
+    currentAudio = null;
+  }
+}
+
+async function playSpoken(text) {
+  try {
+    const response = await fetch('/api/voice/speak', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    });
+
+    const data = await response.json();
+
+    if (data.audio) {
+      const audio = new Audio('data:audio/mpeg;base64,' + data.audio);
+      currentAudio = audio;
+      audio.play().catch(err => console.error('Audio playback failed:', err));
+    } else if (data.fallback === 'browser_tts' && 'speechSynthesis' in window) {
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.rate = 1.0;
+      utter.pitch = 1.0;
+      window.speechSynthesis.speak(utter);
+    }
+  } catch (err) {
+    console.error('Voice playback error:', err);
+  }
 }
 
 function toggleVoiceInput() {
@@ -253,13 +355,19 @@ document.addEventListener('DOMContentLoaded', () => {
   sendButton = document.getElementById('sendButton');
   micButton = document.getElementById('micButton');
   emptyState = document.getElementById('emptyState');
+  cameraButton = document.getElementById('cameraButton');
+  cameraPreview = document.getElementById('cameraPreview');
+  cameraPreviewWrap = document.getElementById('cameraPreviewWrap');
+  speakerButton = document.getElementById('speakerButton');
 
   console.log('Elements found:', {
     chatMessages: !!chatMessages,
     messageInput: !!messageInput,
     sendButton: !!sendButton,
     micButton: !!micButton,
-    emptyState: !!emptyState
+    emptyState: !!emptyState,
+    cameraButton: !!cameraButton,
+    speakerButton: !!speakerButton
   });
 
   // Add event listeners
@@ -290,6 +398,30 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log('Mic button clicked');
       e.preventDefault();
       toggleVoiceInput();
+    });
+  }
+
+  if (cameraButton) {
+    cameraButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      toggleCamera();
+    });
+  }
+
+  if (speakerButton) {
+    speakerButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      toggleSpeaker();
+    });
+  }
+
+  // Trigger camera when user says "use your eyes"
+  if (messageInput) {
+    messageInput.addEventListener('input', () => {
+      const v = messageInput.value.toLowerCase();
+      if (!cameraActive && v.includes('use your eyes')) {
+        toggleCamera();
+      }
     });
   }
 

@@ -20,7 +20,7 @@ router.get('/check', async (req, res) => {
     }
 
     // Convert to UUID format
-    const { stringToUUID } = require('../lib/supabase');
+    const { stringToUUID, ALLOWED_OWNERS } = require('../lib/supabase');
     const uuid = stringToUUID(userId);
 
     // Verify user if token provided
@@ -31,10 +31,12 @@ router.get('/check', async (req, res) => {
       }
     }
 
+    // Privacy boundary: only return memories the caller owns or that are shared.
     const { data, error } = await supabase
       .from('memories')
       .select('*')
       .eq('user_id', uuid)
+      .in('memory_owner', ALLOWED_OWNERS)
       .order('created_at', { ascending: false })
       .limit(20);
 
@@ -80,7 +82,7 @@ router.get('/:userId', async (req, res) => {
 router.post('/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
-    const { content, type = 'general', authToken } = req.body;
+    const { content, type = 'general', owner = 'self', authToken } = req.body;
 
     if (!content) {
       return res.status(400).json({ error: 'Content required' });
@@ -94,7 +96,7 @@ router.post('/:userId', async (req, res) => {
       }
     }
 
-    const memory = await storeMemory(userId, content, type);
+    const memory = await storeMemory(userId, content, type, owner);
 
     // Also store in Pinecone for semantic search
     if (memory) {
@@ -111,6 +113,7 @@ router.post('/:userId', async (req, res) => {
       memory: {
         content: memory?.content,
         type: memory?.memory_type,
+        owner: memory?.memory_owner,
         date: memory?.created_at
       }
     });
