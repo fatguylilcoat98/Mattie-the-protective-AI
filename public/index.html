@@ -496,21 +496,38 @@
       }
 
       initElements() {
+        console.log('Initializing elements...');
         this.chatMessages = document.getElementById('chatMessages');
         this.messageInput = document.getElementById('messageInput');
         this.sendButton = document.getElementById('sendButton');
         this.micButton = document.getElementById('micButton');
         this.emptyState = document.getElementById('emptyState');
         this.statusIndicator = document.getElementById('statusIndicator');
+
+        console.log('Elements found:', {
+          chatMessages: !!this.chatMessages,
+          messageInput: !!this.messageInput,
+          sendButton: !!this.sendButton,
+          micButton: !!this.micButton,
+          emptyState: !!this.emptyState,
+          statusIndicator: !!this.statusIndicator
+        });
       }
 
       initEventListeners() {
+        console.log('Initializing event listeners...');
+
         // Send button
-        this.sendButton.addEventListener('click', () => this.sendMessage());
+        this.sendButton.addEventListener('click', (e) => {
+          console.log('Send button clicked');
+          e.preventDefault();
+          this.sendMessage();
+        });
 
         // Enter key
         this.messageInput.addEventListener('keydown', (e) => {
           if (e.key === 'Enter' && !e.shiftKey) {
+            console.log('Enter key pressed');
             e.preventDefault();
             this.sendMessage();
           }
@@ -522,7 +539,13 @@
         });
 
         // Microphone
-        this.micButton.addEventListener('click', () => this.toggleVoiceInput());
+        this.micButton.addEventListener('click', (e) => {
+          console.log('Mic button clicked');
+          e.preventDefault();
+          this.toggleVoiceInput();
+        });
+
+        console.log('Event listeners initialized');
       }
 
       adjustTextareaHeight() {
@@ -587,8 +610,6 @@
           this.recognition.interimResults = true;
           this.recognition.lang = 'en-US';
 
-          let isListening = false;
-
           this.recognition.onresult = (event) => {
             const transcript = Array.from(event.results)
               .map(result => result[0].transcript)
@@ -598,7 +619,7 @@
           };
 
           this.recognition.onend = () => {
-            isListening = false;
+            this.isRecording = false;
             this.micButton.classList.remove('listening');
             // Auto-send if there's content
             if (this.messageInput.value.trim()) {
@@ -608,7 +629,7 @@
 
           this.recognition.onerror = (event) => {
             console.error('Speech error:', event.error);
-            isListening = false;
+            this.isRecording = false;
             this.micButton.classList.remove('listening');
           };
         } else {
@@ -618,7 +639,10 @@
       }
 
       toggleVoiceInput() {
-        if (!this.recognition) return;
+        if (!this.recognition) {
+          console.log('Voice recognition not supported');
+          return;
+        }
 
         if (this.isRecording) {
           this.recognition.stop();
@@ -631,13 +655,20 @@
             this.micButton.classList.add('listening');
           } catch (error) {
             console.error('Voice recognition start error:', error);
+            this.isRecording = false;
+            this.micButton.classList.remove('listening');
           }
         }
       }
 
       sendMessage() {
         const message = this.messageInput.value.trim();
-        if (!message) return;
+        if (!message) {
+          console.log('No message to send');
+          return;
+        }
+
+        console.log('Sending message:', message);
 
         this.appendMessage('user', message);
         this.messageInput.value = '';
