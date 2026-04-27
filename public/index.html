@@ -482,294 +482,302 @@
       Truth · Safety · We Got Your Back
     */
 
-    class SplendorApp {
-      constructor() {
-        this.userId = this.getUserId();
-        this.isRecording = false;
-        this.recognition = null;
-        this.lastMessageToday = this.getLastMessageDate();
+    // Global variables
+    let userId = null;
+    let isRecording = false;
+    let recognition = null;
+    let chatMessages, messageInput, sendButton, micButton, emptyState;
 
-        this.initElements();
-        this.initEventListeners();
-        this.initVoiceRecognition();
-        this.checkMorningGreeting();
+    // Helper functions
+    function getUserId() {
+      let id = localStorage.getItem('splendor_user_id');
+      if (!id) {
+        id = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('splendor_user_id', id);
+      }
+      return id;
+    }
+
+    function getLastMessageDate() {
+      const lastDate = localStorage.getItem('splendor_last_message');
+      return lastDate ? new Date(lastDate) : null;
+    }
+
+    function setLastMessageDate() {
+      localStorage.setItem('splendor_last_message', new Date().toISOString());
+    }
+
+    function isFirstMessageToday() {
+      const now = new Date();
+      const today = now.toDateString();
+      const lastMessageToday = getLastMessageDate();
+
+      if (!lastMessageToday) return true;
+
+      const lastDateString = lastMessageToday.toDateString();
+      return lastDateString !== today;
+    }
+
+    function adjustTextareaHeight() {
+      messageInput.style.height = 'auto';
+      messageInput.style.height = Math.min(messageInput.scrollHeight, 120) + 'px';
+    }
+
+    function hideEmptyState() {
+      if (emptyState) {
+        emptyState.style.display = 'none';
+      }
+    }
+
+    function scrollToBottom() {
+      setTimeout(() => {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }, 100);
+    }
+
+    function appendMessage(sender, content) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = 'message';
+
+      const bubbleDiv = document.createElement('div');
+      bubbleDiv.className = sender === 'splendor' ? 'splendor-message' : 'user-message';
+      bubbleDiv.textContent = content;
+
+      const timeDiv = document.createElement('div');
+      timeDiv.className = 'message-time';
+      timeDiv.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      messageDiv.appendChild(bubbleDiv);
+      messageDiv.appendChild(timeDiv);
+      chatMessages.appendChild(messageDiv);
+
+      scrollToBottom();
+    }
+
+    function showThinking() {
+      const thinkingDiv = document.createElement('div');
+      thinkingDiv.className = 'thinking-container';
+      thinkingDiv.id = 'thinkingIndicator';
+
+      const bubbleDiv = document.createElement('div');
+      bubbleDiv.className = 'thinking';
+
+      for (let i = 0; i < 3; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'thinking-dot';
+        bubbleDiv.appendChild(dot);
       }
 
-      initElements() {
-        console.log('Initializing elements...');
-        this.chatMessages = document.getElementById('chatMessages');
-        this.messageInput = document.getElementById('messageInput');
-        this.sendButton = document.getElementById('sendButton');
-        this.micButton = document.getElementById('micButton');
-        this.emptyState = document.getElementById('emptyState');
-        this.statusIndicator = document.getElementById('statusIndicator');
+      thinkingDiv.appendChild(bubbleDiv);
+      chatMessages.appendChild(thinkingDiv);
 
-        console.log('Elements found:', {
-          chatMessages: !!this.chatMessages,
-          messageInput: !!this.messageInput,
-          sendButton: !!this.sendButton,
-          micButton: !!this.micButton,
-          emptyState: !!this.emptyState,
-          statusIndicator: !!this.statusIndicator
+      scrollToBottom();
+    }
+
+    function hideThinking() {
+      const thinking = document.getElementById('thinkingIndicator');
+      if (thinking) {
+        thinking.remove();
+      }
+    }
+
+    async function fetchSplendorResponse(message) {
+      try {
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            message,
+            userId: userId
+          }),
         });
+
+        const data = await response.json();
+
+        if (data.error) {
+          appendMessage('splendor', 'Something went wrong — try again in a moment.');
+        } else {
+          appendMessage('splendor', data.message);
+        }
+      } catch (error) {
+        console.error('Chat error:', error);
+        appendMessage('splendor', 'I\'m having trouble connecting right now — try again in a moment.');
+      } finally {
+        hideThinking();
+        sendButton.disabled = false;
+        messageInput.focus();
+      }
+    }
+
+    function sendMessage() {
+      const message = messageInput.value.trim();
+      if (!message) {
+        console.log('No message to send');
+        return;
       }
 
-      initEventListeners() {
-        console.log('Initializing event listeners...');
+      console.log('Sending message:', message);
 
-        // Send button
-        this.sendButton.addEventListener('click', (e) => {
+      appendMessage('user', message);
+      messageInput.value = '';
+      adjustTextareaHeight();
+      hideEmptyState();
+      setLastMessageDate();
+
+      showThinking();
+      sendButton.disabled = true;
+
+      fetchSplendorResponse(message);
+    }
+
+    function toggleVoiceInput() {
+      console.log('Toggle voice input called');
+
+      if (!recognition) {
+        console.log('Voice recognition not supported');
+        return;
+      }
+
+      if (isRecording) {
+        recognition.stop();
+        isRecording = false;
+        micButton.classList.remove('listening');
+        console.log('Stopped recording');
+      } else {
+        try {
+          recognition.start();
+          isRecording = true;
+          micButton.classList.add('listening');
+          console.log('Started recording');
+        } catch (error) {
+          console.error('Voice recognition start error:', error);
+          isRecording = false;
+          micButton.classList.remove('listening');
+        }
+      }
+    }
+
+    function initVoiceRecognition() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+      if (SpeechRecognition) {
+        recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+
+        recognition.onresult = (event) => {
+          const transcript = Array.from(event.results)
+            .map(result => result[0].transcript)
+            .join('');
+          messageInput.value = transcript;
+          adjustTextareaHeight();
+        };
+
+        recognition.onend = () => {
+          isRecording = false;
+          micButton.classList.remove('listening');
+          // Auto-send if there's content
+          if (messageInput.value.trim()) {
+            setTimeout(() => sendMessage(), 500);
+          }
+        };
+
+        recognition.onerror = (event) => {
+          console.error('Speech error:', event.error);
+          isRecording = false;
+          micButton.classList.remove('listening');
+        };
+
+        console.log('Voice recognition initialized');
+      } else {
+        // Hide mic button if not supported
+        micButton.style.display = 'none';
+        console.log('Voice recognition not supported');
+      }
+    }
+
+    async function checkMorningGreeting() {
+      const now = new Date();
+      const hour = now.getHours();
+
+      // Check if it's morning (5am-10am) and first visit today
+      if (hour >= 5 && hour <= 10 && isFirstMessageToday()) {
+        try {
+          const response = await fetch(`/api/chat/morning/${userId}`);
+          const data = await response.json();
+
+          if (data.message) {
+            appendMessage('splendor', data.message);
+            hideEmptyState();
+          }
+        } catch (error) {
+          console.error('Morning greeting error:', error);
+        }
+      }
+    }
+
+    // Initialize everything when DOM is ready
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('DOM loaded, initializing Splendor...');
+
+      // Initialize global variables
+      userId = getUserId();
+      chatMessages = document.getElementById('chatMessages');
+      messageInput = document.getElementById('messageInput');
+      sendButton = document.getElementById('sendButton');
+      micButton = document.getElementById('micButton');
+      emptyState = document.getElementById('emptyState');
+
+      console.log('Elements found:', {
+        chatMessages: !!chatMessages,
+        messageInput: !!messageInput,
+        sendButton: !!sendButton,
+        micButton: !!micButton,
+        emptyState: !!emptyState
+      });
+
+      // Add event listeners
+      if (sendButton) {
+        sendButton.addEventListener('click', (e) => {
           console.log('Send button clicked');
           e.preventDefault();
-          this.sendMessage();
+          sendMessage();
         });
+      }
 
-        // Enter key
-        this.messageInput.addEventListener('keydown', (e) => {
+      if (messageInput) {
+        messageInput.addEventListener('keydown', (e) => {
           if (e.key === 'Enter' && !e.shiftKey) {
             console.log('Enter key pressed');
             e.preventDefault();
-            this.sendMessage();
+            sendMessage();
           }
         });
 
-        // Auto-resize textarea
-        this.messageInput.addEventListener('input', () => {
-          this.adjustTextareaHeight();
+        messageInput.addEventListener('input', () => {
+          adjustTextareaHeight();
         });
+      }
 
-        // Microphone
-        this.micButton.addEventListener('click', (e) => {
+      if (micButton) {
+        micButton.addEventListener('click', (e) => {
           console.log('Mic button clicked');
           e.preventDefault();
-          this.toggleVoiceInput();
+          toggleVoiceInput();
         });
-
-        console.log('Event listeners initialized');
       }
 
-      adjustTextareaHeight() {
-        this.messageInput.style.height = 'auto';
-        this.messageInput.style.height = Math.min(this.messageInput.scrollHeight, 120) + 'px';
-      }
+      // Initialize voice recognition
+      initVoiceRecognition();
 
-      getUserId() {
-        let userId = localStorage.getItem('splendor_user_id');
-        if (!userId) {
-          userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-          localStorage.setItem('splendor_user_id', userId);
-        }
-        return userId;
-      }
+      // Check for morning greeting
+      checkMorningGreeting();
 
-      getLastMessageDate() {
-        const lastDate = localStorage.getItem('splendor_last_message');
-        return lastDate ? new Date(lastDate) : null;
-      }
-
-      setLastMessageDate() {
-        localStorage.setItem('splendor_last_message', new Date().toISOString());
-      }
-
-      isFirstMessageToday() {
-        const now = new Date();
-        const today = now.toDateString();
-
-        if (!this.lastMessageToday) return true;
-
-        const lastDateString = this.lastMessageToday.toDateString();
-        return lastDateString !== today;
-      }
-
-      async checkMorningGreeting() {
-        const now = new Date();
-        const hour = now.getHours();
-
-        // Check if it's morning (5am-10am) and first visit today
-        if (hour >= 5 && hour <= 10 && this.isFirstMessageToday()) {
-          try {
-            const response = await fetch(`/api/chat/morning/${this.userId}`);
-            const data = await response.json();
-
-            if (data.message) {
-              this.appendMessage('splendor', data.message);
-              this.hideEmptyState();
-            }
-          } catch (error) {
-            console.error('Morning greeting error:', error);
-          }
-        }
-      }
-
-      initVoiceRecognition() {
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-        if (SpeechRecognition) {
-          this.recognition = new SpeechRecognition();
-          this.recognition.continuous = false;
-          this.recognition.interimResults = true;
-          this.recognition.lang = 'en-US';
-
-          this.recognition.onresult = (event) => {
-            const transcript = Array.from(event.results)
-              .map(result => result[0].transcript)
-              .join('');
-            this.messageInput.value = transcript;
-            this.adjustTextareaHeight();
-          };
-
-          this.recognition.onend = () => {
-            this.isRecording = false;
-            this.micButton.classList.remove('listening');
-            // Auto-send if there's content
-            if (this.messageInput.value.trim()) {
-              setTimeout(() => this.sendMessage(), 500);
-            }
-          };
-
-          this.recognition.onerror = (event) => {
-            console.error('Speech error:', event.error);
-            this.isRecording = false;
-            this.micButton.classList.remove('listening');
-          };
-        } else {
-          // Hide mic button if not supported
-          this.micButton.style.display = 'none';
-        }
-      }
-
-      toggleVoiceInput() {
-        if (!this.recognition) {
-          console.log('Voice recognition not supported');
-          return;
-        }
-
-        if (this.isRecording) {
-          this.recognition.stop();
-          this.isRecording = false;
-          this.micButton.classList.remove('listening');
-        } else {
-          try {
-            this.recognition.start();
-            this.isRecording = true;
-            this.micButton.classList.add('listening');
-          } catch (error) {
-            console.error('Voice recognition start error:', error);
-            this.isRecording = false;
-            this.micButton.classList.remove('listening');
-          }
-        }
-      }
-
-      sendMessage() {
-        const message = this.messageInput.value.trim();
-        if (!message) {
-          console.log('No message to send');
-          return;
-        }
-
-        console.log('Sending message:', message);
-
-        this.appendMessage('user', message);
-        this.messageInput.value = '';
-        this.adjustTextareaHeight();
-        this.hideEmptyState();
-        this.setLastMessageDate();
-
-        this.showThinking();
-        this.sendButton.disabled = true;
-
-        this.fetchSplendorResponse(message);
-      }
-
-      async fetchSplendorResponse(message) {
-        try {
-          const response = await fetch('/api/chat', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              message,
-              userId: this.userId
-            }),
-          });
-
-          const data = await response.json();
-
-          if (data.error) {
-            this.appendMessage('splendor', 'Something went wrong — try again in a moment.');
-          } else {
-            this.appendMessage('splendor', data.message);
-          }
-        } catch (error) {
-          console.error('Chat error:', error);
-          this.appendMessage('splendor', 'I\'m having trouble connecting right now — try again in a moment.');
-        } finally {
-          this.hideThinking();
-          this.sendButton.disabled = false;
-          this.messageInput.focus();
-        }
-      }
-
-      appendMessage(sender, content) {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = 'message';
-
-        const bubbleDiv = document.createElement('div');
-        bubbleDiv.className = sender === 'splendor' ? 'splendor-message' : 'user-message';
-        bubbleDiv.textContent = content;
-
-        const timeDiv = document.createElement('div');
-        timeDiv.className = 'message-time';
-        timeDiv.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-        messageDiv.appendChild(bubbleDiv);
-        messageDiv.appendChild(timeDiv);
-        this.chatMessages.appendChild(messageDiv);
-
-        this.scrollToBottom();
-      }
-
-      showThinking() {
-        const thinkingDiv = document.createElement('div');
-        thinkingDiv.className = 'thinking-container';
-        thinkingDiv.id = 'thinkingIndicator';
-
-        const bubbleDiv = document.createElement('div');
-        bubbleDiv.className = 'thinking';
-
-        for (let i = 0; i < 3; i++) {
-          const dot = document.createElement('div');
-          dot.className = 'thinking-dot';
-          bubbleDiv.appendChild(dot);
-        }
-
-        thinkingDiv.appendChild(bubbleDiv);
-        this.chatMessages.appendChild(thinkingDiv);
-
-        this.scrollToBottom();
-      }
-
-      hideThinking() {
-        const thinking = document.getElementById('thinkingIndicator');
-        if (thinking) {
-          thinking.remove();
-        }
-      }
-
-      hideEmptyState() {
-        if (this.emptyState) {
-          this.emptyState.style.display = 'none';
-        }
-      }
-
-      scrollToBottom() {
-        setTimeout(() => {
-          this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
-        }, 100);
-      }
-    }
+      console.log('Splendor initialized successfully');
+    });
 
     // Service Worker Registration
     if ('serviceWorker' in navigator) {
@@ -783,11 +791,6 @@
           });
       });
     }
-
-    // Initialize App
-    document.addEventListener('DOMContentLoaded', () => {
-      window.splendorApp = new SplendorApp();
-    });
   </script>
 </body>
 </html>
