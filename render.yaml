@@ -15,6 +15,10 @@ services:
         value: production
       - key: ANTHROPIC_API_KEY
         sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: PERPLEXITY_API_KEY
+        sync: false
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_ANON_KEY
@@ -39,6 +43,10 @@ services:
     startCommand: node workers/reflection-worker.js
     envVars:
       - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: PERPLEXITY_API_KEY
         sync: false
       - key: SUPABASE_URL
         sync: false

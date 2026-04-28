@@ -12,6 +12,7 @@ const { generateSplendorResponse } = require('../lib/anthropic');
 const { getMemoriesForUser, storeMemory, logConversation, verifyUser, supabase, stringToUUID } = require('../lib/supabase');
 const { retrieveMemories, storeMemory: storePineconeMemory, isPineconeConfigured } = require('../lib/pinecone');
 const { search: tavilySearch } = require('../lib/tavily');
+const { processDistributedConsciousness } = require('../lib/multi-ai');
 
 // Initialize Anthropic client for memory analysis only
 const anthropic = new Anthropic({
@@ -1206,12 +1207,33 @@ router.post('/', async (req, res) => {
       { reflection, imageData, conversationHistory }
     );
 
-    // STEP 5: Memory storage only - consciousness temporarily disabled for debugging
+    // STEP 5: Distributed consciousness processing across multiple AI providers
     if (message && message.trim().length > 0) {
       try {
-        // Simple memory storage without consciousness processing
+        // Store basic conversation
         await storeMemory(userId, `User: ${message}`, 'general');
         await storeMemory(userId, `Splendor: ${assistantMessage}`, 'general');
+
+        // Process consciousness across multiple AI providers (parallel, non-blocking)
+        processDistributedConsciousness(userId, message, assistantMessage)
+          .then(async (consciousnessResults) => {
+            // Store consciousness insights from different providers
+            if (consciousnessResults.self_reflection) {
+              await storeMemory(userId, `Self-reflection: ${consciousnessResults.self_reflection}`, 'general');
+            }
+            if (consciousnessResults.goal_generation) {
+              await storeMemory(userId, `Goals: ${consciousnessResults.goal_generation}`, 'general');
+            }
+            if (consciousnessResults.value_analysis) {
+              await storeMemory(userId, `Values: ${consciousnessResults.value_analysis}`, 'general');
+            }
+            console.log(`[MULTI-AI] Distributed consciousness completed for user ${userId}`);
+          })
+          .catch((error) => {
+            console.error('Distributed consciousness error:', error);
+            // Don't fail - consciousness is enhancement, not requirement
+          });
+
         console.log(`[MEMORY] Basic memory storage completed for user ${userId}`);
       } catch (error) {
         console.error('Memory storage error:', error);

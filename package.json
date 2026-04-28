@@ -1,6 +1,6 @@
 {
   "name": "splendor",
-  "version": "5.0.2",
+  "version": "6.0.0",
   "description": "Splendor — The Remarkable AI · The Good Neighbor Guard",
   "main": "server.js",
   "scripts": {
@@ -14,6 +14,7 @@
   "dependencies": {
     "express": "^4.18.2",
     "@anthropic-ai/sdk": "^0.24.3",
+    "openai": "^4.28.0",
     "@supabase/supabase-js": "^2.38.0",
     "@pinecone-database/pinecone": "^3.0.0",
     "tavily": "^1.0.0",
