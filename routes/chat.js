@@ -1206,9 +1206,20 @@ router.post('/', async (req, res) => {
       { reflection, imageData, conversationHistory }
     );
 
-    // STEP 5: Full consciousness cycle - Skip for image-only turns
+    // STEP 5: Full consciousness cycle - TEMPORARILY DISABLED FOR DEBUGGING
+    // if (message && message.trim().length > 0) {
+    //   saveMemoryAndSelfReflection(userId, message, assistantMessage);
+    // }
+
+    // Temporary simple memory save for debugging
     if (message && message.trim().length > 0) {
-      saveMemoryAndSelfReflection(userId, message, assistantMessage);
+      try {
+        await storeMemory(userId, `User: ${message}`, 'general');
+        await storeMemory(userId, `Splendor: ${assistantMessage}`, 'general');
+      } catch (error) {
+        console.error('Simple memory storage error:', error);
+        // Don't fail the response if memory storage fails
+      }
     }
 
     res.json({
