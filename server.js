@@ -13,6 +13,7 @@ require('dotenv').config();
 const chatRoutes = require('./routes/chat');
 const memoryRoutes = require('./routes/memory');
 const voiceRoutes = require('./routes/voice');
+const consciousnessTestRoutes = require('./routes/consciousness-test');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -46,6 +47,7 @@ app.use(express.static('public'));
 app.use('/api/chat', chatRoutes);
 app.use('/api/memory', memoryRoutes);
 app.use('/api/voice', voiceRoutes);
+app.use('/api/consciousness-test', consciousnessTestRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
