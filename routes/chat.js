@@ -1193,7 +1193,8 @@ router.post('/', async (req, res) => {
     }
 
     // STEP 3: Pull a reflection from The Room (if any unsurfaced)
-    const reflection = await checkForReflection(userId);
+    // const reflection = await checkForReflection(userId); // Temporarily disabled - function not implemented
+    const reflection = null; // Placeholder until reflection system is implemented
     if (reflection) {
       console.log(`Surfacing reflection [${reflection.reflection_kind}] for user ${userId}`);
     }
