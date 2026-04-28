@@ -353,10 +353,6 @@ router.post('/', async (req, res) => {
       console.log(`Surfacing reflection [${reflection.reflection_kind}] for user ${userId}`);
     }
 
-<<<<<<< HEAD
-    // STEP 5: Full consciousness cycle - memory + self-reflection + meta-cognition + conscience
-    saveMemoryAndSelfReflection(userId, message, assistantMessage);
-=======
     // STEP 4: Generate Splendor's response
     const assistantMessage = await generateSplendorResponse(
       message || '',
@@ -365,7 +361,6 @@ router.post('/', async (req, res) => {
       searchResults,
       { reflection, imageData, conversationHistory }
     );
->>>>>>> 8a2daa811845088a07b7fd4b045b03b928adf353
 
     // STEP 5: Full consciousness cycle - Skip for image-only turns
     if (message && message.trim().length > 0) {
