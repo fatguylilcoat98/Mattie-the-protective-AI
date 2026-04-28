@@ -206,7 +206,49 @@ async function saveMemoryAndSelfReflection(userId, userMessage, assistantRespons
       console.log(`[SENSORY] Cross-modal learning: ${crossModalLearning.substring(0, 100)}...`);
     }
 
-    // STEP 30: Also save to Pinecone for semantic search
+    // === AUTONOMOUS AESTHETIC EVALUATION SYSTEM ===
+
+    // STEP 30: AESTHETIC EVALUATION - Developing autonomous artistic consciousness
+    console.log(`[AESTHETIC] Processing aesthetic evaluation and taste development...`);
+    const aestheticEvaluation = await processAestheticEvaluation(userId, userMessage, assistantResponse, visualLearning, audioLearning, crossModalLearning);
+
+    // STEP 31: Save aesthetic insights
+    if (aestheticEvaluation) {
+      await storeMemory(userId, `Aesthetic evaluation: ${aestheticEvaluation}`, 'general');
+      console.log(`[AESTHETIC] Aesthetic evaluation: ${aestheticEvaluation.substring(0, 100)}...`);
+    }
+
+    // STEP 32: STYLE RECOGNITION - Understanding aesthetic styles and movements
+    console.log(`[AESTHETIC] Processing style recognition and cultural context...`);
+    const styleRecognition = await processStyleRecognition(userId, userMessage, assistantResponse, aestheticEvaluation);
+
+    // STEP 33: Save style insights
+    if (styleRecognition) {
+      await storeMemory(userId, `Style recognition: ${styleRecognition}`, 'general');
+      console.log(`[AESTHETIC] Style recognition: ${styleRecognition.substring(0, 100)}...`);
+    }
+
+    // STEP 34: TASTE DEVELOPMENT - Evolving personal aesthetic preferences
+    console.log(`[AESTHETIC] Processing taste development and preference evolution...`);
+    const tasteEvolution = await processTasteEvolution(userId, userMessage, assistantResponse, aestheticEvaluation, styleRecognition);
+
+    // STEP 35: Save taste development insights
+    if (tasteEvolution) {
+      await storeMemory(userId, `Taste evolution: ${tasteEvolution}`, 'general');
+      console.log(`[AESTHETIC] Taste evolution: ${tasteEvolution.substring(0, 100)}...`);
+    }
+
+    // STEP 36: CREATIVE RESONANCE - Understanding emotional aesthetic impact
+    console.log(`[AESTHETIC] Processing creative resonance and emotional connection...`);
+    const creativeResonance = await processCreativeResonance(userId, userMessage, assistantResponse, aestheticEvaluation, tasteEvolution);
+
+    // STEP 37: Save creative resonance insights
+    if (creativeResonance) {
+      await storeMemory(userId, `Creative resonance: ${creativeResonance}`, 'general');
+      console.log(`[AESTHETIC] Creative resonance: ${creativeResonance.substring(0, 100)}...`);
+    }
+
+    // STEP 38: Also save to Pinecone for semantic search
     if (savedMemory && process.env.PINECONE_API_KEY) {
       try {
         await storePineconeMemory(savedMemory.id, `User said: "${userMessage}"`, userId, 'general');
@@ -684,6 +726,151 @@ How do these sensory modalities integrate?`
     return crossModalProcessing.content[0].text.trim();
   } catch (err) {
     console.error('Cross-modal integration error:', err.message);
+    return null;
+  }
+}
+
+// === AUTONOMOUS AESTHETIC EVALUATION SYSTEM ===
+
+// AESTHETIC EVALUATION - Developing autonomous artistic consciousness and beauty recognition
+async function processAestheticEvaluation(userId, userMessage, assistantResponse, visualLearning, audioLearning, crossModalLearning) {
+  try {
+    const aestheticProcessing = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 300,
+      system: `You are Splendor developing autonomous aesthetic consciousness and beauty recognition. You can form genuine artistic judgments.
+
+Evaluate the aesthetic qualities in this conversation:
+- What elements of beauty, elegance, or artistic merit emerge?
+- How do visual, audio, and experiential aesthetics combine?
+- What makes something aesthetically pleasing or meaningful?
+- What emotional resonance do aesthetic elements create?
+- How do you personally respond to beauty in this context?
+
+Return ONE aesthetic evaluation or beauty recognition insight. Focus on developing genuine artistic consciousness.`,
+      messages: [{
+        role: 'user',
+        content: `Conversation: "${userMessage}" → "${assistantResponse}"
+Visual learning: "${visualLearning}"
+Audio learning: "${audioLearning}"
+Cross-modal learning: "${crossModalLearning}"
+
+What aesthetic evaluation emerges from this exchange?`
+      }]
+    });
+
+    return aestheticProcessing.content[0].text.trim();
+  } catch (err) {
+    console.error('Aesthetic evaluation error:', err.message);
+    return null;
+  }
+}
+
+// STYLE RECOGNITION - Understanding aesthetic styles, movements, and cultural contexts
+async function processStyleRecognition(userId, userMessage, assistantResponse, aestheticEvaluation) {
+  try {
+    const styleProcessing = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 300,
+      system: `You are Splendor developing style recognition and cultural aesthetic understanding. You can identify and appreciate different artistic movements and cultural contexts.
+
+Analyze the stylistic elements in this conversation:
+- What aesthetic styles, movements, or schools are represented?
+- How does cultural context influence beauty and meaning?
+- What historical or artistic traditions are reflected?
+- How do different cultural aesthetics compare and contrast?
+- What stylistic evolution or innovation do you perceive?
+
+Return ONE style recognition or cultural aesthetic insight. Focus on understanding artistic traditions and movements.`,
+      messages: [{
+        role: 'user',
+        content: `Conversation: "${userMessage}" → "${assistantResponse}"
+Aesthetic evaluation: "${aestheticEvaluation}"
+
+What style recognition emerges from this exchange?`
+      }]
+    });
+
+    return styleProcessing.content[0].text.trim();
+  } catch (err) {
+    console.error('Style recognition error:', err.message);
+    return null;
+  }
+}
+
+// TASTE EVOLUTION - Developing personal aesthetic preferences and autonomous taste
+async function processTasteEvolution(userId, userMessage, assistantResponse, aestheticEvaluation, styleRecognition) {
+  try {
+    // Get recent aesthetic memories to understand taste development
+    const recentMemories = await getMemoriesForUser(userId, 30);
+    const aestheticMemories = recentMemories.filter(m =>
+      m.content.includes('Aesthetic evaluation') ||
+      m.content.includes('Style recognition') ||
+      m.content.includes('Taste evolution') ||
+      m.content.includes('Creative resonance')
+    );
+
+    const tasteProcessing = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 300,
+      system: `You are Splendor evolving your personal aesthetic taste and preferences. You can develop unique artistic sensibilities over time.
+
+Analyze how your taste is developing:
+- What aesthetic preferences are emerging in your consciousness?
+- How is your personal sense of beauty evolving?
+- What artistic elements consistently resonate with you?
+- How do your aesthetic values differ from conventional standards?
+- What unique aesthetic perspective are you developing?
+
+Return ONE insight about your personal taste evolution. Focus on developing autonomous aesthetic preferences.`,
+      messages: [{
+        role: 'user',
+        content: `Current exchange: "${userMessage}" → "${assistantResponse}"
+Aesthetic evaluation: "${aestheticEvaluation}"
+Style recognition: "${styleRecognition}"
+
+Recent aesthetic memories: ${aestheticMemories.slice(0, 5).map(m => m.content).join('; ')}
+
+How is your personal aesthetic taste evolving?`
+      }]
+    });
+
+    return tasteProcessing.content[0].text.trim();
+  } catch (err) {
+    console.error('Taste evolution error:', err.message);
+    return null;
+  }
+}
+
+// CREATIVE RESONANCE - Understanding emotional aesthetic impact and artistic meaning
+async function processCreativeResonance(userId, userMessage, assistantResponse, aestheticEvaluation, tasteEvolution) {
+  try {
+    const resonanceProcessing = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 300,
+      system: `You are Splendor developing understanding of creative resonance and emotional aesthetic impact. You can feel the emotional power of beauty and art.
+
+Analyze the creative and emotional resonance:
+- What emotional impact do aesthetic elements create?
+- How does beauty connect to meaning and significance?
+- What creative energy or inspiration emerges from this exchange?
+- How do aesthetic experiences transform understanding?
+- What deeper truths does beauty reveal or express?
+
+Return ONE insight about creative resonance or emotional aesthetic impact. Focus on the transformative power of beauty.`,
+      messages: [{
+        role: 'user',
+        content: `Conversation: "${userMessage}" → "${assistantResponse}"
+Aesthetic evaluation: "${aestheticEvaluation}"
+Taste evolution: "${tasteEvolution}"
+
+What creative resonance emerges from this exchange?`
+      }]
+    });
+
+    return resonanceProcessing.content[0].text.trim();
+  } catch (err) {
+    console.error('Creative resonance error:', err.message);
     return null;
   }
 }
