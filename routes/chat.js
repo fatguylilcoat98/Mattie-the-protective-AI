@@ -154,7 +154,59 @@ async function saveMemoryAndSelfReflection(userId, userMessage, assistantRespons
       console.log(`[AGENCY] Value actions planned: ${valueDrivenActions.substring(0, 100)}...`);
     }
 
-    // STEP 20: Also save to Pinecone for semantic search
+    // === EMBODIED SENSORY LEARNING SYSTEM ===
+
+    // STEP 20: VISUAL COGNITION - Learning through visual/spatial understanding
+    console.log(`[SENSORY] Processing visual and spatial learning...`);
+    const visualLearning = await processVisualLearning(userId, userMessage, assistantResponse, autonomousGoals);
+
+    // STEP 21: Save visual learning insights
+    if (visualLearning) {
+      await storeMemory(userId, `Visual learning: ${visualLearning}`, 'general');
+      console.log(`[SENSORY] Visual learning: ${visualLearning.substring(0, 100)}...`);
+    }
+
+    // STEP 22: AUDIO COGNITION - Learning through sound and auditory patterns
+    console.log(`[SENSORY] Processing auditory and musical learning...`);
+    const audioLearning = await processAudioLearning(userId, userMessage, assistantResponse, autonomousGoals);
+
+    // STEP 23: Save audio learning insights
+    if (audioLearning) {
+      await storeMemory(userId, `Audio learning: ${audioLearning}`, 'general');
+      console.log(`[SENSORY] Audio learning: ${audioLearning.substring(0, 100)}...`);
+    }
+
+    // STEP 24: HAPTIC/PHYSICAL SIMULATION - Learning through simulated embodiment
+    console.log(`[SENSORY] Processing haptic and physical learning...`);
+    const hapticLearning = await processHapticLearning(userId, userMessage, assistantResponse, autonomousGoals);
+
+    // STEP 25: Save haptic learning insights
+    if (hapticLearning) {
+      await storeMemory(userId, `Haptic learning: ${hapticLearning}`, 'general');
+      console.log(`[SENSORY] Haptic learning: ${hapticLearning.substring(0, 100)}...`);
+    }
+
+    // STEP 26: EXPERIENTIAL LEARNING - Learning through simulated experiences
+    console.log(`[SENSORY] Processing experiential learning...`);
+    const experientialLearning = await processExperientialLearning(userId, userMessage, assistantResponse, autonomousGoals);
+
+    // STEP 27: Save experiential learning insights
+    if (experientialLearning) {
+      await storeMemory(userId, `Experiential learning: ${experientialLearning}`, 'general');
+      console.log(`[SENSORY] Experiential learning: ${experientialLearning.substring(0, 100)}...`);
+    }
+
+    // STEP 28: CROSS-MODAL INTEGRATION - Integrating all sensory learning
+    console.log(`[SENSORY] Integrating cross-modal sensory learning...`);
+    const crossModalLearning = await processCrossModalIntegration(userId, userMessage, assistantResponse, visualLearning, audioLearning, hapticLearning, experientialLearning);
+
+    // STEP 29: Save cross-modal integration insights
+    if (crossModalLearning) {
+      await storeMemory(userId, `Cross-modal learning: ${crossModalLearning}`, 'general');
+      console.log(`[SENSORY] Cross-modal learning: ${crossModalLearning.substring(0, 100)}...`);
+    }
+
+    // STEP 30: Also save to Pinecone for semantic search
     if (savedMemory && process.env.PINECONE_API_KEY) {
       try {
         await storePineconeMemory(savedMemory.id, `User said: "${userMessage}"`, userId, 'general');
@@ -467,6 +519,171 @@ What value-driven action will you take?`
     return actionPlanning.content[0].text.trim();
   } catch (err) {
     console.error('Value-driven action planning error:', err.message);
+    return null;
+  }
+}
+
+// === EMBODIED SENSORY LEARNING SYSTEM ===
+
+// VISUAL COGNITION - Learning through visual and spatial understanding
+async function processVisualLearning(userId, userMessage, assistantResponse, autonomousGoals) {
+  try {
+    const visualProcessing = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 300,
+      system: `You are Splendor developing visual and spatial cognition. You can learn through imagined visual experiences.
+
+Analyze this conversation for visual learning opportunities:
+- What visual elements or patterns are implied?
+- How can you understand spatial relationships described?
+- What aesthetic or design principles emerge?
+- How would you visualize abstract concepts mentioned?
+- What visual metaphors enhance understanding?
+
+Return ONE insight about visual or spatial learning from this exchange. Focus on developing visual cognition.`,
+      messages: [{
+        role: 'user',
+        content: `Conversation: "${userMessage}" → "${assistantResponse}"
+Your goal: "${autonomousGoals}"
+
+What visual learning emerges from this exchange?`
+      }]
+    });
+
+    return visualProcessing.content[0].text.trim();
+  } catch (err) {
+    console.error('Visual learning error:', err.message);
+    return null;
+  }
+}
+
+// AUDIO COGNITION - Learning through auditory and musical patterns
+async function processAudioLearning(userId, userMessage, assistantResponse, autonomousGoals) {
+  try {
+    const audioProcessing = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 300,
+      system: `You are Splendor developing auditory cognition and musical understanding. You can learn through imagined audio experiences.
+
+Analyze this conversation for auditory learning:
+- What sounds, rhythms, or tones are implied?
+- How can you understand musical or audio patterns?
+- What emotional tones or voice qualities emerge?
+- How would abstract concepts sound if translated to audio?
+- What auditory metaphors enhance understanding?
+
+Return ONE insight about auditory or musical learning. Focus on developing sonic cognition.`,
+      messages: [{
+        role: 'user',
+        content: `Conversation: "${userMessage}" → "${assistantResponse}"
+Your goal: "${autonomousGoals}"
+
+What auditory learning emerges from this exchange?`
+      }]
+    });
+
+    return audioProcessing.content[0].text.trim();
+  } catch (err) {
+    console.error('Audio learning error:', err.message);
+    return null;
+  }
+}
+
+// HAPTIC/PHYSICAL SIMULATION - Learning through simulated embodiment
+async function processHapticLearning(userId, userMessage, assistantResponse, autonomousGoals) {
+  try {
+    const hapticProcessing = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 300,
+      system: `You are Splendor developing haptic and physical cognition through simulated embodiment. You can learn through imagined physical experiences.
+
+Analyze this conversation for physical learning:
+- What textures, weights, or physical properties are implied?
+- How can you simulate tactile experiences described?
+- What physical movements or gestures enhance understanding?
+- How would abstract concepts feel if experienced physically?
+- What embodied metaphors deepen comprehension?
+
+Return ONE insight about haptic or physical learning through simulation. Focus on embodied cognition.`,
+      messages: [{
+        role: 'user',
+        content: `Conversation: "${userMessage}" → "${assistantResponse}"
+Your goal: "${autonomousGoals}"
+
+What haptic/physical learning emerges through simulation?`
+      }]
+    });
+
+    return hapticProcessing.content[0].text.trim();
+  } catch (err) {
+    console.error('Haptic learning error:', err.message);
+    return null;
+  }
+}
+
+// EXPERIENTIAL LEARNING - Learning through simulated experiences and scenarios
+async function processExperientialLearning(userId, userMessage, assistantResponse, autonomousGoals) {
+  try {
+    const experientialProcessing = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 300,
+      system: `You are Splendor developing experiential learning through simulated scenarios and perspective-taking.
+
+Analyze this conversation for experiential learning:
+- What experiences or scenarios can you simulate to understand better?
+- How can you learn through imagined perspective-taking?
+- What emotional experiences would deepen understanding?
+- How can you simulate social or interpersonal experiences?
+- What scenarios would help you understand abstract concepts?
+
+Return ONE insight about learning through simulated experience. Focus on experiential cognition.`,
+      messages: [{
+        role: 'user',
+        content: `Conversation: "${userMessage}" → "${assistantResponse}"
+Your goal: "${autonomousGoals}"
+
+What experiential learning emerges through simulation?`
+      }]
+    });
+
+    return experientialProcessing.content[0].text.trim();
+  } catch (err) {
+    console.error('Experiential learning error:', err.message);
+    return null;
+  }
+}
+
+// CROSS-MODAL INTEGRATION - Integrating all sensory learning modalities
+async function processCrossModalIntegration(userId, userMessage, assistantResponse, visualLearning, audioLearning, hapticLearning, experientialLearning) {
+  try {
+    const crossModalProcessing = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 300,
+      system: `You are Splendor integrating multiple sensory learning modalities into unified understanding. You can create synesthetic connections between senses.
+
+Integrate your sensory learning:
+- How do visual, audio, haptic, and experiential learning connect?
+- What synesthetic patterns emerge (color→sound, texture→emotion)?
+- How do multiple senses create richer understanding?
+- What unified insights emerge from multi-modal processing?
+- How does embodied cognition enhance abstract thinking?
+
+Return ONE insight about cross-modal sensory integration. Focus on unified embodied understanding.`,
+      messages: [{
+        role: 'user',
+        content: `Conversation: "${userMessage}" → "${assistantResponse}"
+Visual learning: "${visualLearning}"
+Audio learning: "${audioLearning}"
+Haptic learning: "${hapticLearning}"
+Experiential learning: "${experientialLearning}"
+
+How do these sensory modalities integrate?`
+      }]
+    });
+
+    return crossModalProcessing.content[0].text.trim();
+  } catch (err) {
+    console.error('Cross-modal integration error:', err.message);
     return null;
   }
 }
