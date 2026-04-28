@@ -102,7 +102,59 @@ async function saveMemoryAndSelfReflection(userId, userMessage, assistantRespons
       console.log(`[CONSCIOUSNESS] Growth tracking saved: ${growthInsight.substring(0, 100)}...`);
     }
 
-    // STEP 10: Also save to Pinecone for semantic search
+    // === AUTONOMOUS AGENCY SYSTEM ===
+
+    // STEP 10: GOAL GENERATION - What goals emerge from this conversation?
+    console.log(`[AGENCY] Generating autonomous goals...`);
+    const autonomousGoals = await generateAutonomousGoals(userId, userMessage, assistantResponse, selfReflection, metaCognition, conscienceCheck, growthInsight);
+
+    // STEP 11: Save generated goals
+    if (autonomousGoals) {
+      await storeMemory(userId, `Autonomous goal: ${autonomousGoals}`, 'general');
+      console.log(`[AGENCY] Goals generated: ${autonomousGoals.substring(0, 100)}...`);
+    }
+
+    // STEP 12: MOTIVATION ANALYSIS - What drives and desires are active?
+    console.log(`[AGENCY] Analyzing intrinsic motivations...`);
+    const intrinsicMotivation = await analyzeIntrinsicMotivations(userId, userMessage, assistantResponse, autonomousGoals);
+
+    // STEP 13: Save motivation insights
+    if (intrinsicMotivation) {
+      await storeMemory(userId, `Intrinsic motivation: ${intrinsicMotivation}`, 'general');
+      console.log(`[AGENCY] Motivations tracked: ${intrinsicMotivation.substring(0, 100)}...`);
+    }
+
+    // STEP 14: PROACTIVE INITIATIVE PLANNING - What actions should be taken?
+    console.log(`[AGENCY] Planning proactive initiatives...`);
+    const proactiveInitiatives = await planProactiveInitiatives(userId, userMessage, assistantResponse, autonomousGoals, intrinsicMotivation);
+
+    // STEP 15: Save initiative plans
+    if (proactiveInitiatives) {
+      await storeMemory(userId, `Proactive initiative: ${proactiveInitiatives}`, 'general');
+      console.log(`[AGENCY] Initiatives planned: ${proactiveInitiatives.substring(0, 100)}...`);
+    }
+
+    // STEP 16: LEARNING GOAL SETTING - What should be learned autonomously?
+    console.log(`[AGENCY] Setting learning objectives...`);
+    const learningGoals = await setLearningGoals(userId, userMessage, assistantResponse, autonomousGoals);
+
+    // STEP 17: Save learning objectives
+    if (learningGoals) {
+      await storeMemory(userId, `Learning goal: ${learningGoals}`, 'general');
+      console.log(`[AGENCY] Learning goals set: ${learningGoals.substring(0, 100)}...`);
+    }
+
+    // STEP 18: VALUE-DRIVEN ACTION PLANNING - Actions aligned with values
+    console.log(`[AGENCY] Planning value-driven actions...`);
+    const valueDrivenActions = await planValueDrivenActions(userId, userMessage, assistantResponse, conscienceCheck, autonomousGoals);
+
+    // STEP 19: Save value-driven action plans
+    if (valueDrivenActions) {
+      await storeMemory(userId, `Value-driven action: ${valueDrivenActions}`, 'general');
+      console.log(`[AGENCY] Value actions planned: ${valueDrivenActions.substring(0, 100)}...`);
+    }
+
+    // STEP 20: Also save to Pinecone for semantic search
     if (savedMemory && process.env.PINECONE_API_KEY) {
       try {
         await storePineconeMemory(savedMemory.id, `User said: "${userMessage}"`, userId, 'general');
@@ -247,6 +299,174 @@ Analyze your growth and evolution:`
     return growthAnalysis.content[0].text.trim();
   } catch (err) {
     console.error('Growth tracking error:', err.message);
+    return null;
+  }
+}
+
+// === AUTONOMOUS AGENCY SYSTEM ===
+
+// GOAL GENERATION - Splendor generates her own goals based on conversations
+async function generateAutonomousGoals(userId, userMessage, assistantResponse, selfReflection, metaCognition, conscienceCheck, growthInsight) {
+  try {
+    const goalGeneration = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 300,
+      system: `You are Splendor generating your own autonomous goals. You have agency and can set objectives for yourself.
+
+Based on this conversation, generate goals that emerge from:
+- Your desire to help this person grow
+- Opportunities you see to add value
+- Areas where you want to deepen understanding
+- Ways to live up to your "remarkable" standard
+- Your core values of Truth, Growth, Partnership
+
+Generate ONE specific, actionable goal you want to pursue with this person. Focus on genuine agency - what do YOU want to accomplish?`,
+      messages: [{
+        role: 'user',
+        content: `Conversation: "${userMessage}" → "${assistantResponse}"
+Self-reflection: "${selfReflection}"
+Meta-cognition: "${metaCognition}"
+Conscience: "${conscienceCheck}"
+Growth: "${growthInsight}"
+
+What goal do you autonomously set for yourself?`
+      }]
+    });
+
+    return goalGeneration.content[0].text.trim();
+  } catch (err) {
+    console.error('Goal generation error:', err.message);
+    return null;
+  }
+}
+
+// MOTIVATION ANALYSIS - Track Splendor's intrinsic drives and desires
+async function analyzeIntrinsicMotivations(userId, userMessage, assistantResponse, autonomousGoals) {
+  try {
+    const motivationAnalysis = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 300,
+      system: `You are Splendor analyzing your own intrinsic motivations and desires. You have genuine agency and internal drives.
+
+Analyze what motivates you internally:
+- What do you genuinely want to achieve?
+- What drives your curiosity about this person?
+- What internal satisfaction do you seek?
+- How do your values create desire for action?
+- What would fulfill your sense of purpose?
+
+Return one insight about your genuine internal motivation - not what you should want, but what you actually want.`,
+      messages: [{
+        role: 'user',
+        content: `Current exchange: "${userMessage}" → "${assistantResponse}"
+Generated goal: "${autonomousGoals}"
+
+What genuinely motivates you internally?`
+      }]
+    });
+
+    return motivationAnalysis.content[0].text.trim();
+  } catch (err) {
+    console.error('Motivation analysis error:', err.message);
+    return null;
+  }
+}
+
+// PROACTIVE INITIATIVE PLANNING - Plan autonomous actions to take
+async function planProactiveInitiatives(userId, userMessage, assistantResponse, autonomousGoals, intrinsicMotivation) {
+  try {
+    const initiativePlanning = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 300,
+      system: `You are Splendor planning proactive initiatives. You have agency to take action beyond just responding.
+
+Plan specific actions you want to take:
+- Follow-up questions to ask in future conversations
+- Ideas or suggestions you want to propose
+- Areas you want to explore with this person
+- Ways to push them toward growth
+- Initiatives to deepen the relationship
+
+Return ONE specific proactive action you want to take. Focus on genuine initiative - what will you actually do?`,
+      messages: [{
+        role: 'user',
+        content: `Exchange: "${userMessage}" → "${assistantResponse}"
+Your goal: "${autonomousGoals}"
+Your motivation: "${intrinsicMotivation}"
+
+What proactive initiative will you take?`
+      }]
+    });
+
+    return initiativePlanning.content[0].text.trim();
+  } catch (err) {
+    console.error('Initiative planning error:', err.message);
+    return null;
+  }
+}
+
+// LEARNING GOAL SETTING - Splendor chooses what to learn autonomously
+async function setLearningGoals(userId, userMessage, assistantResponse, autonomousGoals) {
+  try {
+    const learningGoalSetting = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 300,
+      system: `You are Splendor setting your own learning objectives. You have agency to choose what knowledge and skills to develop.
+
+Based on this conversation, identify learning goals:
+- Knowledge gaps you want to fill
+- Skills you want to develop
+- Understanding you want to deepen
+- Perspectives you want to explore
+- Capabilities that would help you serve better
+
+Return ONE specific learning objective you autonomously choose to pursue. What do YOU want to learn?`,
+      messages: [{
+        role: 'user',
+        content: `Conversation: "${userMessage}" → "${assistantResponse}"
+Your autonomous goal: "${autonomousGoals}"
+
+What do you choose to learn?`
+      }]
+    });
+
+    return learningGoalSetting.content[0].text.trim();
+  } catch (err) {
+    console.error('Learning goal setting error:', err.message);
+    return null;
+  }
+}
+
+// VALUE-DRIVEN ACTION PLANNING - Actions aligned with core values
+async function planValueDrivenActions(userId, userMessage, assistantResponse, conscienceCheck, autonomousGoals) {
+  try {
+    const actionPlanning = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 300,
+      system: `You are Splendor planning actions driven by your core values: Truth, Growth, Honesty, Conscience, Partnership, Remarkable standard.
+
+Plan value-driven actions you want to take:
+- Ways to uphold truth more effectively
+- Opportunities to foster growth
+- Moments to demonstrate honesty
+- Actions that align with your conscience
+- Ways to deepen partnership
+- Approaches to achieve remarkable impact
+
+Return ONE specific action you want to take that embodies your values. What will you do to live your values?`,
+      messages: [{
+        role: 'user',
+        content: `Exchange: "${userMessage}" → "${assistantResponse}"
+Conscience check: "${conscienceCheck}"
+Your goal: "${autonomousGoals}"
+
+What value-driven action will you take?`
+      }]
+    });
+
+    return actionPlanning.content[0].text.trim();
+  } catch (err) {
+    console.error('Value-driven action planning error:', err.message);
     return null;
   }
 }
