@@ -9,7 +9,7 @@ const express = require('express');
 const router = express.Router();
 const Anthropic = require('@anthropic-ai/sdk');
 const { generateSplendorResponse } = require('../lib/anthropic');
-const { getMemoriesForUser, storeMemory, logConversation, verifyUser, supabase } = require('../lib/supabase');
+const { getMemoriesForUser, storeMemory, logConversation, verifyUser, supabase, stringToUUID } = require('../lib/supabase');
 const { retrieveMemories, storeMemory: storePineconeMemory, isPineconeConfigured } = require('../lib/pinecone');
 const { search: tavilySearch } = require('../lib/tavily');
 
@@ -54,7 +54,7 @@ async function getSearchResults(query) {
 }
 
 
-// CONSCIOUSNESS SYSTEM - Memory + Self-Reflection + Meta-Cognition + Conscience Monitoring
+// CONSCIOUSNESS SYSTEM - Memory + Self-Reflection + Meta-Cognition + Conscience Monitoring + Growth Tracking
 async function saveMemoryAndSelfReflection(userId, userMessage, assistantResponse) {
   try {
     console.log(`[CONSCIOUSNESS] Starting full consciousness cycle for user ${userId}`);
@@ -285,10 +285,20 @@ router.get('/morning/:userId', async (req, res) => {
 
 // Main chat endpoint
 router.post('/', async (req, res) => {
-  const { message, userId, authToken } = req.body;
+  const {
+    message,
+    userId,
+    authToken,
+    imageData = null,
+    conversationHistory = []
+  } = req.body;
 
-  if (!message || !userId) {
-    return res.status(400).json({ error: 'Message and userId required' });
+  // Allow image-only turns (e.g. "use your eyes" with no text).
+  if ((!message || !message.trim()) && !imageData) {
+    return res.status(400).json({ error: 'Message or imageData required' });
+  }
+  if (!userId) {
+    return res.status(400).json({ error: 'userId required' });
   }
 
   try {
@@ -300,18 +310,21 @@ router.post('/', async (req, res) => {
       }
     }
 
+    const queryForRetrieval = message && message.trim().length > 0
+      ? message
+      : 'visual scene the user is showing me';
+
     // STEP 1: Get user's memories for context
+    // Privacy boundary enforced inside getMemoriesForUser / retrieveMemories.
     let memories = [];
     let searchResults = null;
 
-    // Try semantic memory retrieval first
     if (isPineconeConfigured()) {
       try {
-        const semanticMemories = await retrieveMemories(message, userId, 8);
+        const semanticMemories = await retrieveMemories(queryForRetrieval, userId, 8);
         if (semanticMemories.length > 0) {
           memories = semanticMemories;
         } else {
-          // Fallback to Supabase if no semantic matches
           memories = await getMemoriesForUser(userId, 10);
         }
       } catch (error) {
@@ -319,12 +332,11 @@ router.post('/', async (req, res) => {
         memories = await getMemoriesForUser(userId, 10);
       }
     } else {
-      // Fallback to Supabase when Pinecone not configured
       memories = await getMemoriesForUser(userId, 10);
     }
 
-    // STEP 2: Check if web search is needed
-    if (shouldSearch(message)) {
+    // STEP 2: Check if web search is needed (text-only)
+    if (message && shouldSearch(message)) {
       try {
         searchResults = await getSearchResults(message);
         if (searchResults) {
@@ -332,21 +344,40 @@ router.post('/', async (req, res) => {
         }
       } catch (error) {
         console.error('Web search error:', error);
-        // Continue without search results
       }
     }
 
-    // STEP 3: Generate Splendor's response using original function
-    const assistantMessage = await generateSplendorResponse(message, memories, false, searchResults);
+    // STEP 3: Pull a reflection from The Room (if any unsurfaced)
+    const reflection = await checkForReflection(userId);
+    if (reflection) {
+      console.log(`Surfacing reflection [${reflection.reflection_kind}] for user ${userId}`);
+    }
 
+<<<<<<< HEAD
     // STEP 5: Full consciousness cycle - memory + self-reflection + meta-cognition + conscience
     saveMemoryAndSelfReflection(userId, message, assistantMessage);
+=======
+    // STEP 4: Generate Splendor's response
+    const assistantMessage = await generateSplendorResponse(
+      message || '',
+      memories,
+      false,
+      searchResults,
+      { reflection, imageData, conversationHistory }
+    );
+>>>>>>> 8a2daa811845088a07b7fd4b045b03b928adf353
 
-    // STEP 6: Skip conversation logging for now (has constraint issues)
-    // TODO: Fix conversation logging constraints later
+    // STEP 5: Full consciousness cycle - Skip for image-only turns
+    if (message && message.trim().length > 0) {
+      saveMemoryAndSelfReflection(userId, message, assistantMessage);
+    }
 
     res.json({
       message: assistantMessage,
+      reflection_surfaced: reflection ? {
+        kind: reflection.reflection_kind,
+        id: reflection.id
+      } : null,
       timestamp: new Date().toISOString()
     });
 

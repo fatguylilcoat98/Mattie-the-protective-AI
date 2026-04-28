@@ -50,6 +50,7 @@ Fill in your environment variables:
 - `PINECONE_API_KEY` - Your Pinecone API key (optional - semantic memory)
 - `PINECONE_INDEX` - Your Pinecone index name (default: splendor-memory)
 - `TAVILY_API_KEY` - Your Tavily API key (optional - web search)
+- `ELEVENLABS_API_KEY` - Your ElevenLabs API key (optional - falls back to browser TTS)
 
 ### 3. Database Setup
 
@@ -155,11 +156,34 @@ The app will be available at `http://localhost:3000`
   - Always cites sources and indicates when search was used
   - Only searches when genuinely needed
 
+### ✅ The Room — Background Reflection
+- Scheduled cron job (every 6h) generates reflections from stored memories
+- Concrete patterns, open threads, and connections only — no fake profundity, no encouragement
+- Tracks open threads and elevates priority after 48hrs of silence
+- Surfaces one reflection naturally at the start of the next conversation
+- `NO_REFLECTION` is a valid output. Silence over noise.
+
+### ✅ Privacy Boundary — Per-User Memory Spaces
+- Every memory is tagged `memory_owner` (`self` | `shared`)
+- Sessions only see memories owned by the active user (or explicitly shared)
+- Chris's memories never appear in Aubrey's context, and vice versa
+- Built in from day one before any second user joins
+
+### ✅ Voice — Splendor Picks Her Own
+- `POST /api/voice/choose` — Splendor reads her soul document and picks
+- Three curated options (calm_direct / warm_steady / clear_strong)
+- ElevenLabs synthesis when configured; clean fallback to browser TTS otherwise
+- Tap the speaker icon to have replies read aloud
+
+### ✅ Camera — "Use Your Eyes"
+- Tap the eye icon (or type "use your eyes") to open the rear camera
+- A frame is captured and sent with the next message
+- Splendor responds to what she sees via Claude's vision support
+
 ### 🚧 Planned Features
 - Memory Console (view/edit stored memories)
 - Advanced memory types and retrieval
 - Proactive reminders and follow-ups
-- Enhanced voice interaction
 - Multi-device sync
 
 ---
@@ -181,20 +205,27 @@ The soul document includes:
 
 ```
 splendor/
-├── public/           # PWA frontend
-│   ├── index.html   # Main app interface
-│   ├── manifest.json # PWA configuration
-│   ├── sw.js        # Service worker
-│   └── icons/       # App icons
-├── routes/          # API routes
-│   ├── chat.js      # Chat and morning check-in
-│   └── memory.js    # Memory management
-├── lib/             # Core libraries
-│   ├── anthropic.js # AI integration + soul document
-│   ├── supabase.js  # Database and auth
-│   ├── pinecone.js  # Semantic memory (vector search)
-│   └── tavily.js    # Web search capabilities
-└── server.js        # Express server
+├── public/                  # PWA frontend
+│   ├── index.html          # Main app interface (camera UI, voice toggle)
+│   ├── app.js              # Frontend logic
+│   ├── manifest.json       # PWA configuration
+│   ├── sw.js               # Service worker
+│   └── icons/              # App icons
+├── routes/                  # API routes
+│   ├── chat.js             # Chat, morning check-in, reflection surfacing, vision input
+│   ├── memory.js           # Memory management (memory_owner aware)
+│   └── voice.js            # Voice selection + TTS
+├── lib/                     # Core libraries
+│   ├── anthropic.js        # AI integration + soul document
+│   ├── supabase.js         # Database and auth (privacy boundary)
+│   ├── pinecone.js         # Semantic memory (vector search)
+│   ├── tavily.js           # Web search capabilities
+│   └── voice.js            # ElevenLabs integration
+├── workers/                 # Background workers
+│   └── reflection-worker.js # The Room — scheduled reflection generation
+├── render.yaml              # Render web + cron config
+├── database.sql             # Schema (memories, reflections, open_threads, splendor_config)
+└── server.js                # Express server
 ```
 
 ---

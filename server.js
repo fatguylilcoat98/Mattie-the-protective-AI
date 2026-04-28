@@ -12,11 +12,12 @@ require('dotenv').config();
 
 const chatRoutes = require('./routes/chat');
 const memoryRoutes = require('./routes/memory');
+const voiceRoutes = require('./routes/voice');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
+// Middleware — CSP relaxed for camera frames (blob:) and TTS audio (data:/blob:)
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -25,7 +26,8 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       connectSrc: ["'self'"],
-      imgSrc: ["'self'", "data:"]
+      imgSrc: ["'self'", "data:", "blob:"],
+      mediaSrc: ["'self'", "data:", "blob:"]
     }
   }
 }));
@@ -43,6 +45,7 @@ app.use(express.static('public'));
 // Routes
 app.use('/api/chat', chatRoutes);
 app.use('/api/memory', memoryRoutes);
+app.use('/api/voice', voiceRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

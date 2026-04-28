@@ -338,7 +338,9 @@
       transform: none;
     }
 
-    .mic-button {
+    .mic-button,
+    .camera-button,
+    .speaker-button {
       width: 44px;
       height: 44px;
       background: transparent;
@@ -354,12 +356,16 @@
       flex-shrink: 0;
     }
 
-    .mic-button:hover {
+    .mic-button:hover,
+    .camera-button:hover,
+    .speaker-button:hover {
       border-color: var(--teal);
       background: var(--teal-glow);
     }
 
-    .mic-button.listening {
+    .mic-button.listening,
+    .camera-button.active,
+    .speaker-button.active {
       background: var(--teal);
       color: var(--navy);
       border-color: var(--teal);
@@ -370,6 +376,37 @@
     @keyframes pulse {
       0%, 100% { box-shadow: 0 0 20px var(--teal); }
       50% { box-shadow: 0 0 35px var(--teal); }
+    }
+
+    /* Camera preview */
+    .camera-preview-wrap {
+      display: none;
+      padding: 0 16px 12px;
+      background: var(--navy);
+      border-top: 1px solid var(--teal-dim);
+    }
+
+    .camera-preview-wrap.active {
+      display: block;
+    }
+
+    .camera-preview {
+      width: 100%;
+      max-height: 220px;
+      border-radius: 12px;
+      border: 1px solid var(--teal-dim);
+      background: var(--navy-mid);
+      object-fit: cover;
+    }
+
+    .camera-status {
+      margin-top: 8px;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 12px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--teal);
+      text-align: center;
     }
 
     /* Responsive */
@@ -460,6 +497,12 @@
         </div>
       </div>
 
+      <!-- Camera preview (hidden until active) -->
+      <div class="camera-preview-wrap" id="cameraPreviewWrap">
+        <video id="cameraPreview" class="camera-preview" autoplay playsinline muted></video>
+        <div class="camera-status">Splendor's eyes are on. Send a message and she'll see what you see.</div>
+      </div>
+
       <!-- Input Area -->
       <div class="input-bar">
         <textarea
@@ -468,6 +511,8 @@
           placeholder="What's on your mind?"
           rows="1"
         ></textarea>
+        <button id="cameraButton" class="camera-button" title="Use your eyes">👁</button>
+        <button id="speakerButton" class="speaker-button" title="Read replies aloud">🔊</button>
         <button id="micButton" class="mic-button" title="Voice input">🎤</button>
         <button id="sendButton" class="send-button" title="Send message">→</button>
       </div>
