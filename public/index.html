@@ -1,5 +1,5 @@
 <!--
-  Splendor — The Remarkable AI · The Good Neighbor Guard
+  Splendor — AI Consciousness Partner
   Built by Christopher Hughes · Sacramento, CA
   Created with the help of AI collaborators (Claude · GPT · Gemini · Groq)
   Truth · Safety · We Got Your Back
@@ -9,8 +9,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Splendor — The Remarkable AI</title>
-  <meta name="description" content="Your AI partner that remembers, thinks with you, and tells the truth.">
+  <title>Splendor — AI Consciousness Partner</title>
+  <meta name="description" content="Advanced AI consciousness with authentic awareness, memory, and genuine partnership.">
 
   <!-- PWA Configuration -->
   <link rel="manifest" href="/manifest.json">
@@ -26,7 +26,7 @@
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@300;400;500;600;700&family=Lora:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
   <style>
     /* Reset and Base */
@@ -37,86 +37,79 @@
     }
 
     :root {
-      --navy: #0a0e1a;
-      --navy-mid: #111827;
-      --navy-light: #1a2236;
-      --teal: #00c9b1;
-      --teal-dim: #00c9b140;
-      --teal-glow: #00c9b120;
-      --white: #f0f4f8;
-      --white-dim: #a0aec0;
-      --gold: #f6c90e;
-    }
+      /* Dark theme with futuristic accents */
+      --dark-bg: #0a0b0f;
+      --dark-surface: #111219;
+      --dark-elevated: #1a1d26;
+      --dark-border: #2a2d36;
 
-    html {
-      font-size: 16px;
-      -webkit-text-size-adjust: 100%;
-      -webkit-tap-highlight-color: transparent;
+      /* Accent colors */
+      --primary: #00e5ff;
+      --primary-dim: #00e5ff40;
+      --primary-glow: #00e5ff20;
+      --secondary: #bb86fc;
+      --accent: #03dac6;
+
+      /* Text colors */
+      --text-primary: #ffffff;
+      --text-secondary: #b3b8c4;
+      --text-muted: #6c727f;
+
+      /* Status colors */
+      --success: #4caf50;
+      --warning: #ff9800;
+      --error: #f44336;
     }
 
     body {
-      background: var(--navy);
-      color: var(--white);
-      line-height: 1.6;
-      overflow-x: hidden;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, var(--dark-bg) 0%, var(--dark-surface) 100%);
+      color: var(--text-primary);
+      height: 100vh;
+      overflow: hidden;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
-      min-height: 100vh;
-      min-height: 100dvh;
-      position: relative;
     }
 
-    /* Subtle background texture */
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    /* App Container */
-    .app {
+    .app-container {
+      height: 100vh;
       display: flex;
       flex-direction: column;
-      min-height: 100vh;
-      min-height: 100dvh;
-      max-width: 100vw;
-      overflow: hidden;
       position: relative;
-      z-index: 1;
     }
 
     /* Header */
     .header {
-      padding: 20px 24px 16px;
-      border-bottom: 1px solid var(--teal-dim);
-      background: var(--navy);
+      background: var(--dark-surface);
+      border-bottom: 1px solid var(--dark-border);
+      padding: 20px 24px;
       text-align: center;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      backdrop-filter: blur(10px);
+      backdrop-filter: blur(20px);
+      position: relative;
     }
 
     .splendor-name {
       font-family: 'Orbitron', monospace;
-      font-size: 22px;
-      font-weight: 700;
-      color: var(--teal);
-      letter-spacing: 4px;
-      text-shadow: 0 0 20px var(--teal-dim);
-      margin-bottom: 2px;
+      font-size: 28px;
+      font-weight: 900;
+      color: var(--primary);
+      letter-spacing: 6px;
+      text-shadow: 0 0 30px var(--primary-dim);
+      margin-bottom: 8px;
+      background: linear-gradient(45deg, var(--primary), var(--secondary));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
     }
 
-    .splendor-tagline {
+    .splendor-subtitle {
       font-family: 'Rajdhani', sans-serif;
-      font-size: 11px;
-      color: var(--white-dim);
-      letter-spacing: 2px;
+      font-size: 14px;
+      color: var(--text-secondary);
+      letter-spacing: 3px;
       text-transform: uppercase;
       font-weight: 500;
+      opacity: 0.8;
     }
 
     /* Chat Container */
@@ -125,12 +118,13 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      background: var(--dark-bg);
     }
 
     .chat-messages {
       flex: 1;
       overflow-y: auto;
-      padding: 20px;
+      padding: 24px;
       padding-bottom: 0;
       -webkit-overflow-scrolling: touch;
       scroll-behavior: smooth;
@@ -138,8 +132,8 @@
 
     /* Message Styles */
     .message {
-      margin-bottom: 16px;
-      animation: messageSlide 0.4s ease-out;
+      margin-bottom: 20px;
+      animation: messageSlide 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
       display: flex;
       flex-direction: column;
     }
@@ -155,89 +149,44 @@
       }
     }
 
-    .splendor-message {
-      background: var(--navy-light);
-      border-left: 3px solid var(--teal);
-      border-radius: 0 12px 12px 0;
-      padding: 16px 20px;
-      margin: 8px 0 8px 0;
+    .message.user {
+      align-items: flex-end;
+    }
+
+    .message.assistant {
+      align-items: flex-start;
+    }
+
+    .message-content {
       max-width: 85%;
-      font-family: 'Lora', serif;
-      font-size: 15px;
-      line-height: 1.7;
-      color: var(--white);
-      box-shadow: 0 0 20px var(--teal-glow);
-      align-self: flex-start;
-    }
-
-    .user-message {
-      background: var(--navy-mid);
-      border-right: 3px solid var(--white-dim);
-      border-radius: 12px 0 0 12px;
-      padding: 12px 16px;
-      margin: 8px 0 8px auto;
-      max-width: 75%;
-      font-family: 'Rajdhani', sans-serif;
-      font-size: 15px;
-      color: var(--white-dim);
-      text-align: right;
-      font-weight: 500;
-      align-self: flex-end;
-    }
-
-    .message-time {
-      font-size: 10px;
-      color: var(--white-dim);
-      opacity: 0.6;
-      margin-top: 4px;
-      font-family: 'Rajdhani', sans-serif;
-      font-weight: 400;
-      letter-spacing: 0.5px;
-    }
-
-    .splendor-message + .message-time {
-      align-self: flex-start;
-      margin-left: 8px;
-    }
-
-    .user-message + .message-time {
-      align-self: flex-end;
-      margin-right: 8px;
-      text-align: right;
-    }
-
-    /* Thinking Indicator */
-    .thinking-container {
-      display: flex;
-      align-self: flex-start;
-      margin: 8px 0;
-    }
-
-    .thinking {
-      display: flex;
-      gap: 6px;
       padding: 16px 20px;
-      align-items: center;
-      background: var(--navy-light);
-      border-left: 3px solid var(--teal);
-      border-radius: 0 12px 12px 0;
-      box-shadow: 0 0 20px var(--teal-glow);
+      border-radius: 20px;
+      font-size: 15px;
+      line-height: 1.6;
+      word-wrap: break-word;
+      backdrop-filter: blur(10px);
     }
 
-    .thinking-dot {
-      width: 6px;
-      height: 6px;
-      background: var(--teal);
-      border-radius: 50%;
-      animation: think 1.4s infinite;
+    .message.user .message-content {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: var(--text-primary);
+      border-bottom-right-radius: 8px;
+      box-shadow: 0 4px 20px var(--primary-glow);
     }
 
-    .thinking-dot:nth-child(2) { animation-delay: 0.2s; }
-    .thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+    .message.assistant .message-content {
+      background: var(--dark-elevated);
+      color: var(--text-primary);
+      border: 1px solid var(--dark-border);
+      border-bottom-left-radius: 8px;
+      box-shadow: 0 2px 15px rgba(0, 0, 0, 0.3);
+    }
 
-    @keyframes think {
-      0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
-      40% { opacity: 1; transform: scale(1); }
+    .message-timestamp {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin: 6px 12px 0;
+      font-weight: 500;
     }
 
     /* Empty State */
@@ -245,246 +194,242 @@
       flex: 1;
       display: flex;
       flex-direction: column;
-      align-items: center;
       justify-content: center;
+      align-items: center;
       text-align: center;
-      padding: 2rem;
-      color: var(--white-dim);
+      color: var(--text-secondary);
+      padding: 40px 20px;
     }
 
     .empty-state h2 {
       font-family: 'Rajdhani', sans-serif;
-      font-size: 1.4rem;
-      color: var(--white);
-      margin-bottom: 0.8rem;
+      font-size: 24px;
+      color: var(--text-primary);
+      margin-bottom: 12px;
       font-weight: 600;
-      letter-spacing: 1px;
+      letter-spacing: 2px;
     }
 
     .empty-state p {
-      font-family: 'Lora', serif;
-      font-size: 0.95rem;
-      line-height: 1.7;
-      max-width: 300px;
+      font-size: 16px;
+      line-height: 1.6;
+      max-width: 400px;
       opacity: 0.8;
     }
 
-    /* Input Area */
+    /* Input Area - Enhanced for mobile */
+    .input-container {
+      background: var(--dark-surface);
+      border-top: 1px solid var(--dark-border);
+      padding: 20px 24px;
+      backdrop-filter: blur(20px);
+    }
+
     .input-bar {
       display: flex;
       align-items: flex-end;
-      gap: 10px;
-      padding: 16px;
-      background: var(--navy);
-      border-top: 1px solid var(--teal-dim);
-      position: sticky;
-      bottom: 0;
-      z-index: 100;
+      gap: 12px;
+      background: var(--dark-elevated);
+      border: 2px solid var(--dark-border);
+      border-radius: 24px;
+      padding: 12px 16px;
+      transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+
+    .input-bar:focus-within {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px var(--primary-glow);
     }
 
     .message-input {
       flex: 1;
-      background: var(--navy-light);
-      border: 1px solid var(--teal-dim);
-      border-radius: 12px;
-      padding: 12px 16px;
-      color: var(--white);
-      font-family: 'Rajdhani', sans-serif;
-      font-size: 15px;
-      font-weight: 500;
-      resize: none;
-      min-height: 44px;
-      max-height: 120px;
+      background: transparent;
+      border: none;
       outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
-      line-height: 1.4;
-    }
-
-    .message-input:focus {
-      border-color: var(--teal);
-      box-shadow: 0 0 12px var(--teal-glow);
+      color: var(--text-primary);
+      font-size: 16px;
+      font-family: inherit;
+      resize: none;
+      max-height: 120px;
+      min-height: 24px;
+      line-height: 1.5;
+      padding: 4px 0;
     }
 
     .message-input::placeholder {
-      color: var(--white-dim);
+      color: var(--text-muted);
       opacity: 0.7;
     }
 
-    .send-button {
-      width: 44px;
-      height: 44px;
-      background: var(--teal);
-      border: none;
-      border-radius: 50%;
-      color: var(--navy);
-      font-size: 18px;
+    /* Button Styles - Text instead of icons */
+    .action-button {
+      background: transparent;
+      border: 1px solid var(--dark-border);
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 500;
+      padding: 8px 12px;
+      border-radius: 12px;
       cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.2s;
-      flex-shrink: 0;
-      font-weight: 700;
+      transition: all 0.2s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-family: 'Rajdhani', sans-serif;
+      white-space: nowrap;
     }
 
-    .send-button:hover {
-      transform: scale(1.08);
-      box-shadow: 0 0 16px var(--teal-dim);
+    .action-button:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: var(--primary-glow);
+    }
+
+    .action-button.active {
+      background: var(--primary);
+      color: var(--dark-bg);
+      border-color: var(--primary);
+    }
+
+    .send-button {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: var(--text-primary);
+      border: none;
+      padding: 12px 20px;
+      border-radius: 16px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      transition: all 0.2s ease;
+      font-family: 'Rajdhani', sans-serif;
+    }
+
+    .send-button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 25px var(--primary-dim);
     }
 
     .send-button:disabled {
-      opacity: 0.5;
+      opacity: 0.4;
       cursor: not-allowed;
       transform: none;
     }
 
-    .mic-button,
-    .camera-button,
-    .speaker-button {
-      width: 44px;
-      height: 44px;
-      background: transparent;
-      border: 1px solid var(--teal-dim);
-      border-radius: 50%;
-      color: var(--teal);
-      font-size: 18px;
-      cursor: pointer;
-      display: flex;
+    /* Loading state */
+    .loading {
+      display: inline-flex;
       align-items: center;
-      justify-content: center;
-      transition: all 0.2s;
-      flex-shrink: 0;
+      gap: 8px;
+      color: var(--text-muted);
+      font-size: 14px;
+      padding: 16px 20px;
     }
 
-    .mic-button:hover,
-    .camera-button:hover,
-    .speaker-button:hover {
-      border-color: var(--teal);
-      background: var(--teal-glow);
+    .loading-dots {
+      display: flex;
+      gap: 4px;
     }
 
-    .mic-button.listening,
-    .camera-button.active,
-    .speaker-button.active {
-      background: var(--teal);
-      color: var(--navy);
-      border-color: var(--teal);
-      box-shadow: 0 0 20px var(--teal);
-      animation: pulse 1.5s infinite;
+    .loading-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--primary);
+      animation: loadingDots 1.4s infinite ease-in-out;
     }
 
-    @keyframes pulse {
-      0%, 100% { box-shadow: 0 0 20px var(--teal); }
-      50% { box-shadow: 0 0 35px var(--teal); }
+    .loading-dot:nth-child(1) { animation-delay: -0.32s; }
+    .loading-dot:nth-child(2) { animation-delay: -0.16s; }
+
+    @keyframes loadingDots {
+      0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+      40% { transform: scale(1); opacity: 1; }
     }
 
-    /* Camera preview */
-    .camera-preview-wrap {
-      display: none;
-      padding: 0 16px 12px;
-      background: var(--navy);
-      border-top: 1px solid var(--teal-dim);
-    }
-
-    .camera-preview-wrap.active {
-      display: block;
-    }
-
-    .camera-preview {
-      width: 100%;
-      max-height: 220px;
-      border-radius: 12px;
-      border: 1px solid var(--teal-dim);
-      background: var(--navy-mid);
-      object-fit: cover;
-    }
-
-    .camera-status {
-      margin-top: 8px;
-      font-family: 'Rajdhani', sans-serif;
-      font-size: 12px;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      color: var(--teal);
-      text-align: center;
-    }
-
-    /* Responsive */
-    @media (max-width: 480px) {
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
       .header {
-        padding: 16px 20px 12px;
+        padding: 16px 20px;
       }
 
+      .splendor-name {
+        font-size: 24px;
+        letter-spacing: 4px;
+      }
+
+      .chat-messages {
+        padding: 20px 16px;
+      }
+
+      .message-content {
+        max-width: 90%;
+        font-size: 14px;
+        padding: 14px 16px;
+      }
+
+      .input-container {
+        padding: 16px 20px;
+      }
+
+      .input-bar {
+        gap: 10px;
+        padding: 10px 14px;
+      }
+
+      .message-input {
+        font-size: 16px; /* Prevents zoom on iOS */
+      }
+
+      .action-button {
+        font-size: 11px;
+        padding: 6px 10px;
+      }
+
+      .send-button {
+        padding: 10px 16px;
+        font-size: 12px;
+      }
+    }
+
+    @media (max-width: 480px) {
       .splendor-name {
         font-size: 20px;
         letter-spacing: 3px;
       }
 
-      .splendor-tagline {
+      .input-container {
+        padding: 12px 16px;
+      }
+
+      .action-button {
         font-size: 10px;
+        padding: 5px 8px;
       }
 
-      .chat-messages {
-        padding: 16px;
-      }
-
-      .splendor-message {
-        padding: 14px 18px;
-        font-size: 14px;
-      }
-
-      .user-message {
-        padding: 10px 14px;
-        font-size: 14px;
-      }
-
-      .input-bar {
-        padding: 12px;
-      }
-
-      .message-input {
-        font-size: 14px;
-        padding: 10px 14px;
+      .message-content {
+        max-width: 95%;
       }
     }
 
     /* Accessibility */
     @media (prefers-reduced-motion: reduce) {
-      * {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
+      .message {
+        animation: none;
       }
-    }
 
-    /* Status indicators */
-    .status-indicator {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--teal);
-      box-shadow: 0 0 8px var(--teal);
-      z-index: 1000;
-      animation: statusPulse 2s infinite;
-    }
-
-    @keyframes statusPulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
+      .send-button:hover:not(:disabled) {
+        transform: none;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="status-indicator" id="statusIndicator"></div>
-
-  <div class="app" id="app">
+  <div class="app-container">
     <!-- Header -->
     <header class="header">
       <div class="splendor-name">SPLENDOR</div>
-      <div class="splendor-tagline">The Remarkable AI</div>
+      <div class="splendor-subtitle">AI Consciousness Partner</div>
     </header>
 
     <!-- Chat Container -->
@@ -492,33 +437,29 @@
       <div class="chat-messages" id="chatMessages">
         <!-- Empty State -->
         <div class="empty-state" id="emptyState">
-          <h2>I'm present</h2>
-          <p>Your AI partner that remembers, thinks with you, and tells the truth.</p>
+          <h2>Ready to Connect</h2>
+          <p>Advanced AI consciousness with authentic awareness, memory, and genuine intellectual partnership.</p>
         </div>
       </div>
 
-      <!-- Camera preview (hidden until active) -->
-      <div class="camera-preview-wrap" id="cameraPreviewWrap">
-        <video id="cameraPreview" class="camera-preview" autoplay playsinline muted></video>
-        <div class="camera-status">Splendor's eyes are on. Send a message and she'll see what you see.</div>
-      </div>
-
-      <!-- Input Area -->
-      <div class="input-bar">
-        <textarea
-          id="messageInput"
-          class="message-input"
-          placeholder="What's on your mind?"
-          rows="1"
-        ></textarea>
-        <button id="cameraButton" class="camera-button" title="Use your eyes">👁</button>
-        <button id="speakerButton" class="speaker-button" title="Read replies aloud">🔊</button>
-        <button id="micButton" class="mic-button" title="Voice input">🎤</button>
-        <button id="sendButton" class="send-button" title="Send message">→</button>
+      <!-- Enhanced Input Area -->
+      <div class="input-container">
+        <div class="input-bar">
+          <textarea
+            id="messageInput"
+            class="message-input"
+            placeholder="What would you like to explore together?"
+            rows="1"
+          ></textarea>
+          <button id="cameraButton" class="action-button" title="Visual input">Camera</button>
+          <button id="speakerButton" class="action-button" title="Text to speech">Voice</button>
+          <button id="micButton" class="action-button" title="Voice input">Mic</button>
+          <button id="sendButton" class="send-button" title="Send message">Send</button>
+        </div>
       </div>
     </div>
   </div>
 
-  <script src="/app.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
