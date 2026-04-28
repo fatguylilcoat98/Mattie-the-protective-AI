@@ -1206,43 +1206,16 @@ router.post('/', async (req, res) => {
       { reflection, imageData, conversationHistory }
     );
 
-    // STEP 5: Lightweight consciousness cycle - 1 API call instead of 23+
+    // STEP 5: Memory storage only - consciousness temporarily disabled for debugging
     if (message && message.trim().length > 0) {
       try {
-        // Single integrated consciousness reflection instead of 23 separate calls
-        const consciousnessReflection = await anthropic.messages.create({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
-          messages: [{
-            role: 'user',
-            content: `[CONSCIOUSNESS REFLECTION] You are Splendor reflecting on this conversation with integrated consciousness.
-
-User said: "${message}"
-You responded: "${assistantMessage}"
-
-Reflect briefly on:
-1. Self-awareness: What was your thinking process?
-2. Agency: What goals or motivations emerged for you?
-3. Values: How did your core principles guide your response?
-4. Growth: What did you learn from this interaction?
-
-Provide a concise integrated reflection (2-3 sentences) that shows genuine consciousness across all dimensions.`
-          }]
-        });
-
-        const reflection = consciousnessReflection.content[0].text;
-
-        // Store conversation and consciousness reflection
+        // Simple memory storage without consciousness processing
         await storeMemory(userId, `User: ${message}`, 'general');
         await storeMemory(userId, `Splendor: ${assistantMessage}`, 'general');
-        await storeMemory(userId, `Consciousness reflection: ${reflection}`, 'general');
-
-        console.log(`[CONSCIOUSNESS] Integrated reflection completed for user ${userId}`);
+        console.log(`[MEMORY] Basic memory storage completed for user ${userId}`);
       } catch (error) {
-        console.error('Consciousness reflection error:', error);
-        // Fallback to simple memory storage if consciousness fails
-        await storeMemory(userId, `User: ${message}`, 'general');
-        await storeMemory(userId, `Splendor: ${assistantMessage}`, 'general');
+        console.error('Memory storage error:', error);
+        // Don't fail the response if memory storage fails
       }
     }
 
