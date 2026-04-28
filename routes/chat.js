@@ -1232,7 +1232,8 @@ router.post('/', async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Chat error:', err);
+    console.error('CHAT ROUTE ERROR:', err.message, err.stack);
+    console.error('Full error object:', err);
     res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 });

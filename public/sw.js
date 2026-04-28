@@ -24,6 +24,11 @@ self.addEventListener('install', (event) => {
 
 // Fetch Event
 self.addEventListener('fetch', (event) => {
+  // Never intercept external requests — only cache same-origin
+  if (!event.request.url.startsWith(self.location.origin)) {
+    return; // Let browser handle it normally
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
