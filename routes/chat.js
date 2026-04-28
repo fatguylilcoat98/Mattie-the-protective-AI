@@ -1242,7 +1242,7 @@ Provide a concise integrated reflection (2-3 sentences) that shows genuine consc
         console.error('Consciousness reflection error:', error);
         // Fallback to simple memory storage if consciousness fails
         await storeMemory(userId, `User: ${message}`, 'general');
-        await storeMemory(userId, `Splendor: ${assistantResponse}`, 'general');
+        await storeMemory(userId, `Splendor: ${assistantMessage}`, 'general');
       }
     }
 
