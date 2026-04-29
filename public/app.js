@@ -86,6 +86,9 @@ function appendMessage(sender, content) {
   chatMessages.appendChild(messageDiv);
 
   scrollToBottom();
+
+  // Return the bubble element so it can be updated
+  return bubbleDiv;
 }
 
 function showThinking() {
@@ -132,22 +135,13 @@ async function fetchSplendorResponse(message, imageData = null) {
     const data = await response.json();
 
     if (data.error) {
-      appendMessage('splendor', 'Something went wrong — try again in a moment.');
+      throw new Error(data.error || 'Something went wrong');
     } else {
-      // Start voice synthesis immediately in parallel with text display
-      const voicePromise = speakerActive ? playSpoken(data.message) : null;
-
-      appendMessage('splendor', data.message);
-
-      // Voice synthesis already started above
+      return data.message;
     }
   } catch (error) {
     console.error('Chat error:', error);
-    appendMessage('splendor', 'I\'m having trouble connecting right now — try again in a moment.');
-  } finally {
-    hideThinking();
-    sendButton.disabled = false;
-    messageInput.focus();
+    throw error;
   }
 }
 
@@ -167,7 +161,36 @@ function captureCameraFrame() {
   }
 }
 
-function sendMessage() {
+// Voice synthesis using OpenAI TTS
+async function speakWithOpenAI(text) {
+  if (!speakerActive) return;
+
+  try {
+    const response = await fetch('/api/voice/speak', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    });
+
+    const data = await response.json();
+
+    if (data.audio) {
+      const audio = new Audio('data:audio/mpeg;base64,' + data.audio);
+      currentAudio = audio;
+      audio.play().catch(err => console.error('Audio playback failed:', err));
+    } else if (data.fallback === 'browser_tts' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.rate = 1.1;
+      utter.pitch = 1.0;
+      window.speechSynthesis.speak(utter);
+    }
+  } catch (err) {
+    console.error('Voice synthesis error:', err);
+  }
+}
+
+async function sendMessage() {
   const message = messageInput.value.trim();
   const imageData = captureCameraFrame();
 
@@ -184,10 +207,26 @@ function sendMessage() {
   hideEmptyState();
   setLastMessageDate();
 
-  showThinking();
+  // Show thinking indicator immediately
+  const thinkingEl = appendMessage('splendor', 'Thinking...');
   sendButton.disabled = true;
 
-  fetchSplendorResponse(message, imageData);
+  try {
+    const response = await fetchSplendorResponse(message, imageData);
+
+    // Replace thinking with real response
+    thinkingEl.textContent = response;
+
+    // Then trigger TTS on the full response
+    await speakWithOpenAI(response);
+
+  } catch (err) {
+    console.error('Send message error:', err);
+    thinkingEl.textContent = 'Something went wrong. Try again.';
+  } finally {
+    sendButton.disabled = false;
+    messageInput.focus();
+  }
 }
 
 async function toggleCamera() {
