@@ -117,6 +117,15 @@
       opacity: 0.8;
     }
 
+    .version-info {
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
+      color: var(--text-muted);
+      opacity: 0.6;
+      margin-top: 4px;
+      letter-spacing: 1px;
+    }
+
     /* Chat Container */
     .chat-container {
       flex: 1;
@@ -514,6 +523,7 @@
     <header class="header">
       <div class="splendor-name">SPLENDOR</div>
       <div class="splendor-subtitle">AI Consciousness Partner</div>
+      <div class="version-info" id="versionInfo">Loading...</div>
     </header>
 
     <!-- Chat Container -->
@@ -552,5 +562,29 @@
   </div>
 
   <script src="app.js"></script>
+
+  <!-- Version Loading Script -->
+  <script>
+    // Load version information
+    async function loadVersionInfo() {
+      try {
+        const response = await fetch('/version');
+        const data = await response.json();
+        const versionElement = document.getElementById('versionInfo');
+        if (versionElement) {
+          versionElement.textContent = `v${data.version}`;
+        }
+      } catch (error) {
+        console.log('Could not load version info');
+        const versionElement = document.getElementById('versionInfo');
+        if (versionElement) {
+          versionElement.textContent = 'v6.2.0+';
+        }
+      }
+    }
+
+    // Load version on page load
+    loadVersionInfo();
+  </script>
 </body>
 </html>

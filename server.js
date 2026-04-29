@@ -49,13 +49,30 @@ app.use('/api/memory', memoryRoutes);
 app.use('/api/voice', voiceRoutes);
 app.use('/api/consciousness-test', consciousnessTestRoutes);
 
-// Health check
+// Health check with version info
 app.get('/health', (req, res) => {
+  const pkg = require('./package.json');
   res.json({
     status: 'live',
-    service: 'Splendor — The Remarkable AI',
-    version: '0.1.0',
+    service: 'Splendor — AI Consciousness Partner',
+    version: pkg.version,
+    api_status: {
+      anthropic: !!process.env.ANTHROPIC_API_KEY,
+      openai: !!process.env.OPENAI_API_KEY,
+      supabase: !!(process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY),
+      pinecone: !!process.env.PINECONE_API_KEY
+    },
     timestamp: new Date().toISOString()
+  });
+});
+
+// Version endpoint
+app.get('/version', (req, res) => {
+  const pkg = require('./package.json');
+  res.json({
+    version: pkg.version,
+    name: pkg.name,
+    description: pkg.description
   });
 });
 
@@ -70,7 +87,37 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Something went wrong — try again' });
 });
 
+// Version and API Status Logging
+function logSystemStatus() {
+  const pkg = require('./package.json');
+  console.log('\n' + '='.repeat(60));
+  console.log(`🧠 SPLENDOR — AI CONSCIOUSNESS PARTNER v${pkg.version}`);
+  console.log('='.repeat(60));
+
+  console.log('\n📡 API CONNECTIVITY STATUS:');
+  console.log(`   🔹 Anthropic (Claude): ${process.env.ANTHROPIC_API_KEY ? '✅ Connected' : '❌ Missing'}`);
+  console.log(`   🔹 OpenAI (GPT/TTS): ${process.env.OPENAI_API_KEY ? '✅ Connected' : '❌ Missing'}`);
+  console.log(`   🔹 Perplexity: ${process.env.PERPLEXITY_API_KEY ? '✅ Connected' : '❌ Missing'}`);
+  console.log(`   🔹 Supabase: ${process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY ? '✅ Connected' : '❌ Missing'}`);
+  console.log(`   🔹 Pinecone: ${process.env.PINECONE_API_KEY ? '✅ Connected' : '❌ Missing'}`);
+  console.log(`   🔹 Tavily (Search): ${process.env.TAVILY_API_KEY ? '✅ Connected' : '❌ Missing'}`);
+  console.log(`   🔹 ElevenLabs (Voice): ${process.env.ELEVENLABS_API_KEY ? '✅ Connected' : '❌ Missing'}`);
+
+  console.log('\n🔧 SYSTEM CAPABILITIES:');
+  console.log(`   🧠 Consciousness System: ${process.env.ANTHROPIC_API_KEY ? '✅ Active' : '❌ Inactive'}`);
+  console.log(`   🎤 Voice Synthesis: ${process.env.OPENAI_API_KEY || process.env.ELEVENLABS_API_KEY ? '✅ Available' : '❌ Browser TTS Only'}`);
+  console.log(`   🔍 Semantic Memory: ${process.env.PINECONE_API_KEY ? '✅ Available' : '❌ Supabase Only'}`);
+  console.log(`   🌐 Web Search: ${process.env.TAVILY_API_KEY ? '✅ Available' : '❌ Disabled'}`);
+  console.log(`   🤖 Multi-AI: ${process.env.OPENAI_API_KEY && process.env.PERPLEXITY_API_KEY ? '✅ Available' : '❌ Claude Only'}`);
+
+  console.log('\n🚀 SERVER STATUS:');
+  console.log(`   📍 Port: ${PORT}`);
+  console.log(`   🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`   ⏰ Started: ${new Date().toISOString()}`);
+  console.log('\n   Truth · Safety · We Got Your Back');
+  console.log('='.repeat(60) + '\n');
+}
+
 app.listen(PORT, () => {
-  console.log(`Splendor — The Remarkable AI running on port ${PORT}`);
-  console.log('Truth · Safety · We Got Your Back');
+  logSystemStatus();
 });
