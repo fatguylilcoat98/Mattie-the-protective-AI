@@ -14,6 +14,7 @@ const chatRoutes = require('./routes/chat');
 const memoryRoutes = require('./routes/memory');
 const voiceRoutes = require('./routes/voice');
 const consciousnessTestRoutes = require('./routes/consciousness-test');
+const authRoutes = require('./routes/auth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -44,6 +45,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.static('public'));
 
 // Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/memory', memoryRoutes);
 app.use('/api/voice', voiceRoutes);

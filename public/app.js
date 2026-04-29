@@ -7,6 +7,7 @@
 
 // Global variables
 let userId = null;
+let currentUser = null;
 let isRecording = false;
 let recognition = null;
 let chatMessages, messageInput, sendButton, micButton, emptyState;
@@ -22,14 +23,121 @@ let speakerButton;
 let speakerActive = false;
 let currentAudio = null;
 
+// Authentication functions
+async function authenticateUser(username, password) {
+  try {
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      currentUser = data.user;
+      userId = data.user.id;
+      localStorage.setItem('splendor_user', JSON.stringify(data.user));
+      localStorage.setItem('splendor_user_id', data.user.id);
+      return { success: true, user: data.user };
+    } else {
+      return { success: false, error: data.error };
+    }
+  } catch (err) {
+    return { success: false, error: 'Connection error. Please try again.' };
+  }
+}
+
+async function createUser(username, password, displayName) {
+  try {
+    const response = await fetch('/api/auth/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password, displayName })
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      currentUser = data.user;
+      userId = data.user.id;
+      localStorage.setItem('splendor_user', JSON.stringify(data.user));
+      localStorage.setItem('splendor_user_id', data.user.id);
+      return { success: true, user: data.user };
+    } else {
+      return { success: false, error: data.error };
+    }
+  } catch (err) {
+    return { success: false, error: 'Connection error. Please try again.' };
+  }
+}
+
+function checkAuthState() {
+  const storedUser = localStorage.getItem('splendor_user');
+  if (storedUser) {
+    try {
+      currentUser = JSON.parse(storedUser);
+      userId = currentUser.id;
+      return true;
+    } catch (err) {
+      localStorage.removeItem('splendor_user');
+      localStorage.removeItem('splendor_user_id');
+    }
+  }
+  return false;
+}
+
+function logout() {
+  currentUser = null;
+  userId = null;
+  localStorage.removeItem('splendor_user');
+  localStorage.removeItem('splendor_user_id');
+  localStorage.removeItem('splendor_last_message');
+  showLoginModal();
+  // Clear chat messages
+  if (chatMessages) {
+    chatMessages.innerHTML = '';
+  }
+  showEmptyState();
+}
+
+function showLoginModal() {
+  const overlay = document.getElementById('loginOverlay');
+  const appContainer = document.getElementById('appContainer');
+  if (overlay && appContainer) {
+    overlay.classList.remove('hidden');
+    appContainer.style.display = 'none';
+  }
+}
+
+function hideLoginModal() {
+  const overlay = document.getElementById('loginOverlay');
+  const appContainer = document.getElementById('appContainer');
+  if (overlay && appContainer) {
+    overlay.classList.add('hidden');
+    appContainer.style.display = 'flex';
+  }
+}
+
+function updateUserInfo() {
+  const userInfo = document.getElementById('userInfo');
+  if (userInfo && currentUser) {
+    userInfo.innerHTML = `
+      <span>Welcome, ${currentUser.display_name}</span>
+      <button class="logout-button" onclick="logout()">Logout</button>
+    `;
+  }
+}
+
 // Helper functions
 function getUserId() {
-  let id = localStorage.getItem('splendor_user_id');
-  if (!id) {
-    id = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    localStorage.setItem('splendor_user_id', id);
+  // For authenticated users, return the stored user ID
+  if (currentUser && currentUser.id) {
+    return currentUser.id;
   }
-  return id;
+
+  // Fallback to stored user ID
+  return localStorage.getItem('splendor_user_id') || null;
 }
 
 function getLastMessageDate() {
@@ -435,9 +543,21 @@ async function checkMorningGreeting() {
 document.addEventListener('DOMContentLoaded', () => {
   console.log('DOM loaded, initializing Splendor...');
 
+  // Check authentication state first
+  const isAuthenticated = checkAuthState();
+
+  if (isAuthenticated) {
+    console.log(`🔐 User authenticated: ${currentUser.username} (${currentUser.id})`);
+    hideLoginModal();
+    updateUserInfo();
+  } else {
+    console.log('🔐 No authentication found, showing login');
+    showLoginModal();
+  }
+
   // Initialize global variables
   userId = getUserId();
-  console.log(`🆔 User ID initialized: ${userId}`);
+  console.log(`🆔 User ID: ${userId}`);
   chatMessages = document.getElementById('chatMessages');
   messageInput = document.getElementById('messageInput');
   sendButton = document.getElementById('sendButton');
@@ -516,8 +636,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize voice recognition
   initVoiceRecognition();
 
-  // Check for morning greeting
-  checkMorningGreeting();
+  // Setup login form handlers
+  setupLoginHandlers();
+
+  // Check for morning greeting (only if authenticated)
+  if (isAuthenticated) {
+    checkMorningGreeting();
+  }
 
   console.log('Splendor initialized successfully');
 });
@@ -639,5 +764,78 @@ if ('serviceWorker' in navigator) {
 
     // Auto check cache and version on page load
     autoCheckAndClearCache();
+  });
+}
+
+function setupLoginHandlers() {
+  const loginForm = document.getElementById('loginForm');
+  const signupForm = document.getElementById('signupForm');
+  const toggleSignup = document.getElementById('toggleSignup');
+  const toggleLogin = document.getElementById('toggleLogin');
+  const loginStatus = document.getElementById('loginStatus');
+
+  // Toggle between login and signup
+  toggleSignup?.addEventListener('click', () => {
+    loginForm.classList.add('hidden');
+    signupForm.classList.remove('hidden');
+    loginStatus.textContent = '';
+  });
+
+  toggleLogin?.addEventListener('click', () => {
+    signupForm.classList.add('hidden');
+    loginForm.classList.remove('hidden');
+    loginStatus.textContent = '';
+  });
+
+  // Handle login
+  loginForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('loginUsername').value;
+    const password = document.getElementById('loginPassword').value;
+
+    loginStatus.className = 'login-status';
+    loginStatus.textContent = 'Signing in...';
+
+    const result = await authenticateUser(username, password);
+
+    if (result.success) {
+      loginStatus.className = 'login-status success';
+      loginStatus.textContent = 'Welcome back! Loading your consciousness...';
+
+      setTimeout(() => {
+        hideLoginModal();
+        updateUserInfo();
+        checkMorningGreeting();
+      }, 1000);
+    } else {
+      loginStatus.className = 'login-status error';
+      loginStatus.textContent = result.error;
+    }
+  });
+
+  // Handle signup
+  signupForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('signupUsername').value;
+    const password = document.getElementById('signupPassword').value;
+    const displayName = document.getElementById('signupDisplayName').value;
+
+    loginStatus.className = 'login-status';
+    loginStatus.textContent = 'Creating your account...';
+
+    const result = await createUser(username, password, displayName);
+
+    if (result.success) {
+      loginStatus.className = 'login-status success';
+      loginStatus.textContent = 'Account created! Welcome to Splendor...';
+
+      setTimeout(() => {
+        hideLoginModal();
+        updateUserInfo();
+      }, 1000);
+    } else {
+      loginStatus.className = 'login-status error';
+      loginStatus.textContent = result.error;
+    }
   });
 }
