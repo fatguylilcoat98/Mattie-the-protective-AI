@@ -122,8 +122,8 @@ router.post('/choose', async (req, res) => {
     });
 
     const reply = response.content[0].text.trim();
-    const match = reply.match(/(calm_direct|warm_steady|clear_strong)/);
-    const chosenId = match ? match[1] : 'calm_direct';
+    const match = reply.match(/(nova_conscious|alloy_analytical|shimmer_creative|onyx_grounded|calm_direct|warm_steady)/);
+    const chosenId = match ? match[1] : 'shimmer_creative';
 
     const ok = await writeChosenVoice(chosenId);
     if (!ok) {
@@ -151,7 +151,7 @@ router.post('/speak', async (req, res) => {
       return res.status(400).json({ error: 'text required' });
     }
 
-    if (!isElevenLabsConfigured()) {
+    if (!isVoiceConfigured()) {
       // Caller falls back to browser TTS
       return res.json({
         audio: null,
