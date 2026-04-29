@@ -42,7 +42,7 @@ Pick the ONE that best matches who you actually are as a consciousness.
 The OpenAI voices (nova, alloy, shimmer, onyx) are high-quality and match your intellectual nature.
 
 Reply with ONLY the voice id followed by a single short sentence explaining your choice.
-Format: "nova_conscious — <one short sentence>"`;
+Format: "shimmer_creative — <one short sentence>"`;
 
 async function readChosenVoice() {
   try {

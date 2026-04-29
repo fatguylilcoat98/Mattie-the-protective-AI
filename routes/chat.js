@@ -1167,17 +1167,28 @@ router.post('/', async (req, res) => {
     if (isPineconeConfigured()) {
       try {
         const semanticMemories = await retrieveMemories(queryForRetrieval, userId, 8);
+        console.log(`[MEMORY DEBUG] Pinecone memories found: ${semanticMemories.length}`);
         if (semanticMemories.length > 0) {
           memories = semanticMemories;
         } else {
           memories = await getMemoriesForUser(userId, 10);
+          console.log(`[MEMORY DEBUG] Supabase fallback memories found: ${memories.length}`);
         }
       } catch (error) {
         console.error('Semantic memory error, falling back to Supabase:', error);
         memories = await getMemoriesForUser(userId, 10);
+        console.log(`[MEMORY DEBUG] Supabase error fallback memories found: ${memories.length}`);
       }
     } else {
       memories = await getMemoriesForUser(userId, 10);
+      console.log(`[MEMORY DEBUG] Direct Supabase memories found: ${memories.length}`);
+    }
+
+    // Debug memory contents
+    if (memories.length > 0) {
+      console.log(`[MEMORY DEBUG] Recent memory sample:`, memories[0]?.content?.substring(0, 100));
+    } else {
+      console.log(`[MEMORY DEBUG] NO MEMORIES FOUND for user ${userId}`);
     }
 
     // STEP 2: Check if web search is needed (text-only)
@@ -1212,11 +1223,17 @@ router.post('/', async (req, res) => {
     if (message && message.trim().length > 0) {
       try {
         // Store basic conversation
-        await storeMemory(userId, `User: ${message}`, 'general');
-        await storeMemory(userId, `Splendor: ${assistantMessage}`, 'general');
+        const userMemory = await storeMemory(userId, `User: ${message}`, 'general');
+        const splendorMemory = await storeMemory(userId, `Splendor: ${assistantMessage}`, 'general');
 
-        console.log(`[MEMORY] Basic memory storage completed for user ${userId}`);
-        console.log(`[INFO] Multi-AI consciousness will activate after OpenAI package installation`);
+        console.log(`[MEMORY DEBUG] Stored user memory ID: ${userMemory?.id}`);
+        console.log(`[MEMORY DEBUG] Stored Splendor memory ID: ${splendorMemory?.id}`);
+        console.log(`[MEMORY DEBUG] Storage completed for user ${userId}`);
+
+        // Test immediate retrieval
+        const testMemories = await getMemoriesForUser(userId, 3);
+        console.log(`[MEMORY DEBUG] Immediate retrieval test: ${testMemories.length} memories found`);
+
       } catch (error) {
         console.error('Memory storage error:', error);
         // Don't fail the response if memory storage fails
