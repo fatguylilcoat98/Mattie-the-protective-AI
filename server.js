@@ -76,6 +76,23 @@ app.get('/version', (req, res) => {
   });
 });
 
+// Force cache clear endpoint
+app.post('/api/cache/clear', (req, res) => {
+  const { userId, clearType = 'all' } = req.body;
+
+  res.json({
+    success: true,
+    message: 'Cache clear signal sent to client',
+    clearType: clearType,
+    timestamp: new Date().toISOString(),
+    instructions: {
+      browser_cache: 'Client should clear service worker cache',
+      local_storage: 'Client should clear localStorage',
+      memory_cache: 'Client should clear conversation memory'
+    }
+  });
+});
+
 // Serve the PWA
 app.get('*', (req, res) => {
   res.sendFile(__dirname + '/public/index.html');

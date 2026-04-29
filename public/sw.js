@@ -5,7 +5,7 @@
   Truth · Safety · We Got Your Back
 */
 
-const CACHE_NAME = 'splendor-v1';
+const CACHE_NAME = 'splendor-v6-3-0'; // Updated with version
 const urlsToCache = [
   '/',
   '/manifest.json',
@@ -52,4 +52,26 @@ self.addEventListener('activate', (event) => {
       );
     })
   );
+});
+
+// Handle cache clearing messages
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'CLEAR_CACHE') {
+    console.log('Service Worker: Force clearing all caches');
+
+    event.waitUntil(
+      caches.keys().then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((cacheName) => {
+            console.log('Service Worker: Deleting cache:', cacheName);
+            return caches.delete(cacheName);
+          })
+        );
+      }).then(() => {
+        console.log('Service Worker: All caches cleared');
+        // Send confirmation back to client
+        event.ports[0].postMessage({ success: true, message: 'Cache cleared' });
+      })
+    );
+  }
 });
