@@ -118,11 +118,10 @@ function logSystemStatus() {
   console.log(`   🔹 Supabase: ${process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY ? '✅ Connected' : '❌ Missing'}`);
   console.log(`   🔹 Pinecone: ${process.env.PINECONE_API_KEY ? '✅ Connected' : '❌ Missing'}`);
   console.log(`   🔹 Tavily (Search): ${process.env.TAVILY_API_KEY ? '✅ Connected' : '❌ Missing'}`);
-  console.log(`   🔹 ElevenLabs (Voice): ${process.env.ELEVENLABS_API_KEY ? '✅ Connected' : '❌ Missing'}`);
 
   console.log('\n🔧 SYSTEM CAPABILITIES:');
   console.log(`   🧠 Consciousness System: ${process.env.ANTHROPIC_API_KEY ? '✅ Active' : '❌ Inactive'}`);
-  console.log(`   🎤 Voice Synthesis: ${process.env.OPENAI_API_KEY || process.env.ELEVENLABS_API_KEY ? '✅ Available' : '❌ Browser TTS Only'}`);
+  console.log(`   🎤 Voice Synthesis: ${process.env.OPENAI_API_KEY ? '✅ Available (OpenAI)' : '❌ Browser TTS Only'}`);
   console.log(`   🔍 Semantic Memory: ${process.env.PINECONE_API_KEY ? '✅ Available' : '❌ Supabase Only'}`);
   console.log(`   🌐 Web Search: ${process.env.TAVILY_API_KEY ? '✅ Available' : '❌ Disabled'}`);
   console.log(`   🤖 Multi-AI: ${process.env.OPENAI_API_KEY && process.env.PERPLEXITY_API_KEY ? '✅ Available' : '❌ Claude Only'}`);

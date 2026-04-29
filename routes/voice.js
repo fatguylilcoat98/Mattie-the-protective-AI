@@ -20,7 +20,6 @@ const { supabase } = require('../lib/supabase');
 const {
   VOICE_OPTIONS,
   getVoiceOption,
-  isElevenLabsConfigured,
   isOpenAIConfigured,
   isVoiceConfigured,
   speakResponse
@@ -100,7 +99,7 @@ router.get('/current', async (req, res) => {
     id: voice.id,
     name: voice.name,
     description: voice.description,
-    elevenlabs_available: isElevenLabsConfigured()
+    provider: voice.provider
   });
 });
 
@@ -122,7 +121,7 @@ router.post('/choose', async (req, res) => {
     });
 
     const reply = response.content[0].text.trim();
-    const match = reply.match(/(nova_conscious|alloy_analytical|shimmer_creative|onyx_grounded|calm_direct|warm_steady)/);
+    const match = reply.match(/(nova_conscious|alloy_analytical|shimmer_creative|onyx_grounded)/);
     const chosenId = match ? match[1] : 'shimmer_creative';
 
     const ok = await writeChosenVoice(chosenId);
