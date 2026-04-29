@@ -212,13 +212,12 @@ async function sendMessage() {
   sendButton.disabled = true;
 
   try {
+    // Get text response first
     const response = await fetchSplendorResponse(message, imageData);
 
-    // Replace thinking with real response
+    // Update text AND start TTS at the same time
     thinkingEl.textContent = response;
-
-    // Then trigger TTS on the full response
-    await speakWithOpenAI(response);
+    speakWithOpenAI(response); // no await — fire and forget
 
   } catch (err) {
     console.error('Send message error:', err);
