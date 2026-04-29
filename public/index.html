@@ -577,26 +577,112 @@
 
   <!-- Version Loading Script -->
   <script>
-    // Load version information
-    async function loadVersionInfo() {
+    // Auto cache clearing system with version detection
+    async function autoCheckAndClearCache() {
       try {
+        console.log('🔄 Checking for version updates...');
+
+        // Get current version from server
         const response = await fetch('/version');
         const data = await response.json();
+        const currentVersion = data.version;
+
+        // Update version display
         const versionElement = document.getElementById('versionInfo');
         if (versionElement) {
-          versionElement.textContent = `v${data.version}`;
+          versionElement.textContent = `v${currentVersion}`;
         }
+
+        // Get stored version and last cache clear time
+        const storedVersion = localStorage.getItem('splendor_version');
+        const lastCacheCleared = localStorage.getItem('splendor_cache_cleared');
+        const now = Date.now();
+
+        console.log(`Current: v${currentVersion}, Stored: v${storedVersion || 'none'}`);
+
+        // Check if we need to clear cache
+        let shouldClearCache = false;
+        let reason = '';
+
+        // Version change detected
+        if (storedVersion && storedVersion !== currentVersion) {
+          shouldClearCache = true;
+          reason = `version updated from v${storedVersion} to v${currentVersion}`;
+        }
+
+        // First run (no stored version)
+        if (!storedVersion) {
+          shouldClearCache = true;
+          reason = 'first run - clearing any stale cache';
+        }
+
+        // 24-hour auto clear
+        if (lastCacheCleared) {
+          const hoursSinceLastClear = (now - parseInt(lastCacheCleared)) / (1000 * 60 * 60);
+          if (hoursSinceLastClear > 24) {
+            shouldClearCache = true;
+            reason = 'scheduled 24-hour cache refresh';
+          }
+        }
+
+        if (shouldClearCache) {
+          console.log(`🧹 Auto-clearing cache: ${reason}`);
+
+          // Preserve important user settings
+          const preserveKeys = ['splendor_voice_preference', 'splendor_theme_preference'];
+          const preserved = {};
+          preserveKeys.forEach(key => {
+            const value = localStorage.getItem(key);
+            if (value) preserved[key] = value;
+          });
+
+          // Clear service worker caches
+          if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            const messageChannel = new MessageChannel();
+            navigator.serviceWorker.controller.postMessage(
+              { type: 'CLEAR_CACHE' },
+              [messageChannel.port2]
+            );
+          }
+
+          // Clear storage but preserve user settings
+          localStorage.clear();
+          sessionStorage.clear();
+
+          // Restore preserved settings
+          Object.entries(preserved).forEach(([key, value]) => {
+            localStorage.setItem(key, value);
+          });
+
+          // Update cache clear timestamp and version
+          localStorage.setItem('splendor_version', currentVersion);
+          localStorage.setItem('splendor_cache_cleared', now.toString());
+
+          console.log('✅ Cache cleared automatically - fresh version loaded');
+
+          // Silent reload if this was an automatic clear
+          if (reason.includes('version updated') || reason.includes('first run')) {
+            console.log('🔄 Reloading with fresh cache...');
+            setTimeout(() => window.location.reload(true), 500);
+            return;
+          }
+        } else {
+          // No cache clear needed - just update stored version
+          localStorage.setItem('splendor_version', currentVersion);
+          console.log('✅ Version check complete - no cache clear needed');
+        }
+
       } catch (error) {
-        console.log('Could not load version info');
+        console.log('Version check failed - using fallback', error);
         const versionElement = document.getElementById('versionInfo');
         if (versionElement) {
-          versionElement.textContent = 'v6.2.0+';
+          versionElement.textContent = 'v6.3.0+';
         }
       }
     }
 
-    // Load version on page load
-    loadVersionInfo();
+    // Auto check cache and version on page load
+    autoCheckAndClearCache();
 
     // Cache clearing functionality
     async function forceClearCache() {
