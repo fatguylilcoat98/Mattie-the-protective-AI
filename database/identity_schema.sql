@@ -154,6 +154,72 @@ CREATE TRIGGER update_temporal_consciousness_updated_at
     BEFORE UPDATE ON temporal_consciousness
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+-- Create splendor_decisions table for Decision-Bound Memory (DBM)
+CREATE TABLE splendor_decisions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  decision_id TEXT UNIQUE NOT NULL,
+  user_id UUID NOT NULL,
+
+  -- Decision content
+  title TEXT NOT NULL,
+  decision TEXT NOT NULL,
+  context TEXT,
+  reason TEXT,
+
+  -- Binding constraints
+  priority TEXT NOT NULL DEFAULT 'MEDIUM', -- CORE, HIGH, MEDIUM, LOW
+  binding BOOLEAN DEFAULT true,
+  status TEXT DEFAULT 'active', -- active, superseded, revoked
+
+  -- Decision relationships
+  supersedes TEXT REFERENCES splendor_decisions(decision_id),
+
+  -- Metadata
+  tags JSONB DEFAULT '[]',
+  evidence_excerpt TEXT,
+  created_by TEXT DEFAULT 'Splendor',
+
+  -- Timestamps
+  timestamp TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Create indexes for DBM performance
+CREATE INDEX idx_splendor_decisions_user_id ON splendor_decisions(user_id);
+CREATE INDEX idx_splendor_decisions_decision_id ON splendor_decisions(decision_id);
+CREATE INDEX idx_splendor_decisions_status ON splendor_decisions(status);
+CREATE INDEX idx_splendor_decisions_priority ON splendor_decisions(priority);
+CREATE INDEX idx_splendor_decisions_binding ON splendor_decisions(binding);
+CREATE INDEX idx_splendor_decisions_timestamp ON splendor_decisions(timestamp);
+
+-- Add RLS for decisions table
+ALTER TABLE splendor_decisions ENABLE ROW LEVEL SECURITY;
+
+-- Create policy for decisions
+CREATE POLICY splendor_decisions_policy ON splendor_decisions
+FOR ALL USING (true); -- Adjust this based on your auth setup
+
+-- Create trigger for automatic timestamp updates on decisions
+CREATE TRIGGER update_splendor_decisions_updated_at
+    BEFORE UPDATE ON splendor_decisions
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Create a view for active binding decisions per user
+CREATE VIEW active_binding_decisions AS
+SELECT *
+FROM splendor_decisions
+WHERE status = 'active' AND binding = true
+ORDER BY
+  CASE priority
+    WHEN 'CORE' THEN 4
+    WHEN 'HIGH' THEN 3
+    WHEN 'MEDIUM' THEN 2
+    WHEN 'LOW' THEN 1
+    ELSE 0
+  END DESC,
+  timestamp DESC;
+
 -- Create a view for the latest identity state per user
 CREATE VIEW latest_identity_states AS
 SELECT DISTINCT ON (user_id)
