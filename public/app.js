@@ -226,9 +226,16 @@ async function toggleCamera() {
 function toggleSpeaker() {
   speakerActive = !speakerActive;
   if (speakerButton) speakerButton.classList.toggle('active', speakerActive);
-  if (!speakerActive && currentAudio) {
-    try { currentAudio.pause(); } catch {}
-    currentAudio = null;
+  if (!speakerActive) {
+    // Stop OpenAI audio
+    if (currentAudio) {
+      try { currentAudio.pause(); } catch {}
+      currentAudio = null;
+    }
+    // Stop browser TTS
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
   }
 }
 
