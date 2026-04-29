@@ -52,11 +52,11 @@ async function readChosenVoice() {
       .eq('config_key', 'chosen_voice')
       .maybeSingle();
 
-    if (error || !data) return 'calm_direct';
+    if (error || !data) return 'shimmer_creative';
     return data.config_value;
   } catch (err) {
     console.error('readChosenVoice error:', err.message);
-    return 'calm_direct';
+    return 'shimmer_creative';
   }
 }
 
