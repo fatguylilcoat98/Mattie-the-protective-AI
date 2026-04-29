@@ -134,10 +134,12 @@ async function fetchSplendorResponse(message, imageData = null) {
     if (data.error) {
       appendMessage('splendor', 'Something went wrong — try again in a moment.');
     } else {
+      // Start voice synthesis immediately in parallel with text display
+      const voicePromise = speakerActive ? playSpoken(data.message) : null;
+
       appendMessage('splendor', data.message);
-      if (speakerActive) {
-        playSpoken(data.message);
-      }
+
+      // Voice synthesis already started above
     }
   } catch (error) {
     console.error('Chat error:', error);
@@ -252,10 +254,13 @@ async function playSpoken(text) {
     if (data.audio) {
       const audio = new Audio('data:audio/mpeg;base64,' + data.audio);
       currentAudio = audio;
+      // Start playback immediately
       audio.play().catch(err => console.error('Audio playback failed:', err));
     } else if (data.fallback === 'browser_tts' && 'speechSynthesis' in window) {
+      // Cancel any existing speech and start immediately
+      window.speechSynthesis.cancel();
       const utter = new SpeechSynthesisUtterance(text);
-      utter.rate = 1.0;
+      utter.rate = 1.1;
       utter.pitch = 1.0;
       window.speechSynthesis.speak(utter);
     }
