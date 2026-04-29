@@ -221,6 +221,7 @@ async function sendMessage() {
 
   // Show thinking indicator immediately
   const thinkingEl = appendMessage('splendor', 'Thinking...');
+  thinkingEl.classList.add('thinking');
   sendButton.disabled = true;
 
   try {
@@ -237,6 +238,7 @@ async function sendMessage() {
       await audioEl.load(); // fully buffer it
 
       // Now drop both together
+      thinkingEl.classList.remove('thinking');
       thinkingEl.textContent = response;
       audioEl.play().catch(err => console.error('Audio playback failed:', err));
 
@@ -244,6 +246,7 @@ async function sendMessage() {
       audioEl.addEventListener('ended', () => URL.revokeObjectURL(audioUrl));
     } else {
       // No audio or speaker off - just show text
+      thinkingEl.classList.remove('thinking');
       thinkingEl.textContent = response;
 
       // Try browser TTS as fallback if speaker is on
@@ -254,6 +257,7 @@ async function sendMessage() {
 
   } catch (err) {
     console.error('Send message error:', err);
+    thinkingEl.classList.remove('thinking');
     thinkingEl.textContent = 'Something went wrong. Try again.';
   } finally {
     sendButton.disabled = false;
