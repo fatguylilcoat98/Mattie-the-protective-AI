@@ -327,16 +327,6 @@
       border-color: var(--primary);
     }
 
-    .action-button.cache-clear {
-      border-color: var(--warning);
-      color: var(--warning);
-    }
-
-    .action-button.cache-clear:hover {
-      border-color: var(--warning);
-      color: var(--dark-bg);
-      background: var(--warning);
-    }
 
     .send-button {
       background: linear-gradient(135deg, var(--primary), var(--secondary));
@@ -554,7 +544,6 @@
           <button id="cameraButton" class="action-button" title="Visual input">Camera</button>
           <button id="speakerButton" class="action-button" title="Text to speech">Voice</button>
           <button id="micButton" class="action-button" title="Voice input">Mic</button>
-          <button id="clearCacheButton" class="action-button cache-clear" title="Force clear cache & reset">Clear Cache</button>
         </div>
 
         <!-- Text Input Row -->
@@ -684,74 +673,7 @@
     // Auto check cache and version on page load
     autoCheckAndClearCache();
 
-    // Cache clearing functionality
-    async function forceClearCache() {
-      console.log('Force clearing all caches...');
 
-      try {
-        // 1. Clear service worker caches
-        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-          const messageChannel = new MessageChannel();
-
-          messageChannel.port1.onmessage = (event) => {
-            console.log('Cache clear response:', event.data);
-          };
-
-          navigator.serviceWorker.controller.postMessage(
-            { type: 'CLEAR_CACHE' },
-            [messageChannel.port2]
-          );
-        }
-
-        // 2. Clear localStorage
-        localStorage.clear();
-        console.log('localStorage cleared');
-
-        // 3. Clear sessionStorage
-        sessionStorage.clear();
-        console.log('sessionStorage cleared');
-
-        // 4. Clear indexedDB (if any)
-        if ('indexedDB' in window) {
-          // Note: This is a simplified approach
-          console.log('IndexedDB clear attempted');
-        }
-
-        // 5. Call server cache clear endpoint
-        try {
-          const response = await fetch('/api/cache/clear', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ clearType: 'all' })
-          });
-          const data = await response.json();
-          console.log('Server cache clear:', data);
-        } catch (error) {
-          console.log('Server cache clear failed:', error);
-        }
-
-        // 6. Show confirmation and reload
-        alert('Cache cleared! Page will reload to apply changes.');
-
-        // 7. Force reload from server (bypass cache)
-        window.location.reload(true);
-
-      } catch (error) {
-        console.error('Cache clear error:', error);
-        alert('Cache clear failed. Check console for details.');
-      }
-    }
-
-    // Add cache clear button event listener
-    document.addEventListener('DOMContentLoaded', () => {
-      const clearCacheButton = document.getElementById('clearCacheButton');
-      if (clearCacheButton) {
-        clearCacheButton.addEventListener('click', () => {
-          if (confirm('Clear all cache and reset? This will reload the page.')) {
-            forceClearCache();
-          }
-        });
-      }
     });
   </script>
 </body>
