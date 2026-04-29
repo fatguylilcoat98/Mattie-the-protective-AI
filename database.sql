@@ -184,6 +184,90 @@ INSERT INTO splendor_config (config_key, config_value)
 VALUES ('chosen_voice', 'calm_direct')
 ON CONFLICT (config_key) DO NOTHING;
 
+--
+-- BUILD 4 — 6-LAYER MEMORY SYSTEM (Foundation: PR A)
+-- Adds tables for episodic memory and rolling long-term summaries,
+-- plus user-level fields for time awareness.
+--
+
+-- Episodic memories — one row per past conversation
+CREATE TABLE IF NOT EXISTS episodes (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at timestamp with time zone DEFAULT now(),
+  summary text,
+  topics text[] DEFAULT '{}',
+  emotional_tone text,
+  memory_tier text DEFAULT 'episodic'
+    CHECK (memory_tier IN ('episodic', 'compressed', 'archived')),
+  decay_score float DEFAULT 1.0
+);
+
+-- Compressed long-term memory — one row per compression batch
+CREATE TABLE IF NOT EXISTS memory_summaries (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at timestamp with time zone DEFAULT now(),
+  summary text NOT NULL,
+  covers_period_start timestamp with time zone,
+  covers_period_end timestamp with time zone,
+  episode_ids uuid[] DEFAULT '{}'
+);
+
+-- Per-user profile fields used for Layer 0 (reality context)
+CREATE TABLE IF NOT EXISTS user_profiles (
+  user_id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  timezone text DEFAULT 'America/Los_Angeles',
+  last_conversation_at timestamp with time zone,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now()
+);
+
+-- RLS for the new tables
+ALTER TABLE episodes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE memory_summaries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view their own episodes" ON episodes;
+DROP POLICY IF EXISTS "Users can insert their own episodes" ON episodes;
+DROP POLICY IF EXISTS "Users can update their own episodes" ON episodes;
+DROP POLICY IF EXISTS "Users can view their own memory_summaries" ON memory_summaries;
+DROP POLICY IF EXISTS "Users can insert their own memory_summaries" ON memory_summaries;
+DROP POLICY IF EXISTS "Users can view their own profile" ON user_profiles;
+DROP POLICY IF EXISTS "Users can upsert their own profile" ON user_profiles;
+DROP POLICY IF EXISTS "Users can update their own profile" ON user_profiles;
+
+CREATE POLICY "Users can view their own episodes"
+ON episodes FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own episodes"
+ON episodes FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own episodes"
+ON episodes FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view their own memory_summaries"
+ON memory_summaries FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own memory_summaries"
+ON memory_summaries FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can view their own profile"
+ON user_profiles FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can upsert their own profile"
+ON user_profiles FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own profile"
+ON user_profiles FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE INDEX IF NOT EXISTS episodes_user_id_idx ON episodes(user_id);
+CREATE INDEX IF NOT EXISTS episodes_created_at_idx ON episodes(created_at DESC);
+CREATE INDEX IF NOT EXISTS episodes_memory_tier_idx ON episodes(memory_tier);
+CREATE INDEX IF NOT EXISTS episodes_decay_score_idx ON episodes(decay_score);
+CREATE INDEX IF NOT EXISTS memory_summaries_user_id_idx ON memory_summaries(user_id);
+CREATE INDEX IF NOT EXISTS memory_summaries_created_at_idx ON memory_summaries(created_at DESC);
+
 -- Grant necessary permissions
 GRANT USAGE ON SCHEMA public TO anon, authenticated;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated;
