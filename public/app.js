@@ -211,7 +211,7 @@ async function sendMessage() {
     return;
   }
 
-  console.log('Sending message:', message, imageData ? '(with image)' : '');
+  console.log(`💬 Sending message from user ${userId}:`, message, imageData ? '(with image)' : '');
 
   appendMessage('user', message || (imageData ? '(image)' : ''));
   messageInput.value = '';
@@ -437,6 +437,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize global variables
   userId = getUserId();
+  console.log(`🆔 User ID initialized: ${userId}`);
   chatMessages = document.getElementById('chatMessages');
   messageInput = document.getElementById('messageInput');
   sendButton = document.getElementById('sendButton');
@@ -575,7 +576,7 @@ if ('serviceWorker' in navigator) {
         console.log(`🧹 Auto-clearing cache: ${reason}`);
 
         // Preserve important user settings
-        const preserveKeys = ['splendor_voice_preference', 'splendor_theme_preference'];
+        const preserveKeys = ['splendor_user_id', 'splendor_voice_preference', 'splendor_theme_preference'];
         const preserved = {};
         preserveKeys.forEach(key => {
           const value = localStorage.getItem(key);
