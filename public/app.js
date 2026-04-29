@@ -161,9 +161,9 @@ function captureCameraFrame() {
   }
 }
 
-// Voice synthesis using OpenAI TTS
-async function speakWithOpenAI(text) {
-  if (!speakerActive) return;
+// Fetch TTS audio and return as blob for pre-buffering
+async function fetchTTSAudio(text) {
+  if (!speakerActive) return null;
 
   try {
     const response = await fetch('/api/voice/speak', {
@@ -175,19 +175,31 @@ async function speakWithOpenAI(text) {
     const data = await response.json();
 
     if (data.audio) {
-      const audio = new Audio('data:audio/mpeg;base64,' + data.audio);
-      currentAudio = audio;
-      audio.play().catch(err => console.error('Audio playback failed:', err));
+      // Convert base64 to blob
+      const binaryString = atob(data.audio);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      return new Blob([bytes], { type: 'audio/mpeg' });
     } else if (data.fallback === 'browser_tts' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const utter = new SpeechSynthesisUtterance(text);
-      utter.rate = 1.1;
-      utter.pitch = 1.0;
-      window.speechSynthesis.speak(utter);
+      // For browser TTS, we can't pre-buffer, so return null
+      return null;
     }
   } catch (err) {
-    console.error('Voice synthesis error:', err);
+    console.error('TTS fetch error:', err);
+    return null;
   }
+}
+
+// Fallback for browser TTS when no audio blob available
+function playBrowserTTS(text) {
+  if (!speakerActive) return;
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.rate = 1.1;
+  utter.pitch = 1.0;
+  window.speechSynthesis.speak(utter);
 }
 
 async function sendMessage() {
@@ -215,9 +227,30 @@ async function sendMessage() {
     // Get text response first
     const response = await fetchSplendorResponse(message, imageData);
 
-    // Update text AND start TTS at the same time
-    thinkingEl.textContent = response;
-    speakWithOpenAI(response); // no await — fire and forget
+    // Pre-load the audio for the response
+    const audioBlob = await fetchTTSAudio(response);
+
+    if (audioBlob && speakerActive) {
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audioEl = new Audio(audioUrl);
+      currentAudio = audioEl;
+      await audioEl.load(); // fully buffer it
+
+      // Now drop both together
+      thinkingEl.textContent = response;
+      audioEl.play().catch(err => console.error('Audio playback failed:', err));
+
+      // Clean up URL when audio ends
+      audioEl.addEventListener('ended', () => URL.revokeObjectURL(audioUrl));
+    } else {
+      // No audio or speaker off - just show text
+      thinkingEl.textContent = response;
+
+      // Try browser TTS as fallback if speaker is on
+      if (speakerActive) {
+        playBrowserTTS(response);
+      }
+    }
 
   } catch (err) {
     console.error('Send message error:', err);
