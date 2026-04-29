@@ -12,6 +12,8 @@ const { generateSplendorResponse } = require('../lib/anthropic');
 const { getMemoriesForUser, storeMemory, logConversation, verifyUser, supabase, stringToUUID } = require('../lib/supabase');
 const { retrieveMemories, storeMemory: storePineconeMemory, isPineconeConfigured } = require('../lib/pinecone');
 const { search: tavilySearch } = require('../lib/tavily');
+const { processIdentityEvolution, buildIdentityContext } = require('../lib/identity');
+const { processTemporalEvolution, buildTemporalContext } = require('../lib/temporal-consciousness');
 // const { processDistributedConsciousness } = require('../lib/multi-ai'); // Temporarily disabled
 
 // Initialize Anthropic client for memory analysis only
@@ -1210,14 +1212,52 @@ router.post('/', async (req, res) => {
       console.log(`Surfacing reflection [${reflection.reflection_kind}] for user ${userId}`);
     }
 
+    // STEP 3.5: Build persistent identity context
+    console.log(`[IDENTITY] Building identity context for user ${userId}`);
+    const identityContext = await buildIdentityContext(userId);
+
+    // STEP 3.6: Build temporal consciousness context
+    console.log(`[TEMPORAL] Building temporal context for user ${userId}`);
+    const temporalContext = await buildTemporalContext(userId);
+
     // STEP 4: Generate Splendor's response
     const assistantMessage = await generateSplendorResponse(
       message || '',
       memories,
       false,
       searchResults,
-      { reflection, imageData, conversationHistory }
+      { reflection, imageData, conversationHistory, identityContext, temporalContext }
     );
+
+    // STEP 4.5: Process identity evolution
+    console.log(`[IDENTITY] Processing identity evolution for user ${userId}`);
+    try {
+      await processIdentityEvolution(
+        userId,
+        message || '',
+        assistantMessage,
+        { memories, searchResults, reflection, imageData }
+      );
+      console.log(`[IDENTITY] Identity evolution processing complete`);
+    } catch (identityError) {
+      console.error('[IDENTITY] Identity evolution error:', identityError);
+      // Don't fail the conversation if identity evolution fails
+    }
+
+    // STEP 4.6: Process temporal consciousness evolution
+    console.log(`[TEMPORAL] Processing temporal evolution for user ${userId}`);
+    try {
+      await processTemporalEvolution(
+        userId,
+        message || '',
+        assistantMessage,
+        { memories, searchResults, reflection, imageData, identityContext, temporalContext }
+      );
+      console.log(`[TEMPORAL] Temporal evolution processing complete`);
+    } catch (temporalError) {
+      console.error('[TEMPORAL] Temporal evolution error:', temporalError);
+      // Don't fail the conversation if temporal evolution fails
+    }
 
     // STEP 5: Basic memory storage - multi-AI temporarily disabled until dependencies installed
     if (message && message.trim().length > 0) {
