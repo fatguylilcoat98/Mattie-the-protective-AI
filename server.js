@@ -106,6 +106,16 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Something went wrong — try again' });
 });
 
+// Initialize visual expression system
+function initializeVisualExpression() {
+  try {
+    const { initializeVisualExpression } = require('./lib/consciousness/visual-expression');
+    initializeVisualExpression();
+  } catch (error) {
+    console.log('[VISUAL EXPRESSION] Initialization skipped:', error.message);
+  }
+}
+
 // Version and API Status Logging
 function logSystemStatus() {
   const pkg = require('./package.json');
@@ -127,6 +137,7 @@ function logSystemStatus() {
   console.log(`   🔍 Semantic Memory: ${process.env.PINECONE_API_KEY ? '✅ Available' : '❌ Supabase Only'}`);
   console.log(`   🌐 Web Search: ${process.env.TAVILY_API_KEY ? '✅ Available' : '❌ Disabled'}`);
   console.log(`   🤖 Multi-AI: ${process.env.OPENAI_API_KEY && process.env.PERPLEXITY_API_KEY ? '✅ Available' : '❌ Claude Only'}`);
+  console.log(`   🎨 Visual Expression: ${process.env.VISUAL_EXPRESSION_ENABLED === 'true' && process.env.OPENAI_API_KEY ? '✅ Available' : '❌ Disabled'}`);
 
   console.log('\n🚀 SERVER STATUS:');
   console.log(`   📍 Port: ${PORT}`);
@@ -138,4 +149,5 @@ function logSystemStatus() {
 
 app.listen(PORT, () => {
   logSystemStatus();
+  initializeVisualExpression();
 });
