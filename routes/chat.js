@@ -29,6 +29,16 @@ const {
   initializeLocalMemory
 } = require('../lib/unified-memory');
 const { processFastChat } = require('../lib/performance-optimized-chat');
+const { process6LayerChat, start6LayerSession, end6LayerSession, get6LayerSessionStatus } = require('../lib/6-layer-chat-integration');
+const { startMemoryJobs, triggerDecayJob, triggerCompression, triggerMaintenance } = require('../lib/memory-background-jobs');
+
+// Initialize background memory jobs
+let memoryJobsStarted = false;
+if (!memoryJobsStarted) {
+  startMemoryJobs();
+  memoryJobsStarted = true;
+  console.log('[CHAT ROUTE] Memory background jobs initialized');
+}
 // const { processDistributedConsciousness } = require('../lib/multi-ai'); // Temporarily disabled
 
 // Initialize Anthropic client for memory analysis only
@@ -147,8 +157,100 @@ router.get('/morning/:userId', async (req, res) => {
 
 // Main chat endpoint - PERFORMANCE OPTIMIZED
 router.post('/', async (req, res) => {
-  // Use performance-optimized chat processing
-  return processFastChat(req, res);
+  // Check if 6-layer memory is requested
+  const use6Layer = req.body.use6LayerMemory || process.env.USE_6_LAYER_MEMORY === 'true';
+
+  if (use6Layer) {
+    return process6LayerChat(req, res);
+  } else {
+    return processFastChat(req, res);
+  }
+});
+
+// 6-Layer Memory specific endpoints
+router.post('/6-layer', async (req, res) => {
+  return process6LayerChat(req, res);
+});
+
+// Start 6-layer session with proactive opener
+router.post('/6-layer/start/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const sessionInfo = await start6LayerSession(userId);
+
+    res.json({
+      success: true,
+      ...sessionInfo
+    });
+  } catch (error) {
+    console.error('6-layer session start error:', error);
+    res.status(500).json({ error: 'Failed to start session' });
+  }
+});
+
+// End 6-layer session
+router.post('/6-layer/end/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { reason = 'user_ended' } = req.body;
+    const sessionInfo = await end6LayerSession(userId, reason);
+
+    res.json({
+      success: true,
+      ...sessionInfo
+    });
+  } catch (error) {
+    console.error('6-layer session end error:', error);
+    res.status(500).json({ error: 'Failed to end session' });
+  }
+});
+
+// Get session status
+router.get('/6-layer/status/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const status = get6LayerSessionStatus(userId);
+
+    res.json({
+      success: true,
+      ...status
+    });
+  } catch (error) {
+    console.error('6-layer session status error:', error);
+    res.status(500).json({ error: 'Failed to get session status' });
+  }
+});
+
+// Debug endpoints for memory management (admin only)
+router.post('/admin/memory/decay', async (req, res) => {
+  try {
+    await triggerDecayJob();
+    res.json({ success: true, message: 'Memory decay job completed' });
+  } catch (error) {
+    console.error('Manual decay job error:', error);
+    res.status(500).json({ error: 'Decay job failed' });
+  }
+});
+
+router.post('/admin/memory/compress/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    await triggerCompression(userId);
+    res.json({ success: true, message: `Compression completed for user ${userId}` });
+  } catch (error) {
+    console.error('Manual compression error:', error);
+    res.status(500).json({ error: 'Compression failed' });
+  }
+});
+
+router.post('/admin/memory/maintenance', async (req, res) => {
+  try {
+    await triggerMaintenance();
+    res.json({ success: true, message: 'Memory maintenance completed' });
+  } catch (error) {
+    console.error('Manual maintenance error:', error);
+    res.status(500).json({ error: 'Maintenance failed' });
+  }
 });
 
 module.exports = router;
