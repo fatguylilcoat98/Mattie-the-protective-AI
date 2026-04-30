@@ -19,8 +19,11 @@ const {
   checkDecisionCompliance,
   handleDecisionRecall,
   processDecisionCommand,
-  initializeDbm
-} = require('../lib/decision-bound-memory');
+  initializeDbm,
+  generateDecisionProposal,
+  formatProposalForApproval,
+  STATUSES
+} = require('../lib/decision-bound-memory-v2');
 const { processCalmConsciousness } = require('../lib/calm-consciousness');
 const {
   storeUnifiedMemory,
