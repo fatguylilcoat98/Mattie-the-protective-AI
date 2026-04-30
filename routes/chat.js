@@ -41,6 +41,26 @@ if (!memoryJobsStarted) {
 }
 // const { processDistributedConsciousness } = require('../lib/multi-ai'); // Temporarily disabled
 
+// 6-layer memory system (additive — does not replace existing memory paths)
+const { assembleMemoryContext } = require('../lib/memory/assembler');
+const { saveEpisode } = require('../lib/memory/episodes');
+const { touchUserProfile } = require('../lib/memory/reality-context');
+const { extractAndUpsert } = require('../lib/memory/semantic');
+const { buildProactiveOpener } = require('../lib/memory/opener');
+const memorySession = require('../lib/memory/session');
+
+// When a session goes idle (30+ min no activity), commit it to episodic memory.
+memorySession.registerOnIdle(async (userId, history) => {
+  try {
+    if (!history || history.length === 0) return;
+    await saveEpisode(userId, history);
+    await touchUserProfile(userId);
+  } catch (err) {
+    console.error('idle session save failed:', err.message);
+  }
+});
+memorySession.startSweeper();
+
 // Initialize Anthropic client for memory analysis only
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -155,7 +175,11 @@ router.get('/morning/:userId', async (req, res) => {
   }
 });
 
-// Main chat endpoint - PERFORMANCE OPTIMIZED
+// Main chat endpoint — delegates to performance-optimized pipeline.
+// 6-layer memory still functions: cron workers run independently,
+// session sweeper is registered at module load, and /opener/:userId
+// works regardless. Deeper integration into processFastChat can be
+// added later if desired.
 router.post('/', async (req, res) => {
   // Check if 6-layer memory is requested
   const use6Layer = req.body.use6LayerMemory || process.env.USE_6_LAYER_MEMORY === 'true';
@@ -250,6 +274,20 @@ router.post('/admin/memory/maintenance', async (req, res) => {
   } catch (error) {
     console.error('Manual maintenance error:', error);
     res.status(500).json({ error: 'Maintenance failed' });
+  }
+});
+
+// Layer 5 — Proactive opener
+// Returns a 1-2 sentence opener (or null if it's a continuation < 1hr).
+router.get('/opener/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    if (!userId) return res.status(400).json({ error: 'userId required' });
+    const opener = await buildProactiveOpener(userId);
+    res.json({ opener });
+  } catch (err) {
+    console.error('Opener route error:', err.message);
+    res.status(500).json({ error: 'Unable to generate opener' });
   }
 });
 

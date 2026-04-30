@@ -52,3 +52,31 @@ services:
         sync: false
       - key: SUPABASE_ANON_KEY
         sync: false
+
+  # 6-Layer Memory — daily decay (Layer 2 → Layer 4 prep)
+  - type: cron
+    name: splendor-memory-decay
+    env: node
+    schedule: "0 4 * * *"     # 04:00 UTC daily
+    buildCommand: npm install
+    startCommand: node workers/memory-decay-worker.js
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+
+  # 6-Layer Memory — compression (folds decayed episodes into summaries)
+  - type: cron
+    name: splendor-memory-compression
+    env: node
+    schedule: "30 4 * * *"    # 04:30 UTC daily, 30 min after decay
+    buildCommand: npm install
+    startCommand: node workers/memory-compression-worker.js
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
