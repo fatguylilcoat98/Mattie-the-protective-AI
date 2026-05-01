@@ -15,6 +15,8 @@ require('dotenv').config();
 
 const Anthropic = require('@anthropic-ai/sdk');
 const { createClient } = require('@supabase/supabase-js');
+const { updateCognitiveProfile, getCognitiveProfile } = require('../lib/cognitive-profile-builder');
+const { analyzeEvolutionTrends, detectCognitiveRegression, trackProfileEvolution } = require('../lib/metacognitive-evolution-tracker');
 
 if (!process.env.ANTHROPIC_API_KEY) {
   console.error('Reflection worker: ANTHROPIC_API_KEY missing — aborting.');
@@ -166,6 +168,48 @@ async function runReflection(userId) {
       console.error('Failed to save reflection:', error.message);
     } else {
       console.log(`Reflection saved: [${reflectionKind}]`);
+    }
+
+    // Background cognitive profile building and evolution tracking
+    try {
+      console.log(`[REFLECTION] Building cognitive profile for ${userId}...`);
+
+      // Get current profile for evolution comparison
+      const currentProfile = await getCognitiveProfile(userId);
+
+      // Update cognitive profile with recent patterns (placeholder - would integrate with cognitive analyzer)
+      const updatedProfile = await updateCognitiveProfile(userId, {
+        reflection_context: reflectionText,
+        memory_patterns: allMemories.length,
+        reflection_type: reflectionKind
+      });
+
+      if (updatedProfile && currentProfile) {
+        // Track profile evolution
+        const evolutionResult = await trackProfileEvolution(
+          userId,
+          currentProfile.fingerprint,
+          updatedProfile.fingerprint,
+          'reflection_update'
+        );
+        if (evolutionResult && evolutionResult.length > 0) {
+          console.log(`[REFLECTION] Profile evolution tracked: ${evolutionResult.length} changes`);
+        }
+      }
+
+      // Analyze evolution trends and check for regression
+      const evolutionTrends = await analyzeEvolutionTrends(userId);
+      if (evolutionTrends && evolutionTrends.stability === 'dynamic') {
+        const regressionCheck = await detectCognitiveRegression(userId, evolutionTrends.recent_evolutions);
+        if (regressionCheck && regressionCheck.overall_concern !== 'low') {
+          console.log(`[REFLECTION] Cognitive regression detected: ${regressionCheck.overall_concern} concern level`);
+        }
+      }
+
+      console.log(`[REFLECTION] Cognitive processing complete for ${userId}`);
+    } catch (cognitiveError) {
+      console.error('[REFLECTION] Cognitive processing error:', cognitiveError.message);
+      // Don't crash reflection on cognitive processing errors
     }
 
     if (openThreads && openThreads.length > 0) {
