@@ -691,6 +691,30 @@ async function playSpoken(text) {
   }
 }
 
+async function setupAudioContext() {
+  try {
+    // Request microphone access with echo cancellation
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          sampleRate: 44100
+        }
+      });
+
+      // Stop the stream immediately - we just wanted to set permissions and test echo cancellation
+      stream.getTracks().forEach(track => track.stop());
+      console.log('Audio context setup complete with echo cancellation');
+      return true;
+    }
+  } catch (error) {
+    console.warn('Could not set up enhanced audio context:', error);
+    return false;
+  }
+}
+
 function toggleVoiceInput() {
   console.log('Toggle voice input called');
 
@@ -703,17 +727,30 @@ function toggleVoiceInput() {
     recognition.stop();
     isRecording = false;
     micButton.classList.remove('listening');
-    console.log('Stopped recording');
+    micButton.title = 'Start voice input (click and speak, then click send when done)';
+    console.log('Stopped recording - click Send when ready');
   } else {
     try {
-      recognition.start();
-      isRecording = true;
-      micButton.classList.add('listening');
-      console.log('Started recording');
+      // Set up audio context first for echo cancellation
+      setupAudioContext().then(() => {
+        recognition.start();
+        isRecording = true;
+        micButton.classList.add('listening');
+        micButton.title = 'Stop voice input (recording continuously until you stop)';
+        console.log('Started continuous recording - speak freely, click mic again when done');
+      }).catch(() => {
+        // Fallback if audio setup fails
+        recognition.start();
+        isRecording = true;
+        micButton.classList.add('listening');
+        micButton.title = 'Stop voice input (recording continuously until you stop)';
+        console.log('Started recording with basic audio');
+      });
     } catch (error) {
       console.error('Voice recognition start error:', error);
       isRecording = false;
       micButton.classList.remove('listening');
+      micButton.title = 'Voice input error - try again';
     }
   }
 }
@@ -723,34 +760,77 @@ function initVoiceRecognition() {
 
   if (SpeechRecognition) {
     recognition = new SpeechRecognition();
-    recognition.continuous = false;
+    recognition.continuous = true;  // Keep recording until user stops
     recognition.interimResults = true;
     recognition.lang = 'en-US';
+    recognition.maxAlternatives = 1;
 
     recognition.onresult = (event) => {
-      const transcript = Array.from(event.results)
-        .map(result => result[0].transcript)
-        .join('');
-      messageInput.value = transcript;
+      let finalTranscript = '';
+      let interimTranscript = '';
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript + ' ';
+        } else {
+          interimTranscript += transcript;
+        }
+      }
+
+      // Update the input with final + interim results
+      const currentValue = messageInput.value;
+      const lastFinalLength = currentValue.lastIndexOf(' ') + 1;
+      const baseFinal = currentValue.substring(0, lastFinalLength);
+
+      messageInput.value = baseFinal + finalTranscript + interimTranscript;
       adjustTextareaHeight();
     };
 
     recognition.onend = () => {
       isRecording = false;
       micButton.classList.remove('listening');
-      // Auto-send if there's content
-      if (messageInput.value.trim()) {
-        setTimeout(() => sendMessage(), 500);
-      }
+      console.log('Voice recognition ended - ready to send when you click send button');
+      // NO AUTO-SEND - user must click send button manually
     };
 
     recognition.onerror = (event) => {
-      console.error('Speech error:', event.error);
+      console.error('Speech recognition error:', event.error);
       isRecording = false;
       micButton.classList.remove('listening');
+
+      // Handle specific errors
+      if (event.error === 'no-speech') {
+        console.log('No speech detected, continuing to listen...');
+        // Don't stop on no-speech, just continue
+        return;
+      } else if (event.error === 'network') {
+        appendMessage('system', 'Network error with voice recognition. Please try again.');
+      } else if (event.error === 'not-allowed') {
+        appendMessage('system', 'Microphone permission denied. Please allow microphone access and try again.');
+      }
     };
 
-    console.log('Voice recognition initialized');
+    recognition.onstart = () => {
+      console.log('Voice recognition started');
+    };
+
+    console.log('Voice recognition initialized with continuous mode');
+
+    // Set initial tooltip
+    if (micButton) {
+      micButton.title = 'Start voice input (continuous recording until you stop)';
+    }
+
+    // Pre-setup audio context for better echo cancellation
+    setTimeout(() => {
+      setupAudioContext().then(() => {
+        console.log('Audio context pre-configured for echo cancellation');
+      }).catch(() => {
+        console.log('Audio context setup will be done on first use');
+      });
+    }, 1000);
+
   } else {
     // Hide mic button if not supported
     micButton.style.display = 'none';

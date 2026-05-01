@@ -1,6 +1,6 @@
 {
   "name": "splendor",
-  "version": "12.0.3",
+  "version": "12.0.4",
   "description": "Splendor — The Remarkable AI · The Good Neighbor Guard",
   "main": "server.js",
   "scripts": {
@@ -11,7 +11,8 @@
     "memory:compress": "node workers/memory-compression-worker.js",
     "seed:foundational": "node seed-foundational-rules.js",
     "setup:4tier": "node setup-4tier-system.js",
-    "setup:temporal": "node setup-temporal-memory.js"
+    "setup:temporal": "node setup-temporal-memory.js",
+    "setup:dashboard": "node setup-cognitive-dashboard.js"
   },
   "keywords": ["ai", "assistant", "memory", "truth", "remarkable"],
   "author": "Christopher Hughes · The Good Neighbor Guard",
