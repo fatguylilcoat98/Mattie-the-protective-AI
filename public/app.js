@@ -463,6 +463,9 @@ function hideThinking() {
 
 async function fetchSplendorResponse(message, imageData = null) {
   try {
+    // Get current reality context
+    const realityContextData = typeof getRealityContext === 'function' ? getRealityContext() : null;
+
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: {
@@ -471,7 +474,8 @@ async function fetchSplendorResponse(message, imageData = null) {
       body: JSON.stringify({
         message,
         userId: userId,
-        imageData
+        imageData,
+        realityContext: realityContextData
       }),
     });
 
@@ -818,6 +822,12 @@ document.addEventListener('DOMContentLoaded', () => {
     cameraButton: !!cameraButton,
     speakerButton: !!speakerButton
   });
+
+  // Initialize reality context system
+  if (typeof initializeRealityContext === 'function') {
+    initializeRealityContext();
+    console.log('[REALITY] Reality context system starting...');
+  }
 
   // Add event listeners
   if (sendButton) {
