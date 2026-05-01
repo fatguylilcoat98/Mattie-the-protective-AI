@@ -15,16 +15,23 @@ const {
   toggleSciFiMode,
   getSciFiModeStatus
 } = require('../lib/scifi-mode-manager');
+const {
+  handleSciFiModeToggle,
+  getSciFiStatusForUser,
+  getSystemSciFiStatus
+} = require('../lib/scifi-orchestrator');
 
 // Get current sci-fi mode status
 router.get('/status/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
     const status = await getSciFiModeStatus(userId);
+    const orchestratorStatus = await getSciFiStatusForUser(userId);
 
     res.json({
       success: true,
-      ...status
+      ...status,
+      runtime: orchestratorStatus
     });
 
   } catch (error) {
@@ -51,10 +58,14 @@ router.post('/toggle/:userId', async (req, res) => {
       });
     }
 
+    // Actually start/stop the sci-fi features
+    const orchestratorResult = await handleSciFiModeToggle(userId, result.enabled);
+
     res.json({
       success: true,
       enabled: result.enabled,
-      message: result.message
+      message: result.message,
+      features: orchestratorResult || { note: 'Feature orchestration in progress...' }
     });
 
   } catch (error) {
@@ -120,6 +131,25 @@ router.post('/disable/:userId', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to disable sci-fi mode'
+    });
+  }
+});
+
+// Get system-wide sci-fi mode status (admin endpoint)
+router.get('/system/status', async (req, res) => {
+  try {
+    const systemStatus = getSystemSciFiStatus();
+
+    res.json({
+      success: true,
+      system: systemStatus
+    });
+
+  } catch (error) {
+    console.error('System sci-fi status error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get system sci-fi status'
     });
   }
 });
