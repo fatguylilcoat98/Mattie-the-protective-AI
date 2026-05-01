@@ -731,7 +731,8 @@ function toggleVoiceInput() {
     console.log('Stopped recording - click Send when ready');
   } else {
     try {
-      // Set up audio context first for echo cancellation
+      // Clear input and set up audio context for echo cancellation
+      messageInput.value = '';  // Start with clean slate
       setupAudioContext().then(() => {
         recognition.start();
         isRecording = true;
@@ -769,7 +770,8 @@ function initVoiceRecognition() {
       let finalTranscript = '';
       let interimTranscript = '';
 
-      for (let i = event.resultIndex; i < event.results.length; i++) {
+      // Process all results to build complete transcripts
+      for (let i = 0; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
           finalTranscript += transcript + ' ';
@@ -778,12 +780,8 @@ function initVoiceRecognition() {
         }
       }
 
-      // Update the input with final + interim results
-      const currentValue = messageInput.value;
-      const lastFinalLength = currentValue.lastIndexOf(' ') + 1;
-      const baseFinal = currentValue.substring(0, lastFinalLength);
-
-      messageInput.value = baseFinal + finalTranscript + interimTranscript;
+      // Simply set the value to final + interim (no complex concatenation)
+      messageInput.value = finalTranscript + interimTranscript;
       adjustTextareaHeight();
     };
 
