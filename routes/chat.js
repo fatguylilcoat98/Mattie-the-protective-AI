@@ -33,6 +33,7 @@ const {
 } = require('../lib/unified-memory');
 const { processFastChat } = require('../lib/performance-optimized-chat');
 const { process6LayerChat, start6LayerSession, end6LayerSession, get6LayerSessionStatus } = require('../lib/6-layer-chat-integration');
+const { process4TierChat, start4TierSession, end4TierSession, get4TierSessionStatus } = require('../lib/4-tier-chat-integration');
 const { startMemoryJobs, triggerDecayJob, triggerCompression, triggerMaintenance } = require('../lib/memory-background-jobs');
 
 // Initialize background memory jobs
@@ -245,6 +246,63 @@ router.get('/6-layer/status/:userId', async (req, res) => {
   } catch (error) {
     console.error('6-layer session status error:', error);
     res.status(500).json({ error: 'Failed to get session status' });
+  }
+});
+
+// ===== 4-TIER MEMORY SYSTEM ENDPOINTS =====
+// New governance-focused memory architecture with Tier 1/1.5/2/3/4 hierarchy
+
+// Main 4-tier chat endpoint
+router.post('/4-tier', async (req, res) => {
+  return process4TierChat(req, res);
+});
+
+// Start 4-tier session with proactive opener
+router.post('/4-tier/start/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const sessionInfo = await start4TierSession(userId);
+
+    res.json({
+      success: true,
+      ...sessionInfo
+    });
+  } catch (error) {
+    console.error('4-tier session start error:', error);
+    res.status(500).json({ error: 'Failed to start 4-tier session' });
+  }
+});
+
+// End 4-tier session with background processing
+router.post('/4-tier/end/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { reason = 'user_ended' } = req.body;
+    const sessionInfo = await end4TierSession(userId, reason);
+
+    res.json({
+      success: true,
+      ...sessionInfo
+    });
+  } catch (error) {
+    console.error('4-tier session end error:', error);
+    res.status(500).json({ error: 'Failed to end 4-tier session' });
+  }
+});
+
+// Get 4-tier session status
+router.get('/4-tier/status/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const status = get4TierSessionStatus(userId);
+
+    res.json({
+      success: true,
+      ...status
+    });
+  } catch (error) {
+    console.error('4-tier session status error:', error);
+    res.status(500).json({ error: 'Failed to get 4-tier session status' });
   }
 });
 

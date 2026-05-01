@@ -15,6 +15,7 @@ const memoryRoutes = require('./routes/memory');
 const voiceRoutes = require('./routes/voice');
 const consciousnessTestRoutes = require('./routes/consciousness-test');
 const authRoutes = require('./routes/auth');
+const memoryDebugRoutes = require('./routes/memory-debug');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -50,6 +51,7 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/memory', memoryRoutes);
 app.use('/api/voice', voiceRoutes);
 app.use('/api/consciousness-test', consciousnessTestRoutes);
+app.use('/debug', memoryDebugRoutes);
 
 // Health check with version info
 app.get('/health', (req, res) => {
