@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Brain Button Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #111; color: white; }
+        button { padding: 10px 20px; margin: 10px; background: #0084ff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .result { background: #222; padding: 15px; margin: 10px 0; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h2>Brain Button Diagnostic</h2>
+    <button onclick="testAPIs()">Test Dashboard APIs</button>
+    <div id="results"></div>
+
+    <script>
+        async function testAPIs() {
+            const results = document.getElementById('results');
+            const testUserId = 'test-user';
+
+            results.innerHTML = '<div class="result">Testing APIs...</div>';
+
+            try {
+                // Test cognitive profile API
+                console.log('Testing cognitive profile API...');
+                const profileResponse = await fetch(`/cognitive/api/${testUserId}/profile`);
+                const profileData = await profileResponse.json();
+
+                results.innerHTML += `<div class="result">
+                    <strong>Cognitive Profile API:</strong><br>
+                    Status: ${profileResponse.status}<br>
+                    Response: ${JSON.stringify(profileData, null, 2)}
+                </div>`;
+
+                // Test sci-fi status API
+                console.log('Testing sci-fi status API...');
+                const statusResponse = await fetch(`/api/scifi/status/${testUserId}`);
+                const statusData = await statusResponse.json();
+
+                results.innerHTML += `<div class="result">
+                    <strong>Sci-Fi Status API:</strong><br>
+                    Status: ${statusResponse.status}<br>
+                    Response: ${JSON.stringify(statusData, null, 2)}
+                </div>`;
+
+            } catch (error) {
+                results.innerHTML += `<div class="result" style="color: #ff6b6b;">
+                    <strong>Error:</strong><br>
+                    ${error.message}
+                </div>`;
+            }
+        }
+    </script>
+</body>
+</html>
