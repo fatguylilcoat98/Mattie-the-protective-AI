@@ -210,7 +210,7 @@ function generateDashboardHTML(profile, summary, sciFiEnabled, statusData) {
                 <div class="status-dot ${sciFiEnabled ? 'enabled' : 'disabled'}"></div>
                 ${sciFiEnabled ? 'EXPERIMENTAL MODE ACTIVE' : 'STANDARD MODE ACTIVE'}
               </div>
-              <button class="toggle-button ${sciFiEnabled ? 'danger' : ''}" onclick="toggleSciFiMode()">
+              <button class="toggle-button ${sciFiEnabled ? 'danger' : ''}" id="scifiToggleBtn">
                 ${sciFiEnabled ? 'DISABLE' : 'ENABLE'}
               </button>
             </div>
@@ -301,7 +301,13 @@ function generateDashboardHTML(profile, summary, sciFiEnabled, statusData) {
 }
 
 function initializeDashboardControls() {
-  // Toggle functionality is handled by the onclick in the HTML
+  const scifiToggleBtn = document.getElementById('scifiToggleBtn');
+  if (scifiToggleBtn) {
+    scifiToggleBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      toggleSciFiMode();
+    });
+  }
   console.log('Dashboard controls initialized');
 }
 
