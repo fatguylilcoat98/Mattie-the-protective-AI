@@ -112,30 +112,83 @@ async function requestLocationAccess() {
       return false;
     }
 
-    // Request location
+    console.log('[REALITY] Requesting location permission...');
+
+    // Check permission state first if available
+    if ('permissions' in navigator) {
+      try {
+        const permission = await navigator.permissions.query({ name: 'geolocation' });
+        console.log('[REALITY] Geolocation permission state:', permission.state);
+
+        if (permission.state === 'denied') {
+          realityContext.location = {
+            available: false,
+            error: 'Location permission denied by user',
+            fallback: 'Location access denied'
+          };
+          return false;
+        }
+      } catch (permError) {
+        console.log('[REALITY] Could not check permission state:', permError.message);
+      }
+    }
+
+    // Request location with longer timeout
     navigator.geolocation.getCurrentPosition(
       async (position) => {
+        console.log('[REALITY] Location position received:', {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          accuracy: position.coords.accuracy
+        });
         locationPermissionGranted = true;
         await updateLocationContext(position);
-        console.log('[REALITY] Location access granted');
+        console.log('[REALITY] Location context updated successfully');
       },
       (error) => {
-        console.log('[REALITY] Location permission denied:', error.message);
+        console.error('[REALITY] Geolocation error:', {
+          code: error.code,
+          message: error.message,
+          PERMISSION_DENIED: error.PERMISSION_DENIED,
+          POSITION_UNAVAILABLE: error.POSITION_UNAVAILABLE,
+          TIMEOUT: error.TIMEOUT
+        });
+
+        let errorMessage = 'Location access failed';
+        switch(error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = 'Location permission denied by user';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = 'Location information unavailable';
+            break;
+          case error.TIMEOUT:
+            errorMessage = 'Location request timed out';
+            break;
+          default:
+            errorMessage = error.message || 'Unknown location error';
+        }
+
         realityContext.location = {
           available: false,
-          error: error.message,
+          error: errorMessage,
           fallback: 'Location access denied'
         };
       },
       {
-        enableHighAccuracy: false,
-        timeout: 10000,
+        enableHighAccuracy: true, // Try for better accuracy
+        timeout: 30000, // Increase timeout to 30 seconds
         maximumAge: 300000 // 5 minutes
       }
     );
 
   } catch (error) {
     console.error('[REALITY] Location access error:', error);
+    realityContext.location = {
+      available: false,
+      error: 'Location system error',
+      fallback: 'Location access failed'
+    };
     return false;
   }
 }
@@ -240,4 +293,36 @@ function getRealityContextForMemory() {
     location: realityContext.location,
     contextString: buildContextString()
   };
+}
+
+// Manual location refresh - for debugging
+async function refreshLocation() {
+  console.log('[REALITY] Manual location refresh requested');
+  console.log('[REALITY] Current location state:', realityContext.location);
+
+  if (navigator.geolocation) {
+    console.log('[REALITY] Attempting manual location update...');
+    await requestLocationAccess();
+  } else {
+    console.log('[REALITY] Geolocation not available');
+  }
+}
+
+// Debug function to show all reality context
+function debugRealityContext() {
+  console.log('[REALITY] Full context debug:', {
+    time: realityContext.time,
+    date: realityContext.date,
+    timezone: realityContext.timezone,
+    location: realityContext.location,
+    locationPermissionGranted,
+    contextString: buildContextString()
+  });
+  return realityContext;
+}
+
+// Export debug functions to global scope for console access
+if (typeof window !== 'undefined') {
+  window.refreshLocation = refreshLocation;
+  window.debugRealityContext = debugRealityContext;
 }
