@@ -12,6 +12,9 @@ let isRecording = false;
 let recognition = null;
 let chatMessages, messageInput, sendButton, micButton, emptyState;
 
+// Dashboard state
+let dashboardOpen = false;
+
 // Camera state
 let cameraButton, cameraPreview, cameraPreviewWrap;
 let cameraStream = null;
@@ -127,6 +130,232 @@ function updateUserInfo() {
       <button class="logout-button" onclick="logout()">Logout</button>
     `;
   }
+}
+
+// Cognitive Dashboard Functions
+async function openCognitiveDashboard() {
+  if (!userId) {
+    console.error('No user ID available for dashboard');
+    return;
+  }
+
+  dashboardOpen = true;
+  const dashboardOverlay = document.getElementById('dashboardOverlay');
+  const dashboardContent = document.getElementById('dashboardContent');
+
+  if (dashboardOverlay) {
+    dashboardOverlay.classList.remove('hidden');
+  }
+
+  if (dashboardContent) {
+    dashboardContent.innerHTML = '<div class="loading">Loading your cognitive fingerprint...</div>';
+
+    try {
+      await loadDashboardData();
+    } catch (error) {
+      console.error('Dashboard load error:', error);
+      dashboardContent.innerHTML = '<div class="loading" style="color: var(--error);">Failed to load dashboard data</div>';
+    }
+  }
+}
+
+function closeCognitiveDashboard() {
+  dashboardOpen = false;
+  const dashboardOverlay = document.getElementById('dashboardOverlay');
+  if (dashboardOverlay) {
+    dashboardOverlay.classList.add('hidden');
+  }
+}
+
+async function loadDashboardData() {
+  const dashboardContent = document.getElementById('dashboardContent');
+
+  try {
+    // Fetch cognitive profile and sci-fi status
+    const [profileResponse, statusResponse] = await Promise.all([
+      fetch(`/cognitive/api/${userId}/profile`),
+      fetch(`/api/scifi/status/${userId}`)
+    ]);
+
+    const profileData = await profileResponse.json();
+    const statusData = await statusResponse.json();
+
+    const profile = profileData.profile;
+    const summary = profileData.summary;
+    const sciFiStatus = statusData.enabled;
+
+    dashboardContent.innerHTML = generateDashboardHTML(profile, summary, sciFiStatus, statusData);
+
+    // Initialize sci-fi toggle functionality
+    initializeDashboardControls();
+
+  } catch (error) {
+    console.error('Dashboard data fetch error:', error);
+    dashboardContent.innerHTML = '<div class="loading" style="color: var(--error);">Error loading dashboard</div>';
+  }
+}
+
+function generateDashboardHTML(profile, summary, sciFiEnabled, statusData) {
+  const hasProfile = summary && summary.exists;
+
+  return `
+    <div class="dashboard-grid">
+      <!-- Sci-Fi Mode Control -->
+      <div class="dashboard-card">
+        <h3>🚀 Sci-Fi Mode Control</h3>
+        <div class="dashboard-card-content">
+          <div class="scifi-controls ${sciFiEnabled ? 'enabled' : ''}">
+            <div class="scifi-status">
+              <div class="status-indicator ${sciFiEnabled ? 'enabled' : 'disabled'}">
+                <div class="status-dot ${sciFiEnabled ? 'enabled' : 'disabled'}"></div>
+                ${sciFiEnabled ? 'EXPERIMENTAL MODE ACTIVE' : 'STANDARD MODE ACTIVE'}
+              </div>
+              <button class="toggle-button ${sciFiEnabled ? 'danger' : ''}" onclick="toggleSciFiMode()">
+                ${sciFiEnabled ? 'DISABLE' : 'ENABLE'}
+              </button>
+            </div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">
+              ${sciFiEnabled ? 'Continuous consciousness + ambient awareness active' : 'Standard cognitive fingerprinting only'}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cognitive Profile -->
+      <div class="dashboard-card">
+        <h3>🧠 Cognitive Fingerprint</h3>
+        <div class="dashboard-card-content">
+          ${hasProfile ? `
+            <div class="fingerprint-grid">
+              <div class="fingerprint-item">
+                <div class="label">Reasoning Style</div>
+                <div class="value">${summary.reasoningStyle || 'developing'}</div>
+              </div>
+              <div class="fingerprint-item">
+                <div class="label">Communication</div>
+                <div class="value">${summary.communicationStyle || 'developing'}</div>
+              </div>
+              <div class="fingerprint-item">
+                <div class="label">Learning Style</div>
+                <div class="value">${summary.learningStyle || 'developing'}</div>
+              </div>
+              <div class="fingerprint-item">
+                <div class="label">Conversations</div>
+                <div class="value">${summary.conversations || 0}</div>
+              </div>
+            </div>
+
+            <div style="margin: 16px 0;">
+              <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 6px;">
+                Profile Confidence: ${Math.round((summary.confidence || 0) * 100)}%
+              </div>
+              <div class="confidence-bar">
+                <div class="confidence-fill" style="width: ${Math.round((summary.confidence || 0) * 100)}%"></div>
+              </div>
+            </div>
+          ` : `
+            <div style="text-align: center; color: var(--text-muted); padding: 20px;">
+              <p>Cognitive fingerprint is building...</p>
+              <p>Start a conversation to begin pattern analysis.</p>
+            </div>
+          `}
+        </div>
+      </div>
+
+      <!-- Evolution Timeline -->
+      <div class="dashboard-card">
+        <h3>📈 Thinking Evolution</h3>
+        <div class="dashboard-card-content">
+          <div style="text-align: center; color: var(--text-muted); padding: 20px;">
+            <p>Evolution tracking coming soon...</p>
+            <p>This will show how your thinking patterns change over time.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cost & Usage -->
+      <div class="dashboard-card">
+        <h3>💰 Usage & Cost</h3>
+        <div class="dashboard-card-content">
+          <div class="fingerprint-grid">
+            <div class="fingerprint-item">
+              <div class="label">Mode</div>
+              <div class="value">${sciFiEnabled ? 'Sci-Fi' : 'Standard'}</div>
+            </div>
+            <div class="fingerprint-item">
+              <div class="label">Est. Daily Cost</div>
+              <div class="value">${sciFiEnabled ? '$10-15' : '$2-5'}</div>
+            </div>
+          </div>
+
+          <div style="margin-top: 16px; font-size: 12px; color: var(--text-muted);">
+            ${sciFiEnabled ?
+              'Sci-fi mode includes continuous consciousness and ambient awareness' :
+              'Standard mode includes cognitive fingerprinting and adaptive responses'
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function initializeDashboardControls() {
+  // Toggle functionality is handled by the onclick in the HTML
+  console.log('Dashboard controls initialized');
+}
+
+async function toggleSciFiMode() {
+  if (!userId) return;
+
+  try {
+    const response = await fetch(`/api/scifi/toggle/${userId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      // Show a brief notification
+      showNotification(result.message, 'success');
+
+      // Reload dashboard data
+      setTimeout(() => {
+        loadDashboardData();
+      }, 1000);
+    } else {
+      showNotification('Failed to toggle sci-fi mode: ' + result.error, 'error');
+    }
+  } catch (error) {
+    console.error('Sci-fi toggle error:', error);
+    showNotification('Failed to toggle sci-fi mode', 'error');
+  }
+}
+
+function showNotification(message, type = 'info') {
+  // Simple notification system
+  const notification = document.createElement('div');
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: ${type === 'success' ? 'var(--success)' : type === 'error' ? 'var(--error)' : 'var(--primary)'};
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    z-index: 3000;
+    font-size: 14px;
+    max-width: 300px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  `;
+  notification.textContent = message;
+
+  document.body.appendChild(notification);
+
+  setTimeout(() => {
+    notification.remove();
+  }, 3000);
 }
 
 // Helper functions
@@ -568,6 +797,12 @@ document.addEventListener('DOMContentLoaded', () => {
   cameraPreviewWrap = document.getElementById('cameraPreviewWrap');
   speakerButton = document.getElementById('speakerButton');
 
+  // Cognitive dashboard elements
+  const brainButton = document.getElementById('brainButton');
+  const dashboardOverlay = document.getElementById('dashboardOverlay');
+  const closeDashboard = document.getElementById('closeDashboard');
+  const dashboardContent = document.getElementById('dashboardContent');
+
   console.log('Elements found:', {
     chatMessages: !!chatMessages,
     messageInput: !!messageInput,
@@ -620,6 +855,31 @@ document.addEventListener('DOMContentLoaded', () => {
     speakerButton.addEventListener('click', (e) => {
       e.preventDefault();
       toggleSpeaker();
+    });
+  }
+
+  // Cognitive Dashboard Event Listeners
+  if (brainButton) {
+    brainButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      console.log('Brain button clicked');
+      openCognitiveDashboard();
+    });
+  }
+
+  if (closeDashboard) {
+    closeDashboard.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeCognitiveDashboard();
+    });
+  }
+
+  // Close dashboard when clicking overlay
+  if (dashboardOverlay) {
+    dashboardOverlay.addEventListener('click', (e) => {
+      if (e.target === dashboardOverlay) {
+        closeCognitiveDashboard();
+      }
     });
   }
 

@@ -776,6 +776,298 @@
       }
     }
 
+    /* Cognitive Dashboard Modal */
+    .dashboard-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(10, 14, 26, 0.95);
+      backdrop-filter: blur(10px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+      transition: opacity 0.3s ease;
+      padding: 20px;
+    }
+
+    .dashboard-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .dashboard-modal {
+      background: var(--dark-surface);
+      border: 1px solid var(--dark-border);
+      border-radius: 20px;
+      padding: 0;
+      max-width: 95vw;
+      max-height: 90vh;
+      width: 1000px;
+      height: 700px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+      animation: modalSlide 0.4s ease-out;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .dashboard-header {
+      background: var(--dark-elevated);
+      border-bottom: 1px solid var(--dark-border);
+      padding: 20px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .dashboard-header h2 {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 24px;
+      color: var(--primary);
+      margin: 0;
+      font-weight: 600;
+      letter-spacing: 2px;
+    }
+
+    .close-button {
+      background: none;
+      border: 1px solid var(--dark-border);
+      color: var(--text-muted);
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 16px;
+    }
+
+    .close-button:hover {
+      border-color: var(--error);
+      color: var(--error);
+      background: rgba(244, 67, 54, 0.1);
+    }
+
+    .dashboard-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      min-height: 0;
+    }
+
+    /* Dashboard grid layout */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      height: 100%;
+    }
+
+    .dashboard-card {
+      background: var(--dark-elevated);
+      border: 1px solid var(--dark-border);
+      border-radius: 16px;
+      padding: 20px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .dashboard-card h3 {
+      color: var(--primary);
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 18px;
+      margin: 0 0 16px 0;
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+
+    .dashboard-card-content {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    /* Sci-fi mode controls */
+    .scifi-controls {
+      background: linear-gradient(135deg, var(--dark-border), var(--dark-elevated));
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+      border: 1px solid var(--dark-border);
+    }
+
+    .scifi-controls.enabled {
+      background: linear-gradient(135deg, var(--primary-dim), var(--secondary)20);
+      border-color: var(--primary);
+      box-shadow: 0 0 20px var(--primary-glow);
+    }
+
+    .scifi-status {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .status-indicator.enabled {
+      color: var(--success);
+    }
+
+    .status-indicator.disabled {
+      color: var(--text-muted);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 8px;
+      animation: pulse 2s infinite;
+    }
+
+    .status-dot.enabled {
+      background: var(--success);
+    }
+
+    .status-dot.disabled {
+      background: var(--text-muted);
+    }
+
+    .toggle-button {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: var(--dark-bg);
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .toggle-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 15px var(--primary-glow);
+    }
+
+    .toggle-button.danger {
+      background: linear-gradient(135deg, var(--error), #c62828);
+    }
+
+    /* Profile display */
+    .fingerprint-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .fingerprint-item {
+      background: var(--dark-bg);
+      padding: 12px;
+      border-radius: 8px;
+      border-left: 3px solid var(--primary);
+    }
+
+    .fingerprint-item .label {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .fingerprint-item .value {
+      color: var(--text-primary);
+      font-weight: 500;
+      text-transform: capitalize;
+    }
+
+    .confidence-bar {
+      background: var(--dark-bg);
+      border-radius: 6px;
+      height: 6px;
+      overflow: hidden;
+      margin: 12px 0;
+    }
+
+    .confidence-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      border-radius: 6px;
+      transition: width 0.3s ease;
+    }
+
+    /* Evolution timeline */
+    .evolution-timeline {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .evolution-item {
+      background: var(--dark-bg);
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      border-left: 3px solid var(--secondary);
+    }
+
+    .evolution-item .dimension {
+      font-size: 13px;
+      color: var(--secondary);
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .evolution-item .change {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    .evolution-item .timestamp {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    /* Mobile responsive for dashboard */
+    @media (max-width: 768px) {
+      .dashboard-modal {
+        width: 95vw;
+        height: 85vh;
+        margin: 20px;
+      }
+
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+
+      .fingerprint-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .dashboard-content {
+        padding: 16px;
+      }
+    }
+
     /* Accessibility */
     @media (prefers-reduced-motion: reduce) {
       .message {
@@ -783,6 +1075,10 @@
       }
 
       .send-button:hover:not(:disabled) {
+        transform: none;
+      }
+
+      .toggle-button:hover {
         transform: none;
       }
     }
@@ -845,6 +1141,20 @@
     </div>
   </div>
 
+  <!-- Cognitive Dashboard Modal -->
+  <div class="dashboard-overlay hidden" id="dashboardOverlay">
+    <div class="dashboard-modal">
+      <div class="dashboard-header">
+        <h2>🧠 Cognitive Dashboard</h2>
+        <button class="close-button" id="closeDashboard">✕</button>
+      </div>
+
+      <div class="dashboard-content" id="dashboardContent">
+        <div class="loading">Loading your cognitive fingerprint...</div>
+      </div>
+    </div>
+  </div>
+
   <div class="app-container" id="appContainer">
     <!-- Header -->
     <header class="header">
@@ -871,6 +1181,7 @@
           <button id="cameraButton" class="action-button" title="Visual input">Camera</button>
           <button id="speakerButton" class="action-button" title="Text to speech">Voice</button>
           <button id="micButton" class="action-button" title="Voice input">Mic</button>
+          <button id="brainButton" class="action-button" title="Cognitive dashboard">Brain</button>
         </div>
 
         <!-- Text Input Row -->
