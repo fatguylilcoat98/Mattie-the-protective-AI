@@ -1,6 +1,6 @@
 {
   "name": "splendor",
-  "version": "14.0.1",
+  "version": "14.0.2",
   "description": "Splendor — The Remarkable AI · The Good Neighbor Guard",
   "main": "server.js",
   "scripts": {

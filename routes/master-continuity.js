@@ -43,6 +43,7 @@ router.use(requireContinuityEnabled);
 // ═══════════════════════════════════════════════════════════════════════════════
 // ADMIN DASHBOARD ROUTES
 // ═══════════════════════════════════════════════════════════════════════════════
+/**
  * GET /api/continuity/dashboard
  * Main admin dashboard for Shadow Mode
  */
@@ -136,6 +137,7 @@ router.get('/dashboard', async (req, res) => {
 });
 
 /**
+/**
  * GET /api/continuity/reflection/:id
  * Get detailed reflection information
  */
@@ -178,6 +180,7 @@ router.get('/reflection/:id', async (req, res) => {
 });
 
 /**
+/**
  * POST /api/continuity/reflection/:id/approve
  * Approve a staged reflection
  */
@@ -218,6 +221,7 @@ router.post('/reflection/:id/approve', async (req, res) => {
 });
 
 /**
+/**
  * POST /api/continuity/reflection/:id/reject
  * Reject a staged reflection
  */
@@ -257,6 +261,7 @@ router.post('/reflection/:id/reject', async (req, res) => {
   }
 });
 
+/**
 /**
  * POST /api/continuity/reflection/:id/archive
  * Archive a reflection
@@ -303,6 +308,7 @@ router.post('/reflection/:id/archive', async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
+/**
  * POST /api/continuity/system/toggle-shadow-mode
  * Enable/disable Shadow Mode
  */
@@ -342,6 +348,7 @@ router.post('/system/toggle-shadow-mode', async (req, res) => {
 });
 
 /**
+/**
  * POST /api/continuity/system/run-engine
  * Manually trigger reflection engine
  */
@@ -375,6 +382,7 @@ router.post('/system/run-engine', async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
+/**
  * POST /api/continuity/capture
  * Capture interaction for reflection processing
  */
@@ -406,6 +414,7 @@ router.post('/capture', async (req, res) => {
 // STATIC ADMIN UI
 // ═══════════════════════════════════════════════════════════════════════════════
 
+/**
 /**
  * GET /continuity-admin
  * Serve Shadow Mode admin interface
