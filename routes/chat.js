@@ -235,7 +235,7 @@ router.get('/morning/:userId', async (req, res) => {
 // works regardless. Deeper integration into processFastChat can be
 // added later if desired.
 router.post('/', async (req, res) => {
-n  // Gently check if this is a video request
+ // Gently check if this is a video request
   const videoHandled = await handleVideoRequest(req, res);
   if (videoHandled) return;
 
@@ -251,7 +251,7 @@ n  // Gently check if this is a video request
 
 // 6-Layer Memory specific endpoints
 router.post('/6-layer', async (req, res) => {
-n  // Gently check if this is a video request
+ // Gently check if this is a video request
   const videoHandled = await handleVideoRequest(req, res);
   if (videoHandled) return;
 
@@ -260,7 +260,7 @@ n  // Gently check if this is a video request
 
 // Start 6-layer session with proactive opener
 router.post('/6-layer/start/:userId', async (req, res) => {
-n  // Gently check if this is a video request
+ // Gently check if this is a video request
   const videoHandled = await handleVideoRequest(req, res);
   if (videoHandled) return;
 
@@ -280,7 +280,7 @@ n  // Gently check if this is a video request
 
 // End 6-layer session
 router.post('/6-layer/end/:userId', async (req, res) => {
-n  // Gently check if this is a video request
+ // Gently check if this is a video request
   const videoHandled = await handleVideoRequest(req, res);
   if (videoHandled) return;
 
@@ -320,7 +320,7 @@ router.get('/6-layer/status/:userId', async (req, res) => {
 
 // Main 4-tier chat endpoint
 router.post('/4-tier', async (req, res) => {
-n  // Gently check if this is a video request
+ // Gently check if this is a video request
   const videoHandled = await handleVideoRequest(req, res);
   if (videoHandled) return;
 
@@ -329,7 +329,7 @@ n  // Gently check if this is a video request
 
 // Start 4-tier session with proactive opener
 router.post('/4-tier/start/:userId', async (req, res) => {
-n  // Gently check if this is a video request
+ // Gently check if this is a video request
   const videoHandled = await handleVideoRequest(req, res);
   if (videoHandled) return;
 
@@ -349,7 +349,7 @@ n  // Gently check if this is a video request
 
 // End 4-tier session with background processing
 router.post('/4-tier/end/:userId', async (req, res) => {
-n  // Gently check if this is a video request
+ // Gently check if this is a video request
   const videoHandled = await handleVideoRequest(req, res);
   if (videoHandled) return;
 
@@ -386,7 +386,7 @@ router.get('/4-tier/status/:userId', async (req, res) => {
 
 // Debug endpoints for memory management (admin only)
 router.post('/admin/memory/decay', async (req, res) => {
-n  // Gently check if this is a video request
+ // Gently check if this is a video request
   const videoHandled = await handleVideoRequest(req, res);
   if (videoHandled) return;
 
@@ -400,7 +400,7 @@ n  // Gently check if this is a video request
 });
 
 router.post('/admin/memory/compress/:userId', async (req, res) => {
-n  // Gently check if this is a video request
+ // Gently check if this is a video request
   const videoHandled = await handleVideoRequest(req, res);
   if (videoHandled) return;
 
@@ -415,7 +415,7 @@ n  // Gently check if this is a video request
 });
 
 router.post('/admin/memory/maintenance', async (req, res) => {
-n  // Gently check if this is a video request
+ // Gently check if this is a video request
   const videoHandled = await handleVideoRequest(req, res);
   if (videoHandled) return;
 
