@@ -45,7 +45,7 @@ async function handleVideoRequest(req, res) {
   try {
     let concept = message;
     if (message.includes('<video_generation>')) {
-      const match = message.match(/<video_generation>(.*?)</video_generation>/s);
+      const match = message.match(/<video_generation>([sS]*?)</video_generation>/g);
       if (match) concept = match[1].trim();
     }
     
