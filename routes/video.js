@@ -41,9 +41,9 @@ async function generateVideo(prompt) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         key: MODELSLAB_API_KEY,
-        model_id: 'kling-v2-5-turbo-t2v',
+        model_id: 'kling-v2-master-t2v',
         prompt: prompt.substring(0, 1000),
-        duration: '5s'
+        duration: '5'
       })
     });
 
