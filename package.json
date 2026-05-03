@@ -14,7 +14,7 @@
     "setup:temporal": "node setup-temporal-memory.js",
     "setup:dashboard": "node setup-cognitive-dashboard.js",
     "setup:ambient": "node setup-ambient-insights.js",
-    "migrate:thoughts": "node setup-recent-internal-thoughts.js"
+    "migrate:thoughts": "node setup-recent-internal-thoughts.js",
     "consciousness:start": "node workers/consciousness-scheduler.js",
     "consciousness:reflect": "node workers/autonomous-reflection-worker.js",
     "consciousness:inquire": "node workers/autonomous-inquiry-worker.js",
