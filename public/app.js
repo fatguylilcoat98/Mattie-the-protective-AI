@@ -18,6 +18,9 @@ let dashboardOpen = false;
 // Camera state
 let cameraButton, cameraPreview, cameraPreviewWrap;
 let cameraStream = null;
+// Feature flags
+const USE_STREAMING = true;
+
 let cameraActive = false;
 const captureCanvas = document.createElement('canvas');
 
@@ -461,6 +464,161 @@ function hideThinking() {
   }
 }
 
+
+// Streaming chat function - streams response tokens as they arrive
+async function streamChat(message, imageData = null) {
+  try {
+    // Get current reality context
+    const realityContextData = typeof getRealityContext === 'function' ? getRealityContext() : null;
+
+    const response = await fetch('/api/chat/stream', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message,
+        userId: userId,
+        imageData,
+        realityContext: realityContextData
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let fullResponse = '';
+    let conversationId = null;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      // Decode the chunk and add to buffer
+      buffer += decoder.decode(value, { stream: true });
+
+      // Process complete lines
+      const lines = buffer.split('\n');
+      buffer = lines.pop(); // Keep the incomplete line in buffer
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6); // Remove 'data: '
+          
+          if (data === '[DONE]') {
+            return { fullResponse, conversationId };
+          }
+
+          try {
+            const parsed = JSON.parse(data);
+            
+            if (parsed.type === 'token') {
+              fullResponse += parsed.text;
+              // Return the token immediately for UI update
+              return { token: parsed.text, fullResponse, done: false };
+            } else if (parsed.type === 'done') {
+              conversationId = parsed.conversation_id;
+              fullResponse = parsed.full_response; // Use complete response
+              return { fullResponse, conversationId, done: true };
+            } else if (parsed.type === 'error') {
+              throw new Error(parsed.message);
+            }
+          } catch (e) {
+            console.warn('Failed to parse SSE data:', data);
+          }
+        }
+      }
+    }
+
+    return { fullResponse, conversationId };
+
+  } catch (error) {
+    console.error('Streaming chat error:', error);
+    throw error;
+  }
+}
+
+// Streaming wrapper that handles token-by-token UI updates
+async function handleStreamingResponse(message, imageData = null, thinkingElement = null) {
+  let fullResponse = '';
+  
+  try {
+    const response = await fetch('/api/chat/stream', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message,
+        userId: userId,
+        imageData,
+        realityContext: typeof getRealityContext === 'function' ? getRealityContext() : null
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6);
+          
+          if (data === '[DONE]') {
+            return fullResponse;
+          }
+
+          try {
+            const parsed = JSON.parse(data);
+            
+            if (parsed.type === 'token') {
+              fullResponse += parsed.text;
+              
+              // Update UI immediately with new token
+              if (thinkingElement) {
+                thinkingElement.classList.remove('thinking');
+                thinkingElement.textContent = fullResponse;
+              }
+            } else if (parsed.type === 'done') {
+              fullResponse = parsed.full_response;
+              if (thinkingElement) {
+                thinkingElement.textContent = fullResponse;
+              }
+              return fullResponse;
+            } else if (parsed.type === 'error') {
+              throw new Error(parsed.message);
+            }
+          } catch (e) {
+            console.warn('Failed to parse SSE data:', data);
+          }
+        }
+      }
+    }
+
+    return fullResponse;
+
+  } catch (error) {
+    console.error('Streaming error:', error);
+    throw error;
+  }
+}
+
 async function fetchSplendorResponse(message, imageData = null) {
   try {
     // Get current reality context
@@ -572,8 +730,13 @@ async function sendMessage() {
   sendButton.disabled = true;
 
   try {
-    // Get text response first
-    const response = await fetchSplendorResponse(message, imageData);
+    // Get text response - use streaming if enabled
+    let response;
+    if (USE_STREAMING) {
+      response = await handleStreamingResponse(message, imageData, thinkingEl);
+    } else {
+      response = await fetchSplendorResponse(message, imageData);
+    }
 
     // Pre-load the audio for the response
     const audioBlob = await fetchTTSAudio(response);
