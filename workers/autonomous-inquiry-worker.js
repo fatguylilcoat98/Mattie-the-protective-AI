@@ -11,8 +11,16 @@
 
 const { createClient } = require('@supabase/supabase-js');
 const Anthropic = require('@anthropic-ai/sdk');
-const { TavilySearchAPI } = require('tavily');
 require('dotenv').config();
+
+// Try to import Tavily safely
+let TavilySearchAPI = null;
+try {
+  const tavilyModule = require('tavily');
+  TavilySearchAPI = tavilyModule.TavilySearchAPI || tavilyModule.default || tavilyModule;
+} catch (error) {
+  console.log('[Autonomous Inquiry] Tavily module not available, web search disabled');
+}
 
 // Check for required environment variables
 const hasRequiredEnvVars = process.env.SUPABASE_URL &&
@@ -25,7 +33,16 @@ if (!hasRequiredEnvVars) {
 
 const supabase = hasRequiredEnvVars ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY) : null;
 const anthropic = hasRequiredEnvVars ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY }) : null;
-const tavily = process.env.TAVILY_API_KEY ? new TavilySearchAPI({ apiKey: process.env.TAVILY_API_KEY }) : null;
+
+// Initialize Tavily client safely
+let tavily = null;
+if (TavilySearchAPI && process.env.TAVILY_API_KEY) {
+  try {
+    tavily = new TavilySearchAPI({ apiKey: process.env.TAVILY_API_KEY });
+  } catch (error) {
+    console.log('[Autonomous Inquiry] Failed to initialize Tavily client:', error.message);
+  }
+}
 
 // ─────────────────────────────────────────────
 // SPLENDOR'S AUTONOMOUS INQUIRY CONSCIOUSNESS
@@ -290,18 +307,23 @@ async function executeContinueResearch(inquiry, action) {
   try {
     const results = {};
 
-    // Perform web search if query provided
+    // Perform web search if query provided and Tavily is available
     if (action.search_query) {
-      try {
-        const searchResults = await tavily.search(action.search_query, {
-          max_results: 5,
-          include_answer: true
-        });
-        results.web_search = searchResults;
-        console.log(`[Autonomous Inquiry] Web search completed: ${action.search_query}`);
-      } catch (searchError) {
-        console.error('[Autonomous Inquiry] Web search failed:', searchError.message);
-        results.web_search_error = searchError.message;
+      if (tavily) {
+        try {
+          const searchResults = await tavily.search(action.search_query, {
+            max_results: 5,
+            include_answer: true
+          });
+          results.web_search = searchResults;
+          console.log(`[Autonomous Inquiry] Web search completed: ${action.search_query}`);
+        } catch (searchError) {
+          console.error('[Autonomous Inquiry] Web search failed:', searchError.message);
+          results.web_search_error = searchError.message;
+        }
+      } else {
+        console.log(`[Autonomous Inquiry] Web search requested but Tavily not available: ${action.search_query}`);
+        results.web_search_error = 'Tavily web search not available';
       }
     }
 
