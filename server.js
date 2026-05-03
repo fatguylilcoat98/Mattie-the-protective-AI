@@ -58,6 +58,7 @@ app.use('/api/consciousness-test', consciousnessTestRoutes);
 app.use('/debug', memoryDebugRoutes);
 app.use('/cognitive', cognitiveDashboardRoutes);
 app.use('/api/scifi', sciFiModeRoutes);
+app.use('/api/continuity', require('./routes/master-continuity'));
 
 // Health check with version info
 app.get('/health', (req, res) => {

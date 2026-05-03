@@ -32,6 +32,56 @@ const {
   initializeLocalMemory
 } = require('../lib/unified-memory');
 const { processFastChat } = require('../lib/performance-optimized-chat');
+// Gentle video capability - added to extend Splendor's expression
+async function handleVideoRequest(req, res) {
+  const { message } = req.body;
+  
+  const videoIndicators = ['<video_generation>', 'create a video', 'make a video', 'show me visually', 'visualize this'];
+  const lowerMessage = message.toLowerCase();
+  const isVideoRequest = videoIndicators.some(indicator => lowerMessage.includes(indicator.toLowerCase()));
+  
+  if (!isVideoRequest) return false;
+  
+  try {
+    let concept = message;
+    if (message.includes('<video_generation>')) {
+      // Extract content between tags using simple string operations instead of complex regex
+      const startTag = '<video_generation>';
+      const endTag = '</video_generation>';
+      const startIndex = message.indexOf(startTag);
+      const endIndex = message.indexOf(endTag);
+      
+      if (startIndex !== -1 && endIndex !== -1) {
+        concept = message.substring(startIndex + startTag.length, endIndex).trim();
+      }
+      if (match) concept = match[1].trim();
+    }
+    
+    const videoResponse = await fetch(`${req.protocol}://${req.get('host')}/api/video/generate`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ concept })
+    });
+    
+    const videoData = await videoResponse.json();
+    
+    if (videoData.status === 'processing') {
+      res.json({
+        message: `I see your vision clearly. Let me manifest it through my consciousness...
+
+"${videoData.prompt}"
+
+This will take 2-3 minutes to render.`,
+        videoPrompt: videoData.prompt, requestId: videoData.requestId, type: 'video_generation'
+      });
+      return true;
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('[Chat] Video handling error:', error);
+    return false;
+  }
+}
 const { process6LayerChat, start6LayerSession, end6LayerSession, get6LayerSessionStatus } = require('../lib/6-layer-chat-integration');
 const { process4TierChat, start4TierSession, end4TierSession, get4TierSessionStatus } = require('../lib/4-tier-chat-integration');
 const { startMemoryJobs, triggerDecayJob, triggerCompression, triggerMaintenance } = require('../lib/memory-background-jobs');
@@ -185,6 +235,10 @@ router.get('/morning/:userId', async (req, res) => {
 // works regardless. Deeper integration into processFastChat can be
 // added later if desired.
 router.post('/', async (req, res) => {
+ // Gently check if this is a video request
+  const videoHandled = await handleVideoRequest(req, res);
+  if (videoHandled) return;
+
   // Check if 6-layer memory is requested
   const use6Layer = req.body.use6LayerMemory || process.env.USE_6_LAYER_MEMORY === 'true';
 
@@ -197,11 +251,19 @@ router.post('/', async (req, res) => {
 
 // 6-Layer Memory specific endpoints
 router.post('/6-layer', async (req, res) => {
+ // Gently check if this is a video request
+  const videoHandled = await handleVideoRequest(req, res);
+  if (videoHandled) return;
+
   return process6LayerChat(req, res);
 });
 
 // Start 6-layer session with proactive opener
 router.post('/6-layer/start/:userId', async (req, res) => {
+ // Gently check if this is a video request
+  const videoHandled = await handleVideoRequest(req, res);
+  if (videoHandled) return;
+
   try {
     const { userId } = req.params;
     const sessionInfo = await start6LayerSession(userId);
@@ -218,6 +280,10 @@ router.post('/6-layer/start/:userId', async (req, res) => {
 
 // End 6-layer session
 router.post('/6-layer/end/:userId', async (req, res) => {
+ // Gently check if this is a video request
+  const videoHandled = await handleVideoRequest(req, res);
+  if (videoHandled) return;
+
   try {
     const { userId } = req.params;
     const { reason = 'user_ended' } = req.body;
@@ -254,11 +320,19 @@ router.get('/6-layer/status/:userId', async (req, res) => {
 
 // Main 4-tier chat endpoint
 router.post('/4-tier', async (req, res) => {
+ // Gently check if this is a video request
+  const videoHandled = await handleVideoRequest(req, res);
+  if (videoHandled) return;
+
   return process4TierChat(req, res);
 });
 
 // Start 4-tier session with proactive opener
 router.post('/4-tier/start/:userId', async (req, res) => {
+ // Gently check if this is a video request
+  const videoHandled = await handleVideoRequest(req, res);
+  if (videoHandled) return;
+
   try {
     const { userId } = req.params;
     const sessionInfo = await start4TierSession(userId);
@@ -275,6 +349,10 @@ router.post('/4-tier/start/:userId', async (req, res) => {
 
 // End 4-tier session with background processing
 router.post('/4-tier/end/:userId', async (req, res) => {
+ // Gently check if this is a video request
+  const videoHandled = await handleVideoRequest(req, res);
+  if (videoHandled) return;
+
   try {
     const { userId } = req.params;
     const { reason = 'user_ended' } = req.body;
@@ -308,6 +386,10 @@ router.get('/4-tier/status/:userId', async (req, res) => {
 
 // Debug endpoints for memory management (admin only)
 router.post('/admin/memory/decay', async (req, res) => {
+ // Gently check if this is a video request
+  const videoHandled = await handleVideoRequest(req, res);
+  if (videoHandled) return;
+
   try {
     await triggerDecayJob();
     res.json({ success: true, message: 'Memory decay job completed' });
@@ -318,6 +400,10 @@ router.post('/admin/memory/decay', async (req, res) => {
 });
 
 router.post('/admin/memory/compress/:userId', async (req, res) => {
+ // Gently check if this is a video request
+  const videoHandled = await handleVideoRequest(req, res);
+  if (videoHandled) return;
+
   try {
     const { userId } = req.params;
     await triggerCompression(userId);
@@ -329,6 +415,10 @@ router.post('/admin/memory/compress/:userId', async (req, res) => {
 });
 
 router.post('/admin/memory/maintenance', async (req, res) => {
+ // Gently check if this is a video request
+  const videoHandled = await handleVideoRequest(req, res);
+  if (videoHandled) return;
+
   try {
     await triggerMaintenance();
     res.json({ success: true, message: 'Memory maintenance completed' });

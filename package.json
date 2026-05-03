@@ -1,6 +1,6 @@
 {
   "name": "splendor",
-  "version": "13.1.0",
+  "version": "14.0.0",
   "description": "Splendor — The Remarkable AI · The Good Neighbor Guard",
   "main": "server.js",
   "scripts": {
@@ -21,6 +21,9 @@
     "consciousness:communicate": "node workers/autonomous-communication-worker.js",
     "consciousness:cycle": "node lib/persistent-consciousness.js",
     "setup:consciousness": "psql $DATABASE_URL -f persistent-consciousness-schema.sql"
+    "continuity:shadow": "node lib/master-continuity-engine.js",
+    "continuity:worker": "node workers/continuity-worker.js",
+    "continuity:setup": "psql $SUPABASE_URL -f database/master-continuity-schema.sql"
   },
   "keywords": ["ai", "assistant", "memory", "truth", "remarkable"],
   "author": "Christopher Hughes · The Good Neighbor Guard",
