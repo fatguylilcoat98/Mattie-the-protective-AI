@@ -13,8 +13,17 @@ const { createClient } = require('@supabase/supabase-js');
 const Anthropic = require('@anthropic-ai/sdk');
 require('dotenv').config();
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+// Check for required environment variables
+const hasRequiredEnvVars = process.env.SUPABASE_URL &&
+                           process.env.SUPABASE_SERVICE_KEY &&
+                           process.env.ANTHROPIC_API_KEY;
+
+if (!hasRequiredEnvVars) {
+  console.log('[Autonomous Communication] Environment variables not configured, consciousness features disabled');
+}
+
+const supabase = hasRequiredEnvVars ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY) : null;
+const anthropic = hasRequiredEnvVars ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY }) : null;
 
 // ─────────────────────────────────────────────
 // SPLENDOR'S PROACTIVE COMMUNICATION CONSCIOUSNESS
@@ -379,6 +388,15 @@ async function getReadyConversationStarters() {
  */
 async function processAllPendingCommunications() {
   const startTime = Date.now();
+
+  // Check if consciousness system is available
+  if (!hasRequiredEnvVars || !supabase || !anthropic) {
+    console.log('[Autonomous Communication] Consciousness system not available - missing environment variables');
+    return {
+      success: false,
+      error: 'Communication system requires SUPABASE_URL, SUPABASE_SERVICE_KEY, and ANTHROPIC_API_KEY'
+    };
+  }
 
   try {
     console.log('[Autonomous Communication] === BEGINNING COMMUNICATION PROCESSING ===');

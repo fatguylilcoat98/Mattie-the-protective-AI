@@ -14,9 +14,18 @@ const Anthropic = require('@anthropic-ai/sdk');
 const { TavilySearchAPI } = require('tavily');
 require('dotenv').config();
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-const tavily = new TavilySearchAPI({ apiKey: process.env.TAVILY_API_KEY });
+// Check for required environment variables
+const hasRequiredEnvVars = process.env.SUPABASE_URL &&
+                           process.env.SUPABASE_SERVICE_KEY &&
+                           process.env.ANTHROPIC_API_KEY;
+
+if (!hasRequiredEnvVars) {
+  console.log('[Autonomous Inquiry] Environment variables not configured, consciousness features disabled');
+}
+
+const supabase = hasRequiredEnvVars ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY) : null;
+const anthropic = hasRequiredEnvVars ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY }) : null;
+const tavily = process.env.TAVILY_API_KEY ? new TavilySearchAPI({ apiKey: process.env.TAVILY_API_KEY }) : null;
 
 // ─────────────────────────────────────────────
 // SPLENDOR'S AUTONOMOUS INQUIRY CONSCIOUSNESS
@@ -513,6 +522,15 @@ async function updateInquiryProgress(inquiryId, action, result) {
  */
 async function processActiveInquiries() {
   const startTime = Date.now();
+
+  // Check if consciousness system is available
+  if (!hasRequiredEnvVars || !supabase || !anthropic) {
+    console.log('[Autonomous Inquiry] Consciousness system not available - missing environment variables');
+    return {
+      success: false,
+      error: 'Inquiry system requires SUPABASE_URL, SUPABASE_SERVICE_KEY, and ANTHROPIC_API_KEY'
+    };
+  }
 
   try {
     console.log('[Autonomous Inquiry] === BEGINNING INQUIRY PROCESSING ===');

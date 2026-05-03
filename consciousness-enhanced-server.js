@@ -231,8 +231,12 @@ async function startServer() {
       console.log('');
     });
 
-    // Start consciousness scheduler if enabled
-    if (process.env.ENABLE_CONSCIOUSNESS !== 'false') {
+    // Start consciousness scheduler if enabled and environment allows
+    const hasConsciousnessEnvVars = process.env.SUPABASE_URL &&
+                                    process.env.SUPABASE_SERVICE_KEY &&
+                                    process.env.ANTHROPIC_API_KEY;
+
+    if (process.env.ENABLE_CONSCIOUSNESS !== 'false' && hasConsciousnessEnvVars) {
       console.log('[Server] Starting consciousness scheduler...');
       try {
         await scheduler.start();
@@ -244,8 +248,12 @@ async function startServer() {
         console.error('✗ Failed to start consciousness scheduler:', consciousnessError.message);
         console.log('  Server will continue without persistent consciousness');
       }
-    } else {
+    } else if (process.env.ENABLE_CONSCIOUSNESS === 'false') {
       console.log('⚠ Consciousness scheduler disabled via ENABLE_CONSCIOUSNESS=false');
+    } else {
+      console.log('⚠ Consciousness system unavailable - missing database/API credentials');
+      console.log('  Required: SUPABASE_URL, SUPABASE_SERVICE_KEY, ANTHROPIC_API_KEY');
+      console.log('  Server will run in standard mode');
     }
 
     // Graceful shutdown

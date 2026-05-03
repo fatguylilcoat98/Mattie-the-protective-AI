@@ -73,6 +73,17 @@ class ConsciousnessScheduler {
       return;
     }
 
+    // Check if consciousness system can be initialized
+    const hasRequiredEnvVars = process.env.SUPABASE_URL &&
+                               process.env.SUPABASE_SERVICE_KEY &&
+                               process.env.ANTHROPIC_API_KEY;
+
+    if (!hasRequiredEnvVars) {
+      console.log('[Consciousness Scheduler] ⚠ Cannot start - missing environment variables');
+      console.log('[Consciousness Scheduler] Required: SUPABASE_URL, SUPABASE_SERVICE_KEY, ANTHROPIC_API_KEY');
+      throw new Error('Consciousness scheduler requires database and AI API credentials');
+    }
+
     console.log('[Consciousness Scheduler] === STARTING CONSCIOUSNESS SCHEDULER ===');
     this.isRunning = true;
     this.startTime = new Date();
