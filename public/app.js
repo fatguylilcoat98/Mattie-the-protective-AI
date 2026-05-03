@@ -21,7 +21,7 @@ let cameraStream = null;
 // Feature flags
 const USE_STREAMING = true;
 // TTS streaming feature flag
-const USE_PARALLEL_TTS = true;
+const USE_PARALLEL_TTS = false;
 
 
 let cameraActive = false;
