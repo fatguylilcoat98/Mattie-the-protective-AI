@@ -42,7 +42,7 @@ async function generateVideo(prompt) {
     key: MODELSLAB_API_KEY,
     model_id: 'kling-v2-master-t2v',
     prompt: prompt.substring(0, 1000),
-    duration: '5'
+    duration: '10'
   };
 
   console.log('[Splendor Video] Sending to ModelsLab:', JSON.stringify(body, null, 2));
