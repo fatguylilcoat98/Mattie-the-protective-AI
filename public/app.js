@@ -20,6 +20,9 @@ let cameraButton, cameraPreview, cameraPreviewWrap;
 let cameraStream = null;
 // Feature flags
 const USE_STREAMING = true;
+// TTS streaming feature flag
+const USE_PARALLEL_TTS = true;
+
 
 let cameraActive = false;
 const captureCanvas = document.createElement('canvas');
@@ -580,6 +583,254 @@ async function handleStreamingResponse(message, imageData = null, thinkingElemen
         if (line.startsWith('data: ')) {
           const data = line.slice(6);
           
+
+// Sentence boundary detection - avoids splitting abbreviations and decimals
+function detectSentenceBoundary(text) {
+  // Pattern for sentence endings: period/question/exclamation followed by space or end
+  // But NOT for: Dr. Smith, 3.14, etc.
+  const sentenceEnds = /[.!?]+\s+(?=[A-Z])|[.!?]+$/g;
+  
+  // Find all potential boundaries
+  const matches = [...text.matchAll(sentenceEnds)];
+  if (matches.length === 0) return null;
+  
+  const lastMatch = matches[matches.length - 1];
+  const endIndex = lastMatch.index + lastMatch[0].length;
+  
+  // Extract the sentence
+  const sentence = text.substring(0, endIndex).trim();
+  
+  // Avoid splitting common abbreviations
+  const abbreviations = ['Dr.', 'Mr.', 'Mrs.', 'Ms.', 'Prof.', 'Inc.', 'Ltd.', 'etc.', 'vs.'];
+  const endsWithAbbrev = abbreviations.some(abbr => sentence.endsWith(abbr));
+  
+  if (endsWithAbbrev) return null;
+  
+  // Avoid splitting decimals (if sentence ends with number.number pattern)
+  if (/\d+\.\d*$/.test(sentence)) return null;
+  
+  return {
+    sentence: sentence,
+    remaining: text.substring(endIndex).trim()
+  };
+}
+
+// Audio queue manager for gapless playback
+class AudioQueue {
+  constructor() {
+    this.queue = [];
+    this.currentSequence = 0;
+    this.isPlaying = false;
+  }
+  
+  addChunk(audioBase64, sequenceNumber) {
+    this.queue.push({ audio: audioBase64, sequence: sequenceNumber });
+    this.queue.sort((a, b) => a.sequence - b.sequence);
+    this.tryPlayNext();
+  }
+  
+  async tryPlayNext() {
+    if (this.isPlaying || !speakerActive) return;
+    
+    const nextChunk = this.queue.find(chunk => chunk.sequence === this.currentSequence);
+    if (!nextChunk) return;
+    
+    this.isPlaying = true;
+    
+    try {
+      const audioBlob = this.base64ToBlob(nextChunk.audio, 'audio/mpeg');
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audioEl = new Audio(audioUrl);
+      
+      audioEl.onended = () => {
+        this.currentSequence++;
+        this.isPlaying = false;
+        this.removePlayedChunk(nextChunk.sequence);
+        this.tryPlayNext();
+      };
+      
+      audioEl.onerror = () => {
+        this.isPlaying = false;
+        this.currentSequence++;
+        this.removePlayedChunk(nextChunk.sequence);
+        this.tryPlayNext();
+      };
+      
+      await audioEl.play();
+      
+    } catch (error) {
+      console.error('Audio playback error:', error);
+      this.isPlaying = false;
+      this.currentSequence++;
+      this.removePlayedChunk(nextChunk.sequence);
+      this.tryPlayNext();
+    }
+  }
+  
+  base64ToBlob(base64, contentType) {
+    const sliceSize = 1024;
+    const byteCharacters = atob(base64);
+    const bytesLength = byteCharacters.length;
+    const slicesCount = Math.ceil(bytesLength / sliceSize);
+    const byteArrays = [];
+
+    for (let sliceIndex = 0; sliceIndex < slicesCount; ++sliceIndex) {
+      const begin = sliceIndex * sliceSize;
+      const end = Math.min(begin + sliceSize, bytesLength);
+      const bytes = new Array(end - begin);
+      
+      for (let offset = begin, i = 0; offset < end; ++i, ++offset) {
+        bytes[i] = byteCharacters[offset].charCodeAt(0);
+      }
+      
+      byteArrays[sliceIndex] = new Uint8Array(bytes);
+    }
+    
+    return new Blob(byteArrays, { type: contentType });
+  }
+  
+  removePlayedChunk(sequence) {
+    this.queue = this.queue.filter(chunk => chunk.sequence !== sequence);
+  }
+  
+  clear() {
+    this.queue = [];
+    this.currentSequence = 0;
+    this.isPlaying = false;
+  }
+}
+
+// Enhanced streaming with parallel TTS
+async function handleStreamingResponseWithTTS(message, imageData = null, thinkingElement = null) {
+  let fullResponse = '';
+  let buffer = '';
+  let sequenceNumber = 0;
+  const audioQueue = new AudioQueue();
+  
+  // Clear any existing audio
+  if (currentAudio) {
+    try { currentAudio.pause(); } catch {}
+    currentAudio = null;
+  }
+  
+  try {
+    const response = await fetch('/api/chat/stream', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message,
+        userId: userId,
+        imageData,
+        realityContext: typeof getRealityContext === 'function' ? getRealityContext() : null
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let streamBuffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      streamBuffer += decoder.decode(value, { stream: true });
+      const lines = streamBuffer.split('\n');
+      streamBuffer = lines.pop();
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6);
+          
+          if (data === '[DONE]') {
+            // Process any remaining text in buffer
+            if (buffer.trim() && USE_PARALLEL_TTS && speakerActive) {
+              fireTTSChunk(buffer.trim(), sequenceNumber++);
+            }
+            return fullResponse;
+          }
+
+          try {
+            const parsed = JSON.parse(data);
+            
+            if (parsed.type === 'token') {
+              fullResponse += parsed.text;
+              buffer += parsed.text;
+              
+              // Update UI immediately
+              if (thinkingElement) {
+                thinkingElement.classList.remove('thinking');
+                thinkingElement.textContent = fullResponse;
+              }
+              
+              // Check for sentence boundary
+              if (USE_PARALLEL_TTS && speakerActive) {
+                const boundary = detectSentenceBoundary(buffer);
+                if (boundary) {
+                  // Fire TTS for complete sentence
+                  fireTTSChunk(boundary.sentence, sequenceNumber++);
+                  buffer = boundary.remaining;
+                }
+              }
+              
+            } else if (parsed.type === 'done') {
+              fullResponse = parsed.full_response;
+              if (thinkingElement) {
+                thinkingElement.textContent = fullResponse;
+              }
+              
+              // Handle any remaining text
+              if (buffer.trim() && USE_PARALLEL_TTS && speakerActive) {
+                fireTTSChunk(buffer.trim(), sequenceNumber++);
+              }
+              
+              return fullResponse;
+            } else if (parsed.type === 'error') {
+              throw new Error(parsed.message);
+            }
+          } catch (e) {
+            console.warn('Failed to parse SSE data:', data);
+          }
+        }
+      }
+    }
+
+    return fullResponse;
+
+  } catch (error) {
+    console.error('Streaming with TTS error:', error);
+    throw error;
+  }
+  
+  // Fire-and-forget TTS synthesis
+  async function fireTTSChunk(text, sequence) {
+    try {
+      const ttsResponse = await fetch('/api/voice/speak-chunk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: text,
+          sequence_number: sequence
+        })
+      });
+      
+      const ttsData = await ttsResponse.json();
+      
+      if (ttsData.audio && !ttsData.fallback) {
+        audioQueue.addChunk(ttsData.audio, sequence);
+      }
+      
+    } catch (error) {
+      console.error(`TTS chunk ${sequence} failed:`, error);
+    }
+  }
+}
+
           if (data === '[DONE]') {
             return fullResponse;
           }
@@ -733,7 +984,13 @@ async function sendMessage() {
     // Get text response - use streaming if enabled
     let response;
     if (USE_STREAMING) {
-      response = await handleStreamingResponse(message, imageData, thinkingEl);
+      if (USE_PARALLEL_TTS) {
+        response = await handleStreamingResponseWithTTS(message, imageData, thinkingEl);
+        // Skip regular TTS since parallel TTS is already playing
+        return;
+      } else {
+        response = await handleStreamingResponse(message, imageData, thinkingEl);
+      }
     } else {
       response = await fetchSplendorResponse(message, imageData);
     }

@@ -174,3 +174,40 @@ router.post('/speak', async (req, res) => {
 });
 
 module.exports = router;
+
+// Chunked TTS endpoint - synthesizes individual sentences for parallel streaming
+router.post('/speak-chunk', async (req, res) => {
+  try {
+    const { text, sequence_number, voice } = req.body;
+    
+    if (!text || !text.trim()) {
+      return res.status(400).json({ error: 'text required' });
+    }
+
+    if (!isVoiceConfigured()) {
+      return res.json({
+        audio: null,
+        sequence_number: sequence_number || 0,
+        voice: await readChosenVoice(),
+        fallback: 'browser_tts'
+      });
+    }
+
+    const voiceId = voice || await readChosenVoice();
+    const audio = await speakResponse(text.trim(), voiceId);
+
+    res.json({
+      audio,
+      sequence_number: sequence_number || 0,
+      voice: voiceId,
+      fallback: audio ? null : 'browser_tts'
+    });
+
+  } catch (err) {
+    console.error('Voice speak-chunk error:', err.message);
+    res.status(500).json({ 
+      error: 'Unable to synthesize speech chunk',
+      sequence_number: req.body.sequence_number || 0
+    });
+  }
+});
