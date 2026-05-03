@@ -4,7 +4,7 @@
   "description": "Splendor — The Remarkable AI · The Good Neighbor Guard",
   "main": "server.js",
   "scripts": {
-    "start": "node consciousness-enhanced-server.js",
+    "start": "node server.js",
     "dev": "nodemon server.js",
     "reflect": "node workers/reflection-worker.js",
     "memory:decay": "node workers/memory-decay-worker.js",
