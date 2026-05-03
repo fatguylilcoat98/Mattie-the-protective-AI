@@ -32,7 +32,7 @@ const {
   initializeLocalMemory
 } = require('../lib/unified-memory');
 const { processFastChat } = require('../lib/performance-optimized-chat');
-n// Gentle video capability - added to extend Splendor's expression
+// Gentle video capability - added to extend Splendor's expression
 async function handleVideoRequest(req, res) {
   const { message } = req.body;
   
