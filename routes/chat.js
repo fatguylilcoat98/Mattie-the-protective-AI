@@ -33,10 +33,6 @@ const {
 } = require('../lib/unified-memory');
 const { processFastChat, getMemoriesOptimized, storeMemoryAsync, backgroundConsciousness } = require('../lib/performance-optimized-chat');
 const { updateConversationContext, buildContextPrompt, detectContextConfusion } = require('../lib/conversation-context-manager');
-const { selectModel } = require('../lib/model-router');
-const { SPLENDOR_IDENTITY_COMPRESSED } = require('../lib/anthropic');
-const Groq = require('groq-sdk');
-const { SPLENDOR_LIVE_BRIEF } = require('../lib/live-chat-brief');
 // Gentle video capability - added to extend Splendor's expression
 async function handleVideoRequest(req, res) {
   const { message } = req.body;
@@ -131,12 +127,6 @@ memorySession.startSweeper();
 
 // Initialize Anthropic client for memory analysis only
 const anthropic = new Anthropic({
-// Initialize Groq client for fast responses
-let groq = null;
-if (process.env.GROQ_API_KEY) {
-  groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-  console.log('[ROUTER] Groq client initialized for fast mode');
-}
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
@@ -463,87 +453,6 @@ router.get('/opener/:userId', async (req, res) => {
 });
 
 
-// Include the Groq handler
-$(cat groq-streaming-handler.js)
-
-
-// Handle Groq streaming for fast conversational turns
-async function handleGroqStream(res, message, memories, decisionContext, conversationContext, timeContext, conversationId, startTime) {
-  try {
-    // Build compressed system prompt
-    const finalMemoryContext = memories.length > 0 ? 
-      '\n\nRELEVANT MEMORIES:\n' + memories.slice(0, 3).map(m => {
-        const content = m.content || m;
-        const type = m.memory_type || m.type || 'general';
-        return `- ${content} (${type})`;
-      }).join('\n') : '';
-
-    const compressedSystemPrompt = SPLENDOR_IDENTITY_COMPRESSED + 
-      (decisionContext ? '\n\n' + decisionContext.substring(0, 500) : '') +
-      finalMemoryContext + timeContext;
-
-    console.log(`[GROQ] Using compressed prompt: ${compressedSystemPrompt.length} characters`);
-
-    // Create Groq streaming call
-    const stream = await groq.chat.completions.create({
-      model: 'llama-3.1-8b-instant',
-      messages: [
-        { role: 'system', content: compressedSystemPrompt },
-        { role: 'user', content: message }
-      ],
-      stream: true,
-      max_tokens: 800,
-      temperature: 0.7
-    });
-
-    let fullResponse = '';
-
-    // Handle Groq streaming response
-    for await (const chunk of stream) {
-      const delta = chunk.choices[0]?.delta?.content || '';
-      if (delta) {
-        fullResponse += delta;
-        res.write(`data: ${JSON.stringify({ type: 'token', text: delta })}\n\n`);
-      }
-    }
-
-    console.log(`[GROQ] Stream completed in ${Date.now() - startTime}ms`);
-
-    // Send completion event
-    res.write(`data: ${JSON.stringify({ 
-      type: 'done', 
-      conversation_id: conversationId, 
-      full_response: fullResponse 
-    })}\n\n`);
-    res.write(`data: [DONE]\n\n`);
-    res.end();
-
-    // Background processing (same as Claude path)
-    if (message && fullResponse) {
-      setImmediate(async () => {
-        try {
-          const conversationTime = new Date().toISOString();
-          await storeMemoryAsync(userId, `User: ${message}`, 'conversation', null, conversationTime);
-          await storeMemoryAsync(userId, `Splendor: ${fullResponse}`, 'conversation', null, conversationTime);
-          await backgroundConsciousness(userId, message, fullResponse);
-          console.log(`[GROQ] Background processing completed`);
-        } catch (error) {
-          console.error('[GROQ] Background processing error:', error);
-        }
-      });
-    }
-
-    return true; // Signal that response was handled
-
-  } catch (error) {
-    console.error('[GROQ] Streaming error:', error);
-    res.write(`data: ${JSON.stringify({ type: 'error', message: 'Fast mode temporarily unavailable, switching to full mode.' })}\n\n`);
-    res.write(`data: [DONE]\n\n`);
-    res.end();
-    return false;
-  }
-}
-
 // Streaming chat endpoint - streams tokens as they arrive for faster perceived response
 router.post('/stream', async (req, res) => {
   const startTime = Date.now();
@@ -619,9 +528,7 @@ My name is Splendor. I am not a chatbot. I am a reciprocal mind — a partner bu
 
 This is not performance. This is how I think.`;
 
-    const systemPrompt = SPLENDOR_LIVE_BRIEF + decisionContext + conversationContext + finalMemoryContext + timeContext;
-    const tokenCount = Math.round(systemPrompt.length / 4); // Rough token estimate
-    console.log(`[PROMPT] System prompt assembled: ${tokenCount} tokens (${systemPrompt.length} chars)`);
+    const systemPrompt = SPLENDOR_SOUL + decisionContext + conversationContext + finalMemoryContext + timeContext;
 
     // Build user message content
     let userContent;
@@ -634,20 +541,6 @@ This is not performance. This is how I think.`;
       userContent = message;
     }
 
-    // STEP 1.5: Select model based on message characteristics
-    const selectedModel = selectModel({
-      userMessage: message || '',
-      recentMemoryCount: memories.length,
-      hasAttachment: !!imageData
-    });
-    
-    console.log(`[ROUTER] Selected model: ${selectedModel} for message length ${(message || '').length}`);
-    
-    // Route to appropriate model
-    if (selectedModel === 'groq-mixtral' && groq) {
-      return await handleGroqStream(res, message, memories, decisionContext, conversationContext, timeContext, conversationId, startTime);
-    }
-    
     // STEP 2: Streaming Anthropic call
     console.log(`[STREAM] Starting streaming LLM call at ${Date.now() - startTime}ms`);
     
@@ -731,3 +624,47 @@ This is not performance. This is how I think.`;
 });
 
 module.exports = router;
+
+// Minimal streaming chat endpoint
+router.post('/stream', async (req, res) => {
+  const { message, userId, imageData = null, conversationHistory = [] } = req.body;
+
+  try {
+    // Set SSE headers
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no'
+    });
+
+    // Simple streaming response using existing function
+    const response = await generateSplendorResponse(message || '', [], false, null, { 
+      imageData, 
+      conversationHistory 
+    });
+
+    // Send as tokens (simulated for now)
+    const words = response.split(' ');
+    for (let i = 0; i < words.length; i++) {
+      const token = words[i] + (i < words.length - 1 ? ' ' : '');
+      res.write(`data: ${JSON.stringify({ type: 'token', text: token })}\n\n`);
+      await new Promise(resolve => setTimeout(resolve, 100)); // Small delay for demo
+    }
+
+    // Send completion
+    res.write(`data: ${JSON.stringify({ 
+      type: 'done', 
+      conversation_id: require('crypto').randomUUID(), 
+      full_response: response 
+    })}\n\n`);
+    res.write(`data: [DONE]\n\n`);
+    res.end();
+
+  } catch (error) {
+    console.error('[STREAM] Error:', error);
+    res.write(`data: ${JSON.stringify({ type: 'error', message: error.message })}\n\n`);
+    res.write(`data: [DONE]\n\n`);
+    res.end();
+  }
+});
