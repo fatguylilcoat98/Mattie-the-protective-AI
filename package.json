@@ -20,7 +20,7 @@
     "consciousness:inquire": "node workers/autonomous-inquiry-worker.js",
     "consciousness:communicate": "node workers/autonomous-communication-worker.js",
     "consciousness:cycle": "node lib/persistent-consciousness.js",
-    "setup:consciousness": "psql $DATABASE_URL -f persistent-consciousness-schema.sql"
+    "setup:consciousness": "psql $DATABASE_URL -f persistent-consciousness-schema.sql", 
     "continuity:shadow": "node lib/master-continuity-engine.js",
     "continuity:worker": "node workers/continuity-worker.js",
     "continuity:setup": "psql $SUPABASE_URL -f database/master-continuity-schema.sql"
