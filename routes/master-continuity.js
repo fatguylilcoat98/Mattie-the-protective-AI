@@ -12,17 +12,37 @@ const router = express.Router();
 const { createClient } = require('@supabase/supabase-js');
 const { runReflectionEngine, captureInteraction } = require('../lib/master-continuity-engine');
 
-// Initialize Supabase client
-const supabase = createClient(
-  process.env.SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_KEY || ''
-);
+// Initialize Supabase client only if environment variables are set
+let supabase = null;
+if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY) {
+  supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_KEY
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MIDDLEWARE - CHECK CONTINUITY SYSTEM ENABLED
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Check if continuity system is properly configured
+function requireContinuityEnabled(req, res, next) {
+  if (!supabase) {
+    return res.status(503).json({
+      error: 'Master Continuity Layer not configured',
+      message: 'Supabase environment variables not set. Set SUPABASE_URL and SUPABASE_SERVICE_KEY to enable continuity features.',
+      status: 'disabled'
+    });
+  }
+  next();
+}
+
+// Apply middleware to all routes
+router.use(requireContinuityEnabled);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ADMIN DASHBOARD ROUTES
 // ═══════════════════════════════════════════════════════════════════════════════
-
-/**
  * GET /api/continuity/dashboard
  * Main admin dashboard for Shadow Mode
  */
