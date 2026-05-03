@@ -57,7 +57,7 @@ async function handleVideoRequest(req, res) {
       if (match) concept = match[1].trim();
     }
     
-    const videoResponse = await fetch(`${req.protocol}://${req.get('host')}/api/video/generate`, {
+    const videoResponse = await fetch(`${req.protocol}://${req.get('host')}}/api/video/generate`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ concept })
     });
@@ -70,8 +70,17 @@ async function handleVideoRequest(req, res) {
 
 "${videoData.prompt}"
 
-This will take 2-3 minutes to render.`,
-        videoPrompt: videoData.prompt, requestId: videoData.requestId, type: 'video_generation'
+🎬 **Video Status:** Processing (${videoData.requestId})
+⏱ **Time:** 2-3 minutes to render
+🔗 **Check here:** ${req.protocol}://${req.get('host')}/api/video/status/${videoData.requestId}
+
+**To get your video:**
+• Copy this link: ${req.protocol}://${req.get('host')}/api/video/status/${videoData.requestId}
+• Check back in 2-3 minutes
+• Or refresh and ask me "What's the status of video ${videoData.requestId}?"
+
+I'll be thinking visually while this renders...`,
+        videoPrompt: videoData.prompt, requestId: videoData.requestId, statusUrl: `${req.protocol}://${req.get("host")}/api/video/status/${videoData.requestId}`, type: 'video_generation'
       });
       return true;
     }
