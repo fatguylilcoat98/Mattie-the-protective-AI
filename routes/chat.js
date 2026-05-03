@@ -45,7 +45,15 @@ async function handleVideoRequest(req, res) {
   try {
     let concept = message;
     if (message.includes('<video_generation>')) {
-      const match = message.match(/<video_generation>([sS]*?)</video_generation>/g);
+      // Extract content between tags using simple string operations instead of complex regex
+      const startTag = '<video_generation>';
+      const endTag = '</video_generation>';
+      const startIndex = message.indexOf(startTag);
+      const endIndex = message.indexOf(endTag);
+      
+      if (startIndex !== -1 && endIndex !== -1) {
+        concept = message.substring(startIndex + startTag.length, endIndex).trim();
+      }
       if (match) concept = match[1].trim();
     }
     
