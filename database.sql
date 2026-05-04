@@ -268,6 +268,44 @@ CREATE INDEX IF NOT EXISTS episodes_decay_score_idx ON episodes(decay_score);
 CREATE INDEX IF NOT EXISTS memory_summaries_user_id_idx ON memory_summaries(user_id);
 CREATE INDEX IF NOT EXISTS memory_summaries_created_at_idx ON memory_summaries(created_at DESC);
 
+--
+-- BUILD 5 — AUTH (the missing public.users table)
+-- routes/auth.js queries `public.users` with bcrypt password hashes.
+-- Without this table, every login + signup silently 500s and the
+-- frontend modal sticks on "Login failed. Please try again." which the
+-- user reads as "sorry, not available". Run this in Supabase to unblock.
+--
+
+CREATE TABLE IF NOT EXISTS public.users (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  username text UNIQUE NOT NULL,
+  password_hash text NOT NULL,
+  display_name text,
+  created_at timestamp with time zone DEFAULT now(),
+  last_active timestamp with time zone DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS users_username_idx ON public.users(username);
+
+-- Auth route uses the anon key, so we expose minimal RLS.
+-- Username + password_hash columns are read by login (need anon SELECT)
+-- and inserted by signup (need anon INSERT). Tighten later if you add
+-- a service-role auth layer.
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Anyone can read users for auth" ON public.users;
+DROP POLICY IF EXISTS "Anyone can insert users for signup" ON public.users;
+DROP POLICY IF EXISTS "Users can update their own row" ON public.users;
+
+CREATE POLICY "Anyone can read users for auth"
+ON public.users FOR SELECT USING (true);
+
+CREATE POLICY "Anyone can insert users for signup"
+ON public.users FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Users can update their own row"
+ON public.users FOR UPDATE USING (true);
+
 -- Grant necessary permissions
 GRANT USAGE ON SCHEMA public TO anon, authenticated;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated;

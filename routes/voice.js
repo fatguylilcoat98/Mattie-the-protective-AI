@@ -87,7 +87,8 @@ router.get('/options', (req, res) => {
       name: v.name,
       description: v.description
     })),
-    elevenlabs_available: isElevenLabsConfigured()
+    voice_available: isVoiceConfigured(),
+    openai_available: isOpenAIConfigured()
   });
 });
 
@@ -142,16 +143,17 @@ router.post('/choose', async (req, res) => {
   }
 });
 
-// Synthesize speech for a given text using Splendor's chosen voice
+// Synthesize speech for a given text using Splendor's chosen voice.
+// Optional `tone` body field overrides the inferred emotional delivery
+// (e.g. "Speak with a quiet laugh", "Speak softly and sadly").
 router.post('/speak', async (req, res) => {
   try {
-    const { text } = req.body;
+    const { text, tone = null } = req.body;
     if (!text || !text.trim()) {
       return res.status(400).json({ error: 'text required' });
     }
 
     if (!isVoiceConfigured()) {
-      // Caller falls back to browser TTS
       return res.json({
         audio: null,
         voice: await readChosenVoice(),
@@ -160,11 +162,12 @@ router.post('/speak', async (req, res) => {
     }
 
     const voiceId = await readChosenVoice();
-    const audio = await speakResponse(text, voiceId);
+    const audio = await speakResponse(text, voiceId, tone);
 
     res.json({
       audio,
       voice: voiceId,
+      tone_used: tone || 'inferred',
       fallback: audio ? null : 'browser_tts'
     });
   } catch (err) {
