@@ -19,9 +19,12 @@ let dashboardOpen = false;
 let cameraButton, cameraPreview, cameraPreviewWrap;
 let cameraStream = null;
 // Feature flags
-const USE_STREAMING = true;
-// TTS streaming feature flag
-const USE_PARALLEL_TTS = true;
+// Streaming + parallel-TTS are temporarily disabled. The cached older
+// shells on installed PWAs still call handleStreamingResponseWithTTS
+// before it was wired up, throwing a ReferenceError. The simple
+// non-streaming path goes through /api/chat which is known-good.
+const USE_STREAMING = false;
+const USE_PARALLEL_TTS = false;
 
 
 let cameraActive = false;
@@ -983,8 +986,8 @@ async function sendMessage() {
   try {
     // Get text response - use streaming if enabled
     let response;
-    if (USE_STREAMING) {
-      if (USE_PARALLEL_TTS) {
+    if (USE_STREAMING && typeof handleStreamingResponse === 'function') {
+      if (USE_PARALLEL_TTS && typeof handleStreamingResponseWithTTS === 'function') {
         response = await handleStreamingResponseWithTTS(message, imageData, thinkingEl);
         // Skip regular TTS since parallel TTS is already playing
         return;
