@@ -28,20 +28,20 @@ router.post('/', async (req, res) => {
     // Generate response
     const response = await generateSplendorResponse(message, memories, false);
 
-    // Store conversation
-    try {
-      await storeMemory(userId, `User: ${message}`, 'conversation');
-      await storeMemory(userId, `Splendor: ${response}`, 'conversation');
-    } catch (storeError) {
-      console.error('Memory storage failed:', storeError);
-    }
-
     console.log(`[CHAT] Response generated successfully`);
 
+    // Send response immediately — don't make the user wait for memory writes.
     res.json({
       message: response,
       timestamp: new Date().toISOString()
     });
+
+    // Fire-and-forget memory writes after the response has been sent.
+    // Errors are logged but never delay the user-visible reply.
+    storeMemory(userId, `User: ${message}`, 'conversation')
+      .catch((e) => console.error('Memory storage (user) failed:', e.message));
+    storeMemory(userId, `Splendor: ${response}`, 'conversation')
+      .catch((e) => console.error('Memory storage (assistant) failed:', e.message));
 
   } catch (error) {
     console.error('[CHAT] Error:', error);
