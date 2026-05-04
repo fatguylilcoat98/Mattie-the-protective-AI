@@ -165,7 +165,7 @@ ${context.conversations.map(c => `- ${c.content?.substring(0, 200)}...`).join('\
 `;
 
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 800,
       messages: [{
         role: 'user',

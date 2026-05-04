@@ -239,7 +239,7 @@ ${JSON.stringify(context.sources_consulted, null, 2)}
 `;
 
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 800,
       messages: [{
         role: 'user',

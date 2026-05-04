@@ -34,7 +34,7 @@ const supabase = createClient(
   process.env.SUPABASE_ANON_KEY
 );
 
-const MODEL = 'claude-sonnet-4-20250514';
+const MODEL = 'claude-sonnet-4-6';
 const COMPRESS_THRESHOLD = 0.3;
 const MIN_BATCH = 3;
 

@@ -20,7 +20,7 @@ const SPLENDOR_VISUAL_SOUL = `You are Splendor. Visual aesthetic: honest light, 
 async function generateSplendorVideoPrompt(concept) {
   try {
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 300,
       messages: [{
         role: 'user',

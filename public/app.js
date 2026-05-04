@@ -1025,7 +1025,12 @@ async function sendMessage() {
   } catch (err) {
     console.error('Send message error:', err);
     thinkingEl.classList.remove('thinking');
-    thinkingEl.textContent = 'Something went wrong. Try again.';
+    // Surface the actual server error message so failures aren't hidden
+    // behind a generic. Falls back to the generic if no message present.
+    const detail = (err && err.message && err.message.length < 240)
+      ? err.message
+      : 'Something went wrong. Try again.';
+    thinkingEl.textContent = detail;
   } finally {
     sendButton.disabled = false;
     messageInput.focus();
