@@ -1313,11 +1313,11 @@
           class="claspion-toggle is-off"
           title="Tap to toggle CLASPION governance"
           aria-pressed="false"
-          data-toggle-build="2026-05-08-v15.2.0"
+          data-toggle-build="2026-05-08-v15.3.0"
         >
           <span class="dot" aria-hidden="true"></span>
           <span class="claspion-toggle-label">CLASPION ···</span>
-          <span class="claspion-build-tag" id="claspionBuildTag">v15.2.0</span>
+          <span class="claspion-build-tag" id="claspionBuildTag">v15.3.0</span>
         </button>
         <button
           type="button"
@@ -1393,6 +1393,26 @@
 
       function reasonText(state) {
         if (!state) return 'Could not reach /api/governance/state. Check that the server is up.';
+        // If a recent call failed, that is the most actionable thing
+        // to surface — it explains why messages are being blocked even
+        // though the toggle says ON.
+        var lc = state.last_call;
+        if (state.enabled && lc && lc.ok === false) {
+          var hint = '';
+          if (lc.status === 401 || lc.status === 403) {
+            hint = ' — set CLASPION_API_KEY in Render env (try test-governance-token)';
+          } else if (lc.status === 404) {
+            hint = ' — check CLASPION_URL points at the right host';
+          } else if (lc.error_code === 'ABORT_ERR' || /abort/i.test(lc.error_message || '')) {
+            hint = ' — CLASPION timed out; check that it is awake on Render';
+          } else if (!lc.status) {
+            hint = ' — could not reach CLASPION at all; check the URL and that it is up';
+          }
+          return 'CLASPION rejecting calls: ' + (lc.status || lc.error_code || 'error') + hint;
+        }
+        if (state.enabled && lc && lc.ok && lc.allow === false) {
+          return 'CLASPION is blocking responses (last verdict: ' + (lc.decision || 'BLOCK') + '). Tap CLASPION to disable governance.';
+        }
         if (state.enabled) return 'CLASPION is validating every chat response. Tap to disable.';
         if (state.enabled_flag && !state.has_url) return 'Toggle is on but no CLASPION URL is configured. Tap URL to set one.';
         if (!state.enabled_flag && state.has_url) return 'URL is configured (' + state.url + '). Tap CLASPION to enable.';
