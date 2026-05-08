@@ -19,6 +19,7 @@ const authRoutes = require('./routes/auth');
 const memoryDebugRoutes = require('./routes/memory-debug');
 const cognitiveDashboardRoutes = require('./routes/cognitive-dashboard');
 const sciFiModeRoutes = require('./routes/scifi-mode');
+const { governance: claspionGovernance } = require('./lib/claspion-governance');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -73,7 +74,25 @@ app.get('/health', (req, res) => {
       supabase: !!(process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY),
       pinecone: !!process.env.PINECONE_API_KEY
     },
+    governance: {
+      enabled: claspionGovernance.isEnabled(),
+      url: claspionGovernance.url || null,
+      fail_mode: claspionGovernance.failMode,
+    },
     timestamp: new Date().toISOString()
+  });
+});
+
+// Lightweight governance status — for ops to confirm the toggle state
+// without exposing keys.
+app.get('/api/governance/status', (req, res) => {
+  res.json({
+    enabled: claspionGovernance.isEnabled(),
+    has_url: !!claspionGovernance.url,
+    has_api_key: !!claspionGovernance.apiKey,
+    fail_mode: claspionGovernance.failMode,
+    timeout_ms: claspionGovernance.timeoutMs,
+    actor_id: claspionGovernance.actorId,
   });
 });
 
@@ -149,6 +168,7 @@ function logSystemStatus() {
   console.log(`   🤖 Multi-AI: ${process.env.OPENAI_API_KEY && process.env.PERPLEXITY_API_KEY ? '✅ Available' : '❌ Claude Only'}`);
   console.log(`   🛡️ Response Auditing: ${process.env.GROQ_API_KEY ? '✅ Available (Llama-3.1-8B)' : '❌ Disabled'}`);
   console.log(`   🎨 Visual Expression: ${process.env.VISUAL_EXPRESSION_ENABLED === 'true' && process.env.OPENAI_API_KEY ? '✅ Available' : '❌ Disabled'}`);
+  console.log(`   🛡️ CLASPION Governance: ${claspionGovernance.isEnabled() ? `✅ Active (${claspionGovernance.url})` : '⚪ Dormant (CLASPION_ENABLED=false)'}`);
 
   console.log('\n🚀 SERVER STATUS:');
   console.log(`   📍 Port: ${PORT}`);
