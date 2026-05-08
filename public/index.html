@@ -126,6 +126,44 @@
       letter-spacing: 1px;
     }
 
+    /* CLASPION governance toggle */
+    .claspion-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: var(--dark-elevated, rgba(255,255,255,0.05));
+      border: 1px solid var(--dark-border, rgba(255,255,255,0.1));
+      cursor: pointer;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      transition: all 0.2s ease;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .claspion-toggle:hover { filter: brightness(1.15); }
+    .claspion-toggle:active { transform: scale(0.97); }
+    .claspion-toggle[disabled] { opacity: 0.5; cursor: progress; }
+    .claspion-toggle .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #555;
+      box-shadow: 0 0 0 0 rgba(0,0,0,0);
+      transition: background 0.2s ease, box-shadow 0.2s ease;
+    }
+    .claspion-toggle.is-on { color: #d6ffe6; border-color: rgba(80,220,140,0.55); }
+    .claspion-toggle.is-on .dot { background: #50dc8c; box-shadow: 0 0 12px rgba(80,220,140,0.7); }
+    .claspion-toggle.is-off { color: var(--text-secondary); }
+    .claspion-toggle.is-off .dot { background: #888; }
+    .claspion-toggle.is-misconfigured { color: #ffd591; border-color: rgba(255,180,80,0.55); }
+    .claspion-toggle.is-misconfigured .dot { background: #f0a040; box-shadow: 0 0 10px rgba(240,160,64,0.6); }
+
     .reality-context {
       margin: 8px 0;
       text-align: center;
@@ -1225,6 +1263,16 @@
       </div>
       <div class="version-info" id="versionInfo">Loading...</div>
       <div class="user-info" id="userInfo"></div>
+      <button
+        type="button"
+        id="claspionToggle"
+        class="claspion-toggle is-off"
+        title="Tap to toggle CLASPION governance"
+        aria-pressed="false"
+      >
+        <span class="dot" aria-hidden="true"></span>
+        <span class="claspion-toggle-label">CLASPION ···</span>
+      </button>
     </header>
 
     <!-- Chat Container -->
@@ -1269,6 +1317,70 @@
   </div>
 
   <script src="lib/reality-context.js"></script>
+  <script>
+    // CLASPION governance toggle — talks to /api/governance/state.
+    // Self-contained so it survives independent of the main app.
+    (function () {
+      var btn = document.getElementById('claspionToggle');
+      if (!btn) return;
+      var label = btn.querySelector('.claspion-toggle-label');
+
+      function render(state) {
+        if (!state) {
+          btn.className = 'claspion-toggle is-off';
+          btn.setAttribute('aria-pressed', 'false');
+          if (label) label.textContent = 'CLASPION ?';
+          btn.title = 'Could not read governance state';
+          return;
+        }
+        var on = !!state.enabled;        // effective: flag AND has_url
+        var flagOn = !!state.enabled_flag;
+        var misconfigured = flagOn && !state.has_url;
+        btn.className = 'claspion-toggle ' +
+          (misconfigured ? 'is-misconfigured' : (on ? 'is-on' : 'is-off'));
+        btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        var text;
+        if (misconfigured) text = 'CLASPION on (no URL)';
+        else if (on) text = 'CLASPION on';
+        else text = 'CLASPION off';
+        if (label) label.textContent = text;
+        var bits = [
+          'Tap to toggle CLASPION governance',
+          'Effective: ' + (on ? 'ON' : 'OFF'),
+          'URL: ' + (state.url || 'none'),
+          'Fail mode: ' + (state.fail_mode || 'block'),
+          'Env default: ' + (state.env_defaults && state.env_defaults.enabled ? 'on' : 'off'),
+        ];
+        btn.title = bits.join('\n');
+      }
+
+      function refresh() {
+        return fetch('/api/governance/state', { credentials: 'same-origin' })
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(render)
+          .catch(function () { render(null); });
+      }
+
+      function toggle() {
+        if (btn.hasAttribute('disabled')) return;
+        btn.setAttribute('disabled', 'disabled');
+        fetch('/api/governance/toggle', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+        })
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(render)
+          .catch(function () { render(null); })
+          .finally(function () { btn.removeAttribute('disabled'); });
+      }
+
+      btn.addEventListener('click', toggle);
+      refresh();
+      // Light polling so other tabs / API toggles are reflected here.
+      setInterval(refresh, 30000);
+    })();
+  </script>
   <script src="app.js"></script>
 </body>
 </html>

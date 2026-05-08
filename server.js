@@ -60,6 +60,7 @@ app.use('/debug', memoryDebugRoutes);
 app.use('/cognitive', cognitiveDashboardRoutes);
 app.use('/api/scifi', sciFiModeRoutes);
 app.use('/api/continuity', require('./routes/master-continuity'));
+app.use('/api/governance', require('./routes/governance'));
 
 // Health check with version info
 app.get('/health', (req, res) => {
@@ -83,18 +84,9 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Lightweight governance status — for ops to confirm the toggle state
-// without exposing keys.
-app.get('/api/governance/status', (req, res) => {
-  res.json({
-    enabled: claspionGovernance.isEnabled(),
-    has_url: !!claspionGovernance.url,
-    has_api_key: !!claspionGovernance.apiKey,
-    fail_mode: claspionGovernance.failMode,
-    timeout_ms: claspionGovernance.timeoutMs,
-    actor_id: claspionGovernance.actorId,
-  });
-});
+// Note: governance state/toggle/reset live in routes/governance.js, mounted
+// above at /api/governance. The legacy /api/governance/status alias is kept
+// in that router for back-compat.
 
 // Version endpoint
 app.get('/version', (req, res) => {
