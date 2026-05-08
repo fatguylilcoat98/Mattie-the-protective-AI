@@ -970,6 +970,11 @@ async function sendMessage() {
     return;
   }
 
+  // iOS: unlock the persistent audio element on this real user gesture
+  // so the post-fetch playSpoken() can actually emit sound. No-op on
+  // Android and on subsequent sends.
+  unlockIosAudio();
+
   console.log(`💬 Sending message from user ${userId}:`, message, imageData ? '(with image)' : '');
 
   appendMessage('user', message || (imageData ? '(image)' : ''));
@@ -1076,6 +1081,10 @@ async function toggleCamera() {
 }
 
 function toggleSpeaker() {
+  // iOS: prime audio inside this real tap so future TTS replies play.
+  // Calling here means a user who turns the speaker on BEFORE typing
+  // still gets working audio on iOS.
+  unlockIosAudio();
   speakerActive = !speakerActive;
   if (speakerButton) speakerButton.classList.toggle('active', speakerActive);
   if (!speakerActive) {
@@ -1102,12 +1111,43 @@ async function playSpoken(text) {
     const data = await response.json();
 
     if (data.audio) {
-      const audio = new Audio('data:audio/mpeg;base64,' + data.audio);
-      currentAudio = audio;
-      // Start playback immediately
-      audio.play().catch(err => console.error('Audio playback failed:', err));
+      const src = 'data:audio/mpeg;base64,' + data.audio;
+      // iOS Safari blocks Audio().play() that runs after async work
+      // (the user's tap gesture has "expired" by the time the audio
+      // arrives). Reuse the audio element we unlocked synchronously
+      // inside the user's first tap — that one keeps working.
+      const el = window.unlockedAudio;
+      if (el) {
+        try {
+          el.src = src;
+          // iOS PWA quirks: load() forces re-buffer of the new src.
+          el.load();
+          const p = el.play();
+          if (p && p.catch) {
+            p.catch((err) => {
+              console.error('Audio playback rejected (likely iOS silent switch or expired gesture):', err);
+              // Last-ditch fallback so the user still hears something.
+              if ('speechSynthesis' in window) {
+                try {
+                  window.speechSynthesis.cancel();
+                  const u = new SpeechSynthesisUtterance(text);
+                  window.speechSynthesis.speak(u);
+                } catch {}
+              }
+            });
+          }
+          currentAudio = el;
+        } catch (err) {
+          console.error('Audio element error:', err);
+        }
+      } else {
+        // Pre-unlock path (very first reply or unlock didn't fire yet).
+        // Best effort; will fail on iOS but works on Android.
+        const audio = new Audio(src);
+        currentAudio = audio;
+        audio.play().catch((err) => console.error('Audio playback failed (no unlock):', err));
+      }
     } else if (data.fallback === 'browser_tts' && 'speechSynthesis' in window) {
-      // Cancel any existing speech and start immediately
       window.speechSynthesis.cancel();
       const utter = new SpeechSynthesisUtterance(text);
       utter.rate = 1.1;
@@ -1116,6 +1156,48 @@ async function playSpoken(text) {
     }
   } catch (err) {
     console.error('Voice playback error:', err);
+  }
+}
+
+// iOS audio unlock — must run synchronously inside the first real
+// user gesture (button click, etc.). Creates one persistent <audio>
+// element, primes it with a 1-frame silent MP3, calls play() in the
+// gesture so iOS marks it "user-activated." All future playSpoken()
+// calls reuse this element and play() works even from async code.
+//
+// Tiny silent MP3 (~0.07s) — works as iOS gesture primer.
+const SILENT_MP3 = 'data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQwAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAACAAACcQCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgID///////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAnGMHkkIAAAAAAAAAAAAAAAAAAAA//sQxAADwAABpAAAACAAADSAAAAETEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVU=';
+
+function unlockIosAudio() {
+  if (window.unlockedAudio) return; // already done
+  try {
+    const el = document.createElement('audio');
+    el.preload = 'auto';
+    el.playsInline = true;
+    el.setAttribute('playsinline', '');
+    el.setAttribute('webkit-playsinline', '');
+    el.src = SILENT_MP3;
+    // Don't append to DOM — keep it offscreen.
+    const p = el.play();
+    if (p && p.then) {
+      p.then(() => {
+        // After the silent primer plays, immediately pause so we can
+        // reuse the same element for actual TTS playback.
+        try { el.pause(); el.currentTime = 0; } catch {}
+        window.unlockedAudio = el;
+        console.log('[audio] iOS audio unlocked');
+      }).catch((err) => {
+        // Some iOS versions throw on the silent primer. Keep the
+        // element anyway — subsequent .play() calls in real gestures
+        // (button taps) will still work.
+        window.unlockedAudio = el;
+        console.warn('[audio] silent primer rejected, keeping element anyway:', err && err.message);
+      });
+    } else {
+      window.unlockedAudio = el;
+    }
+  } catch (err) {
+    console.error('[audio] unlock failed:', err);
   }
 }
 

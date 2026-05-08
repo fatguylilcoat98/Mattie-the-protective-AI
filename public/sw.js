@@ -5,7 +5,7 @@
   Truth · Safety · We Got Your Back
 */
 
-const CACHE_NAME = 'splendor-v7'; // increment this number
+const CACHE_NAME = 'splendor-v8'; // increment this number
 const urlsToCache = [
   '/',
   '/manifest.json',
