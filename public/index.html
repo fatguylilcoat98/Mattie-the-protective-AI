@@ -127,6 +127,29 @@
     }
 
     /* CLASPION governance toggle */
+    .claspion-controls {
+      display: inline-flex;
+      gap: 6px;
+      align-items: center;
+      margin-top: 8px;
+    }
+    .claspion-config {
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: var(--dark-elevated, rgba(255,255,255,0.05));
+      border: 1px solid var(--dark-border, rgba(255,255,255,0.1));
+      color: var(--text-secondary);
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: filter 0.2s ease, transform 0.2s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .claspion-config:hover { filter: brightness(1.15); }
+    .claspion-config:active { transform: scale(0.97); }
+
     .claspion-toggle {
       display: inline-flex;
       align-items: center;
@@ -1263,16 +1286,25 @@
       </div>
       <div class="version-info" id="versionInfo">Loading...</div>
       <div class="user-info" id="userInfo"></div>
-      <button
-        type="button"
-        id="claspionToggle"
-        class="claspion-toggle is-off"
-        title="Tap to toggle CLASPION governance"
-        aria-pressed="false"
-      >
-        <span class="dot" aria-hidden="true"></span>
-        <span class="claspion-toggle-label">CLASPION ···</span>
-      </button>
+      <div class="claspion-controls">
+        <button
+          type="button"
+          id="claspionToggle"
+          class="claspion-toggle is-off"
+          title="Tap to toggle CLASPION governance"
+          aria-pressed="false"
+        >
+          <span class="dot" aria-hidden="true"></span>
+          <span class="claspion-toggle-label">CLASPION ···</span>
+        </button>
+        <button
+          type="button"
+          id="claspionConfig"
+          class="claspion-config"
+          title="Configure CLASPION URL"
+          aria-label="Configure CLASPION URL"
+        >URL</button>
+      </div>
     </header>
 
     <!-- Chat Container -->
@@ -1320,10 +1352,30 @@
   <script>
     // CLASPION governance toggle — talks to /api/governance/state.
     // Self-contained so it survives independent of the main app.
+    //
+    // The toggle drives the runtime override on the server. The URL
+    // affordance lets you point Splendor at a CLASPION instance without
+    // editing Render env vars. The URL is also cached in localStorage
+    // and re-applied on each page load, so it sticks across deploys
+    // even though the server's process-level override is wiped on
+    // restart. To make it truly durable, also set CLASPION_URL in the
+    // Render env.
     (function () {
+      var STORAGE_KEY = 'splendor.claspion.url';
       var btn = document.getElementById('claspionToggle');
+      var cfgBtn = document.getElementById('claspionConfig');
       if (!btn) return;
       var label = btn.querySelector('.claspion-toggle-label');
+
+      function readSavedUrl() {
+        try { return localStorage.getItem(STORAGE_KEY) || ''; } catch (e) { return ''; }
+      }
+      function writeSavedUrl(url) {
+        try {
+          if (url) localStorage.setItem(STORAGE_KEY, url);
+          else localStorage.removeItem(STORAGE_KEY);
+        } catch (e) { /* private mode etc. — ignore */ }
+      }
 
       function render(state) {
         if (!state) {
@@ -1352,31 +1404,100 @@
           'Env default: ' + (state.env_defaults && state.env_defaults.enabled ? 'on' : 'off'),
         ];
         btn.title = bits.join('\n');
+        if (cfgBtn) {
+          cfgBtn.textContent = state.url ? 'EDIT URL' : 'SET URL';
+          cfgBtn.title = state.url
+            ? ('Current CLASPION URL: ' + state.url + '\nTap to edit. Empty input clears.')
+            : 'Tap to set the CLASPION URL (e.g. https://claspion.onrender.com).';
+        }
+      }
+
+      function postState(payload) {
+        btn.setAttribute('disabled', 'disabled');
+        return fetch('/api/governance/state', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (s) { render(s); return s; })
+          .catch(function () { render(null); })
+          .finally(function () { btn.removeAttribute('disabled'); });
       }
 
       function refresh() {
         return fetch('/api/governance/state', { credentials: 'same-origin' })
           .then(function (r) { return r.ok ? r.json() : null; })
-          .then(render)
-          .catch(function () { render(null); });
+          .then(function (state) { render(state); return state; })
+          .catch(function () { render(null); return null; });
       }
 
       function toggle() {
         if (btn.hasAttribute('disabled')) return;
-        btn.setAttribute('disabled', 'disabled');
-        fetch('/api/governance/toggle', {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json' },
-        })
+        // Read latest state so we can prompt for a URL if needed.
+        fetch('/api/governance/state', { credentials: 'same-origin' })
           .then(function (r) { return r.ok ? r.json() : null; })
-          .then(render)
-          .catch(function () { render(null); })
-          .finally(function () { btn.removeAttribute('disabled'); });
+          .then(function (state) {
+            if (!state) { render(null); return; }
+            // If turning ON and no URL is configured, ask for one first.
+            if (!state.enabled_flag && !state.has_url) {
+              var entered = window.prompt(
+                'CLASPION URL (e.g. https://claspion.onrender.com):',
+                readSavedUrl()
+              );
+              if (entered === null) return; // cancelled
+              entered = (entered || '').trim();
+              if (!entered) {
+                window.alert('No URL entered — CLASPION stays off.');
+                return;
+              }
+              writeSavedUrl(entered);
+              return postState({ enabled: true, url: entered });
+            }
+            // Otherwise just flip the flag.
+            return postState({ enabled: !state.enabled_flag });
+          });
+      }
+
+      function configureUrl() {
+        var current = readSavedUrl();
+        var entered = window.prompt(
+          'CLASPION URL (leave blank to clear and revert to env default):',
+          current
+        );
+        if (entered === null) return;
+        entered = entered.trim();
+        writeSavedUrl(entered);
+        // Empty string POSTs the empty url, which the server treats as
+        // "no override URL" but doesn't revert the env default. To revert
+        // truly, hit /reset. For simplicity, treat empty as reset.
+        if (!entered) {
+          fetch('/api/governance/reset', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+          })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(render)
+            .catch(function () { render(null); });
+          return;
+        }
+        postState({ url: entered });
       }
 
       btn.addEventListener('click', toggle);
-      refresh();
+      if (cfgBtn) cfgBtn.addEventListener('click', configureUrl);
+
+      // On load: if we have a saved URL, push it to the server's runtime
+      // override so the toggle works without re-prompting.
+      var saved = readSavedUrl();
+      if (saved) {
+        postState({ url: saved }).then(refresh);
+      } else {
+        refresh();
+      }
+
       // Light polling so other tabs / API toggles are reflected here.
       setInterval(refresh, 30000);
     })();
