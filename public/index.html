@@ -186,6 +186,17 @@
     .claspion-toggle.is-off .dot { background: #888; }
     .claspion-toggle.is-misconfigured { color: #ffd591; border-color: rgba(255,180,80,0.55); }
     .claspion-toggle.is-misconfigured .dot { background: #f0a040; box-shadow: 0 0 10px rgba(240,160,64,0.6); }
+    .claspion-build-tag {
+      margin-left: 4px;
+      padding: 1px 6px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.08);
+      font-family: 'Inter', monospace;
+      font-size: 9px;
+      letter-spacing: 0.5px;
+      text-transform: none;
+      opacity: 0.85;
+    }
 
     .reality-context {
       margin: 8px 0;
@@ -1293,9 +1304,11 @@
           class="claspion-toggle is-off"
           title="Tap to toggle CLASPION governance"
           aria-pressed="false"
+          data-toggle-build="2026-05-08-v15.1.0"
         >
           <span class="dot" aria-hidden="true"></span>
           <span class="claspion-toggle-label">CLASPION ···</span>
+          <span class="claspion-build-tag" id="claspionBuildTag">v15.1.0</span>
         </button>
         <button
           type="button"

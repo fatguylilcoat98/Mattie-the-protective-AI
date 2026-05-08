@@ -5,72 +5,83 @@
   Truth · Safety · We Got Your Back
 */
 
-const CACHE_NAME = 'splendor-v9'; // increment this number
+const CACHE_NAME = 'splendor-v10'; // increment this number on every deploy
 const urlsToCache = [
-  '/',
   '/manifest.json',
   '/icons/splendor-icon.svg'
 ];
 
-// Install Service Worker
+// Install Service Worker — pre-cache the offline shell, then take over
+// from any older SW immediately so the user does not need to close-and-
+// reopen the app to see the new build.
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        return cache.addAll(urlsToCache);
-      })
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(urlsToCache))
   );
 });
 
-// Fetch Event
+// Fetch:
+//   * HTML / navigations → network-first. Always try the network so
+//     UI updates ship without manual cache clearing. Fall back to cache
+//     only when offline.
+//   * Everything else (icons, manifest) → cache-first.
+//   * Cross-origin → pass through.
 self.addEventListener('fetch', (event) => {
-  // Never intercept external requests — only cache same-origin
-  if (!event.request.url.startsWith(self.location.origin)) {
-    return; // Let browser handle it normally
+  const req = event.request;
+
+  // Cross-origin: don't touch.
+  if (!req.url.startsWith(self.location.origin)) return;
+
+  const isNavigation =
+    req.mode === 'navigate' ||
+    (req.method === 'GET' &&
+      (req.headers.get('accept') || '').includes('text/html'));
+
+  if (isNavigation) {
+    event.respondWith(
+      fetch(req)
+        .then((res) => {
+          // Stash a copy so we still work offline.
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then((c) => c.put(req, copy)).catch(() => {});
+          return res;
+        })
+        .catch(() => caches.match(req).then((cached) => cached || caches.match('/manifest.json')))
+    );
+    return;
   }
 
+  // Static assets: cache-first.
   event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Return cached version or fetch from network
-        return response || fetch(event.request);
-      }
-    )
+    caches.match(req).then((cached) => cached || fetch(req))
   );
 });
 
-// Activate Service Worker
-self.addEventListener('activate', event => {
+// Activate: drop any older caches and become the active SW immediately.
+self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
+    caches.keys().then((cacheNames) =>
+      Promise.all(
         cacheNames
-          .filter(name => name !== CACHE_NAME)
-          .map(name => caches.delete(name))
-      );
-    })
+          .filter((name) => name !== CACHE_NAME)
+          .map((name) => caches.delete(name))
+      )
+    ).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
-// Handle cache clearing messages
+// Allow the page to force a full cache wipe.
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'CLEAR_CACHE') {
-    console.log('Service Worker: Force clearing all caches');
-
     event.waitUntil(
-      caches.keys().then((cacheNames) => {
-        return Promise.all(
-          cacheNames.map((cacheName) => {
-            console.log('Service Worker: Deleting cache:', cacheName);
-            return caches.delete(cacheName);
-          })
-        );
-      }).then(() => {
-        console.log('Service Worker: All caches cleared');
-        // Send confirmation back to client
-        event.ports[0].postMessage({ success: true, message: 'Cache cleared' });
-      })
+      caches.keys()
+        .then((cacheNames) => Promise.all(cacheNames.map((n) => caches.delete(n))))
+        .then(() => {
+          if (event.ports && event.ports[0]) {
+            event.ports[0].postMessage({ success: true, message: 'Cache cleared' });
+          }
+        })
     );
   }
 });
