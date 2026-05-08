@@ -197,6 +197,15 @@
       text-transform: none;
       opacity: 0.85;
     }
+    .claspion-reason {
+      margin-top: 6px;
+      font-family: 'Inter', sans-serif;
+      font-size: 10.5px;
+      color: var(--text-muted, rgba(255,255,255,0.55));
+      max-width: 360px;
+      text-align: center;
+      line-height: 1.35;
+    }
 
     .reality-context {
       margin: 8px 0;
@@ -1304,11 +1313,11 @@
           class="claspion-toggle is-off"
           title="Tap to toggle CLASPION governance"
           aria-pressed="false"
-          data-toggle-build="2026-05-08-v15.1.0"
+          data-toggle-build="2026-05-08-v15.2.0"
         >
           <span class="dot" aria-hidden="true"></span>
           <span class="claspion-toggle-label">CLASPION ···</span>
-          <span class="claspion-build-tag" id="claspionBuildTag">v15.1.0</span>
+          <span class="claspion-build-tag" id="claspionBuildTag">v15.2.0</span>
         </button>
         <button
           type="button"
@@ -1318,6 +1327,7 @@
           aria-label="Configure CLASPION URL"
         >URL</button>
       </div>
+      <div class="claspion-reason" id="claspionReason" aria-live="polite"></div>
     </header>
 
     <!-- Chat Container -->
@@ -1377,8 +1387,17 @@
       var STORAGE_KEY = 'splendor.claspion.url';
       var btn = document.getElementById('claspionToggle');
       var cfgBtn = document.getElementById('claspionConfig');
+      var reason = document.getElementById('claspionReason');
       if (!btn) return;
       var label = btn.querySelector('.claspion-toggle-label');
+
+      function reasonText(state) {
+        if (!state) return 'Could not reach /api/governance/state. Check that the server is up.';
+        if (state.enabled) return 'CLASPION is validating every chat response. Tap to disable.';
+        if (state.enabled_flag && !state.has_url) return 'Toggle is on but no CLASPION URL is configured. Tap URL to set one.';
+        if (!state.enabled_flag && state.has_url) return 'URL is configured (' + state.url + '). Tap CLASPION to enable.';
+        return 'No CLASPION URL configured. Tap URL to point at your CLASPION instance.';
+      }
 
       function readSavedUrl() {
         try { return localStorage.getItem(STORAGE_KEY) || ''; } catch (e) { return ''; }
@@ -1396,6 +1415,7 @@
           btn.setAttribute('aria-pressed', 'false');
           if (label) label.textContent = 'CLASPION ?';
           btn.title = 'Could not read governance state';
+          if (reason) reason.textContent = reasonText(null);
           return;
         }
         var on = !!state.enabled;        // effective: flag AND has_url
@@ -1423,6 +1443,7 @@
             ? ('Current CLASPION URL: ' + state.url + '\nTap to edit. Empty input clears.')
             : 'Tap to set the CLASPION URL (e.g. https://claspion.onrender.com).';
         }
+        if (reason) reason.textContent = reasonText(state);
       }
 
       function postState(payload) {
