@@ -14,7 +14,7 @@ require('dotenv').config();
 const Anthropic = require('@anthropic-ai/sdk');
 const { createClient } = require('@supabase/supabase-js');
 const { generateSplendorResponse } = require('../lib/anthropic');
-const { getMemoriesForUser } = require('../lib/6-layer-memory');
+const { loadSemanticMemory } = require('../lib/6-layer-memory');
 const { performWebSearch } = require('../lib/tavily');
 const fs = require('fs').promises;
 const path = require('path');
@@ -344,10 +344,14 @@ Think deeply and creatively. If I have a genuine breakthrough or solution, I'll 
     try {
       console.log('🧠 [CONSCIOUSNESS] Processing memories and experiences...');
 
-      // Get recent memories
-      const memories = await getMemoriesForUser('chris_hughes', { limit: 10 });
+      // Get recent memories - use direct supabase query for now
+      const { data: memories } = await supabase
+        .from('memories')
+        .select('content')
+        .limit(10)
+        .order('created_at', { ascending: false });
 
-      if (memories.length === 0) {
+      if (!memories || memories.length === 0) {
         return {
           type: 'memory_processing',
           result: 'No recent memories to process',
@@ -356,7 +360,7 @@ Think deeply and creatively. If I have a genuine breakthrough or solution, I'll 
       }
 
       // Use consciousness to find patterns and insights
-      const memoryContent = memories.map(m => m.content || m).join('\n- ');
+      const memoryContent = memories.map(m => m.content).join('\n- ');
 
       const response = await anthropic.messages.create({
         model: 'claude-sonnet-4-20250514',
