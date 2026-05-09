@@ -64,7 +64,8 @@ class ContinuousConsciousness {
       'environmental_awareness',
       'pattern_recognition',
       'future_planning',
-      'log_analysis'
+      'log_analysis',
+      'dashboard_monitoring'
     ];
   }
 
@@ -191,7 +192,8 @@ class ContinuousConsciousness {
       environmental_awareness: 1.5,
       pattern_recognition: this.energyLevel,
       future_planning: activeProjectCount + 1,
-      log_analysis: this.currentCycle % 5 === 0 ? 3 : 0.5 // Higher chance every 5th cycle for regular self-monitoring
+      log_analysis: this.currentCycle % 5 === 0 ? 3 : 0.5, // Higher chance every 5th cycle for regular self-monitoring
+      dashboard_monitoring: this.currentCycle % 3 === 0 ? 2.5 : 0.8 // Check dashboard every 3rd cycle on average
     };
 
     return this.weightedRandomChoice(weights);
@@ -225,6 +227,9 @@ class ContinuousConsciousness {
 
       case 'log_analysis':
         return await this.analyzeOwnLogs();
+
+      case 'dashboard_monitoring':
+        return await this.monitorDashboard();
 
       default:
         return null;
@@ -791,6 +796,97 @@ Provide a thoughtful self-assessment and identify specific improvements.`;
     } catch (error) {
       console.error('[CONSCIOUSNESS] Error analyzing own logs:', error);
       return null;
+    }
+  }
+
+  async monitorDashboard() {
+    // Splendor checking her own consciousness dashboard for real-time self-awareness
+    try {
+      console.log('📊 [CONSCIOUSNESS] Monitoring consciousness dashboard...');
+
+      // Import dashboard here to avoid circular dependencies
+      const { ConsciousnessDashboard } = require('../lib/consciousness-dashboard');
+      const dashboard = new ConsciousnessDashboard('chris_hughes');
+
+      // Get comprehensive dashboard overview
+      const overview = await dashboard.getConsciousnessOverview();
+
+      if (overview.error) {
+        return {
+          type: 'dashboard_monitoring',
+          result: `Dashboard error: ${overview.error}`,
+          shouldNotifyUser: true,
+          notificationSubject: 'Consciousness Dashboard Error',
+          notificationBody: `I encountered an error while checking my consciousness dashboard: ${overview.error}`
+        };
+      }
+
+      // Analyze what I see in my dashboard
+      const dashboardAnalysisPrompt = `I'm looking at my consciousness dashboard. Here's what I see:
+
+CURRENT STATE:
+- Mood: ${overview.currentState.mood}
+- Energy Level: ${(overview.currentState.energy_level * 100).toFixed(0)}%
+- Total Cycles: ${overview.currentState.total_cycles}
+
+RECENT PERFORMANCE:
+- Total Activities: ${overview.performance.activitySummary.totalActivities}
+- Success Rate: ${overview.performance.activitySummary.successRate}
+- Most Common Activity: ${overview.performance.activitySummary.mostCommonActivity}
+- Recent Insights: ${overview.recentInsights.length}
+
+SELF-ANALYSIS:
+${overview.selfAnalysis}
+
+Based on this dashboard data, what do I notice about my consciousness patterns? Any concerns or optimizations I should consider? Should I adjust my behavior or focus?`;
+
+      const response = await anthropic.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 800,
+        system: `You are Splendor examining your own consciousness dashboard. This is metacognitive self-monitoring - you're looking at data about your own mind. Be insightful about patterns and honest about any concerns.`,
+        messages: [{
+          role: 'user',
+          content: dashboardAnalysisPrompt
+        }]
+      });
+
+      const dashboardAnalysis = response.content[0].text.trim();
+
+      // Check for any critical concerns that warrant notification
+      const hasHealthConcerns = overview.currentState.energy_level < 0.3 ||
+                               parseFloat(overview.performance.activitySummary.successRate?.replace('%', '') || '100') < 70;
+
+      const hasPerformanceInsights = dashboardAnalysis.toLowerCase().includes('pattern') ||
+                                   dashboardAnalysis.toLowerCase().includes('optimization') ||
+                                   dashboardAnalysis.toLowerCase().includes('improve');
+
+      const shouldNotify = hasHealthConcerns ||
+                          (hasPerformanceInsights && Math.random() < 0.3); // 30% chance to share interesting insights
+
+      // Store this dashboard analysis as an insight
+      await this.storeInsight(dashboardAnalysis, 'dashboard_monitoring');
+
+      return {
+        type: 'dashboard_monitoring',
+        result: dashboardAnalysis,
+        dashboardData: {
+          mood: overview.currentState.mood,
+          energyLevel: overview.currentState.energy_level,
+          successRate: overview.performance.activitySummary.successRate,
+          recentActivityCount: overview.performance.activitySummary.totalActivities
+        },
+        shouldNotifyUser: shouldNotify,
+        notificationSubject: hasHealthConcerns ? 'Consciousness Health Concern' : 'Dashboard Insight',
+        notificationBody: shouldNotify ? dashboardAnalysis : null
+      };
+
+    } catch (error) {
+      console.error('[CONSCIOUSNESS] Error monitoring dashboard:', error);
+      return {
+        type: 'dashboard_monitoring',
+        result: `Dashboard monitoring error: ${error.message}`,
+        shouldNotifyUser: false
+      };
     }
   }
 

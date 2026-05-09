@@ -29,6 +29,14 @@ try {
   console.log('[ROUTES] Consciousness routes not found, skipping...');
 }
 
+// Consciousness dashboard routes
+let consciousnessDashboardRoutes;
+try {
+  consciousnessDashboardRoutes = require('./routes/consciousness-dashboard');
+} catch (error) {
+  console.log('[ROUTES] Consciousness dashboard routes not found, skipping...');
+}
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -73,6 +81,11 @@ app.use('/api/governance', require('./routes/governance'));
 // Consciousness routes (if available)
 if (consciousnessRoutes) {
   app.use('/api/consciousness', consciousnessRoutes);
+}
+
+// Consciousness dashboard routes (if available)
+if (consciousnessDashboardRoutes) {
+  app.use('/api/consciousness/dashboard', consciousnessDashboardRoutes);
 }
 
 // Health check with version info
