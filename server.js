@@ -88,6 +88,9 @@ if (consciousnessDashboardRoutes) {
   app.use('/api/consciousness/dashboard', consciousnessDashboardRoutes);
 }
 
+// Consciousness debug routes (temporary)
+app.use('/api/consciousness/debug', require('./routes/consciousness-debug'));
+
 // Health check with version info
 app.get('/health', (req, res) => {
   const pkg = require('./package.json');
