@@ -74,15 +74,49 @@ class ContinuousConsciousness {
     if (this.userId) return this.userId;
 
     try {
-      // Get the most recent user from the database
-      const { data: users } = await supabase
+      // Try multiple sources to find the current user
+      let foundUserId = null;
+
+      // First try: conversations table
+      const { data: conversations } = await supabase
         .from('conversations')
         .select('user_id')
         .order('created_at', { ascending: false })
         .limit(1);
 
-      if (users && users.length > 0) {
-        this.userId = users[0].user_id;
+      if (conversations && conversations.length > 0) {
+        foundUserId = conversations[0].user_id;
+      }
+
+      // Second try: memories table
+      if (!foundUserId) {
+        const { data: memories } = await supabase
+          .from('memories')
+          .select('user_id')
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (memories && memories.length > 0) {
+          foundUserId = memories[0].user_id;
+        }
+      }
+
+      // Third try: user_settings table (sci-fi users)
+      if (!foundUserId) {
+        const { data: settings } = await supabase
+          .from('user_settings')
+          .select('user_id')
+          .eq('scifi_mode_enabled', true)
+          .limit(1);
+
+        if (settings && settings.length > 0) {
+          foundUserId = settings[0].user_id;
+        }
+      }
+
+      if (foundUserId) {
+        this.userId = foundUserId;
+        console.log(`[CONSCIOUSNESS] Found active user: ${foundUserId}`);
         return this.userId;
       }
 
@@ -1064,8 +1098,8 @@ This is like examining my own dreams and thoughts - what does my mental timeline
         .update({
           mood: this.currentMood,
           energy_level: this.energyLevel,
-          last_consciousness_cycle: new Date().toISOString(),
-          total_cycles: this.currentCycle
+          total_cycles: this.currentCycle,
+          last_interaction: new Date().toISOString()
         })
         .eq('user_id', userId);
 
