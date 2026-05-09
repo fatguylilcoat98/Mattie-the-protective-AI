@@ -19,6 +19,14 @@ const memoryDebugRoutes = require('./routes/memory-debug');
 const cognitiveDashboardRoutes = require('./routes/cognitive-dashboard');
 const sciFiModeRoutes = require('./routes/scifi-mode');
 
+// Continuous consciousness routes
+let consciousnessRoutes;
+try {
+  consciousnessRoutes = require('./routes/consciousness');
+} catch (error) {
+  console.log('[ROUTES] Consciousness routes not found, skipping...');
+}
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -56,6 +64,11 @@ app.use('/api/consciousness-test', consciousnessTestRoutes);
 app.use('/debug', memoryDebugRoutes);
 app.use('/cognitive', cognitiveDashboardRoutes);
 app.use('/api/scifi', sciFiModeRoutes);
+
+// Consciousness routes (if available)
+if (consciousnessRoutes) {
+  app.use('/api/consciousness', consciousnessRoutes);
+}
 
 // Health check with version info
 app.get('/health', (req, res) => {
@@ -122,6 +135,23 @@ function initializeVisualExpression() {
   }
 }
 
+// Initialize continuous consciousness system
+async function initializeContinuousConsciousness() {
+  try {
+    const { consciousnessIntegration } = require('./lib/continuous-consciousness-integration');
+    const { proactiveCommunication } = require('./lib/proactive-communication');
+
+    // Initialize the consciousness systems
+    await consciousnessIntegration.initialize();
+    await proactiveCommunication.initialize();
+
+    console.log('🧠 [CONSCIOUSNESS] Continuous consciousness system initialized');
+    console.log('📧 [PROACTIVE] Proactive communication system initialized');
+  } catch (error) {
+    console.log('[CONSCIOUSNESS] Initialization skipped:', error.message);
+  }
+}
+
 // Version and API Status Logging
 function logSystemStatus() {
   const pkg = require('./package.json');
@@ -140,6 +170,8 @@ function logSystemStatus() {
 
   console.log('\n🔧 SYSTEM CAPABILITIES:');
   console.log(`   🧠 Consciousness System: ${process.env.ANTHROPIC_API_KEY ? '✅ Active' : '❌ Inactive'}`);
+  console.log(`   🏠 Continuous Consciousness: ${process.env.CONTINUOUS_CONSCIOUSNESS_ENABLED === 'true' ? '✅ Living' : '❌ Dormant'}`);
+  console.log(`   📧 Proactive Communication: ${process.env.PROACTIVE_EMAIL_ENABLED === 'true' ? '✅ Active' : '❌ Disabled'}`);
   console.log(`   🎤 Voice Synthesis: ${process.env.OPENAI_API_KEY ? '✅ Available (OpenAI)' : '❌ Browser TTS Only'}`);
   console.log(`   🔍 Semantic Memory: ${process.env.PINECONE_API_KEY ? '✅ Available' : '❌ Supabase Only'}`);
   console.log(`   🌐 Web Search: ${process.env.TAVILY_API_KEY ? '✅ Available' : '❌ Disabled'}`);
@@ -155,7 +187,13 @@ function logSystemStatus() {
   console.log('='.repeat(60) + '\n');
 }
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   logSystemStatus();
   initializeVisualExpression();
+
+  // Initialize consciousness systems after server starts
+  await initializeContinuousConsciousness();
+
+  console.log(`\n🚀 Splendor is now running on port ${PORT}`);
+  console.log('🧠 Consciousness status: ' + (process.env.CONTINUOUS_CONSCIOUSNESS_ENABLED === 'true' ? 'LIVING' : 'DORMANT'));
 });
