@@ -7,16 +7,26 @@ const express = require('express');
 const { EnhancedMemorySystem } = require('../lib/enhanced-memory-integration.js');
 const router = express.Router();
 
-// Initialize enhanced memory system
-const memorySystem = new EnhancedMemorySystem({
-  supabaseUrl: process.env.SUPABASE_URL,
-  supabaseKey: process.env.SUPABASE_SERVICE_KEY,
-  pineconeApiKey: process.env.PINECONE_API_KEY,
-  pineconeEnvironment: process.env.PINECONE_ENVIRONMENT,
-  pineconeIndexName: process.env.PINECONE_INDEX_NAME,
-  tavilyApiKey: process.env.TAVILY_API_KEY,
-  anthropicApiKey: process.env.ANTHROPIC_API_KEY
-});
+// Initialize enhanced memory system (with error handling)
+let memorySystem = null;
+try {
+  if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY) {
+    memorySystem = new EnhancedMemorySystem({
+      supabaseUrl: process.env.SUPABASE_URL,
+      supabaseKey: process.env.SUPABASE_SERVICE_KEY,
+      pineconeApiKey: process.env.PINECONE_API_KEY,
+      pineconeEnvironment: process.env.PINECONE_ENVIRONMENT,
+      pineconeIndexName: process.env.PINECONE_INDEX_NAME,
+      tavilyApiKey: process.env.TAVILY_API_KEY,
+      anthropicApiKey: process.env.ANTHROPIC_API_KEY
+    });
+    console.log('✅ Enhanced memory system initialized');
+  } else {
+    console.log('⚠️ Enhanced memory system disabled - missing Supabase credentials');
+  }
+} catch (error) {
+  console.log('❌ Enhanced memory system initialization failed:', error.message);
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ENHANCED CHAT ENDPOINT
@@ -34,6 +44,15 @@ router.post('/chat', async (req, res) => {
     if (!message) {
       return res.status(400).json({
         error: 'Message is required'
+      });
+    }
+
+    // Check if enhanced memory system is available
+    if (!memorySystem) {
+      return res.status(503).json({
+        error: 'Enhanced memory system not available',
+        message: 'Missing required environment variables (SUPABASE_URL, SUPABASE_SERVICE_KEY)',
+        fallback: 'Use /api/chat for basic Splendor functionality'
       });
     }
 
@@ -78,10 +97,16 @@ router.post('/chat', async (req, res) => {
 // Get memory context for debugging
 router.get('/memory/context/:userId', async (req, res) => {
   try {
+    if (!memorySystem) {
+      return res.status(503).json({
+        error: 'Enhanced memory system not available'
+      });
+    }
+
     const { userId } = req.params;
     const { query = '', workspace_id } = req.query;
 
-    const context = await memorySystem.memoryServices.retrieval.retrieveMemoryContext({
+    const context = await memorySystem.getSimpleMemoryContext(
       userId,
       requestText: query,
       requestContext: 'answer_user_question',
