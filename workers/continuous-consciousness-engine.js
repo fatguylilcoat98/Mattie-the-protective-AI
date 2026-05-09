@@ -1005,10 +1005,6 @@ This is like examining my own dreams and thoughts - what does my mental timeline
       console.error('[CONSCIOUSNESS] Error logging activity:', error);
     }
   }
-    } catch (error) {
-      console.error('[CONSCIOUSNESS] Error logging activity:', error);
-    }
-  }
 
   async storeInsight(insight, type) {
     try {
@@ -1022,10 +1018,6 @@ This is like examining my own dreams and thoughts - what does my mental timeline
           created_at: new Date().toISOString()
         });
       console.log(`[CONSCIOUSNESS] Stored insight: ${type} for user ${userId}`);
-    } catch (error) {
-      console.error('[CONSCIOUSNESS] Error storing insight:', error);
-    }
-  }
     } catch (error) {
       console.error('[CONSCIOUSNESS] Error storing insight:', error);
     }
@@ -1054,11 +1046,6 @@ This is like examining my own dreams and thoughts - what does my mental timeline
           delivered: false
         });
       console.log(`[CONSCIOUSNESS] Stored proactive message for user ${userId}: ${result.notificationSubject}`);
-    } catch (error) {
-      console.error('[CONSCIOUSNESS] Error sending proactive message:', error);
-    }
-  }
-
     } catch (error) {
       console.error('[CONSCIOUSNESS] Error sending proactive message:', error);
     }
