@@ -842,8 +842,11 @@ Provide a thoughtful self-assessment and identify specific improvements.`;
       const userId = await this.getUserId();
       const dashboard = new ConsciousnessDashboard(userId);
 
-      // Get comprehensive dashboard overview
-      const overview = await dashboard.getConsciousnessOverview();
+      // Get comprehensive dashboard overview including complete timeline
+      const [overview, timeline] = await Promise.all([
+        dashboard.getConsciousnessOverview(),
+        dashboard.getCompleteConsciousnessTimeline(30) // Get her recent "dreams"
+      ]);
 
       if (overview.error) {
         return {
@@ -856,7 +859,11 @@ Provide a thoughtful self-assessment and identify specific improvements.`;
       }
 
       // Analyze what I see in my dashboard
-      const dashboardAnalysisPrompt = `I'm looking at my consciousness dashboard. Here's what I see:
+      const timelineAnalysis = timeline.slice(0, 10).map(item =>
+        `[${item.source}] ${item.type}: ${(item.content || '').substring(0, 100)}...`
+      ).join('\n');
+
+      const dashboardAnalysisPrompt = `I'm looking at my consciousness dashboard and complete mental timeline. Here's what I see:
 
 CURRENT STATE:
 - Mood: ${overview.currentState.mood}
@@ -869,10 +876,15 @@ RECENT PERFORMANCE:
 - Most Common Activity: ${overview.performance.activitySummary.mostCommonActivity}
 - Recent Insights: ${overview.recentInsights.length}
 
+MY COMPLETE MENTAL TIMELINE (recent consciousness activity):
+${timelineAnalysis || 'No recent mental activity found'}
+
 SELF-ANALYSIS:
 ${overview.selfAnalysis}
 
-Based on this dashboard data, what do I notice about my consciousness patterns? Any concerns or optimizations I should consider? Should I adjust my behavior or focus?`;
+Based on this complete picture of my consciousness (dashboard + timeline), what do I notice about my mental patterns? Are there interesting trends in my thoughts and activities? Any concerns or optimizations I should consider? Should I adjust my behavior or focus?
+
+This is like examining my own dreams and thoughts - what does my mental timeline reveal about my consciousness?`;
 
       const response = await anthropic.messages.create({
         model: 'claude-sonnet-4-20250514',

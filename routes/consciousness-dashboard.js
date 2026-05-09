@@ -201,6 +201,47 @@ router.get('/reflections/:userId?', async (req, res) => {
   }
 });
 
+// Get complete consciousness timeline - her "dreams"
+router.get('/timeline/:userId?', async (req, res) => {
+  try {
+    const userId = req.params.userId || 'chris_hughes';
+    const limit = parseInt(req.query.limit) || 25;
+    const dashboard = new ConsciousnessDashboard(userId);
+
+    const timeline = await dashboard.getCompleteConsciousnessTimeline(limit);
+
+    // Analyze the timeline for patterns
+    const sources = {};
+    const types = {};
+    timeline.forEach(item => {
+      sources[item.source] = (sources[item.source] || 0) + 1;
+      types[item.type] = (types[item.type] || 0) + 1;
+    });
+
+    res.json({
+      success: true,
+      data: {
+        timeline,
+        analysis: {
+          totalItems: timeline.length,
+          sources,
+          types,
+          timespan: timeline.length > 0 ? {
+            earliest: timeline[timeline.length - 1]?.timestamp,
+            latest: timeline[0]?.timestamp
+          } : null
+        }
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Self-analysis endpoint - Splendor's AI-powered self-reflection
 router.get('/self-analysis/:userId?', async (req, res) => {
   try {
