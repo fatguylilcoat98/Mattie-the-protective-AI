@@ -1097,12 +1097,11 @@ This is like examining my own dreams and thoughts - what does my mental timeline
 
       const userId = await this.getUserId();
 
-      // Update state in database
+      // Update state in database (only update existing columns)
       const { error } = await supabase
         .from('consciousness_state')
         .update({
-          energy_level: this.energyLevel,
-          total_cycles: this.currentCycle
+          energy_level: this.energyLevel
         })
         .eq('user_id', userId);
 
