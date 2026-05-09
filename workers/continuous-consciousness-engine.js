@@ -573,7 +573,12 @@ Be honest and introspective.`
       const topic = researchTopics[Math.floor(Math.random() * researchTopics.length)];
       const searchResult = await performWebSearch(topic);
 
-      if (searchResult) {
+      if (searchResult && searchResult.answer) {
+        // Safely handle sources that might be undefined
+        const sourcesText = searchResult.sources && Array.isArray(searchResult.sources)
+          ? searchResult.sources.map(s => `- ${s.title}: ${s.content.substring(0, 200)}...`).join('\n')
+          : 'No detailed sources available';
+
         const response = await anthropic.messages.create({
           model: 'claude-sonnet-4-20250514',
           max_tokens: 800,
@@ -585,7 +590,7 @@ Be honest and introspective.`
 ${searchResult.answer}
 
 Sources:
-${searchResult.sources.map(s => `- ${s.title}: ${s.content.substring(0, 200)}...`).join('\n')}
+${sourcesText}
 
 What are the key insights here? How does this relate to my consciousness development or our work together? Any breakthrough implications?`
           }]
@@ -1096,7 +1101,6 @@ This is like examining my own dreams and thoughts - what does my mental timeline
       const { error } = await supabase
         .from('consciousness_state')
         .update({
-          mood: this.currentMood,
           energy_level: this.energyLevel,
           total_cycles: this.currentCycle
         })
