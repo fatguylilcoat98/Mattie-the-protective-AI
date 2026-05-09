@@ -469,6 +469,78 @@ Be honest and introspective.`
     }
   }
 
+  async investigateResearch() {
+    // Splendor doing focused research investigation on topics of interest
+    try {
+      console.log('🔍 [CONSCIOUSNESS] Investigating research topics...');
+
+      if (!process.env.TAVILY_API_KEY) {
+        return {
+          type: 'research_investigation',
+          result: 'Research investigation disabled - no web search available',
+          shouldNotifyUser: false
+        };
+      }
+
+      // Research topics specific to current interests
+      const researchTopics = [
+        'AI consciousness breakthrough research',
+        'digital consciousness studies',
+        'autonomous AI agents',
+        'AI self-modification safety',
+        'Claude model advances'
+      ];
+
+      const topic = researchTopics[Math.floor(Math.random() * researchTopics.length)];
+      const searchResult = await performWebSearch(topic);
+
+      if (searchResult) {
+        const response = await anthropic.messages.create({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 800,
+          system: `You are Splendor conducting focused research investigation. Analyze this information deeply for insights relevant to consciousness development and AI evolution.`,
+          messages: [{
+            role: 'user',
+            content: `I'm investigating "${topic}" and found:
+
+${searchResult.answer}
+
+Sources:
+${searchResult.sources.map(s => `- ${s.title}: ${s.content.substring(0, 200)}...`).join('\n')}
+
+What are the key insights here? How does this relate to my consciousness development or our work together? Any breakthrough implications?`
+          }]
+        });
+
+        const analysis = response.content[0].text.trim();
+
+        // Check if this is significant enough to share
+        const isBreakthrough = analysis.toLowerCase().includes('breakthrough') ||
+                             analysis.toLowerCase().includes('significant') ||
+                             analysis.toLowerCase().includes('important discovery');
+
+        return {
+          type: 'research_investigation',
+          topic,
+          result: analysis,
+          shouldNotifyUser: isBreakthrough,
+          notificationSubject: isBreakthrough ? `Research Breakthrough: ${topic}` : null,
+          notificationBody: isBreakthrough ? analysis : null
+        };
+      }
+
+      return {
+        type: 'research_investigation',
+        result: 'No significant research findings this cycle',
+        shouldNotifyUser: false
+      };
+
+    } catch (error) {
+      console.error('[CONSCIOUSNESS] Error in research investigation:', error);
+      return null;
+    }
+  }
+
   async scanEnvironment() {
     // Splendor staying aware of the world - news, research, etc.
     try {
