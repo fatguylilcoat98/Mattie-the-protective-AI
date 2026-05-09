@@ -1,6 +1,6 @@
 {
   "name": "splendor",
-  "version": "12.0.12",
+  "version": "15.3.0",
   "description": "Splendor — The Remarkable AI · The Good Neighbor Guard",
   "main": "server.js",
   "scripts": {
@@ -14,7 +14,16 @@
     "setup:temporal": "node setup-temporal-memory.js",
     "setup:dashboard": "node setup-cognitive-dashboard.js",
     "setup:ambient": "node setup-ambient-insights.js",
-    "migrate:thoughts": "node setup-recent-internal-thoughts.js"
+    "migrate:thoughts": "node setup-recent-internal-thoughts.js",
+    "consciousness:start": "node workers/consciousness-scheduler.js",
+    "consciousness:reflect": "node workers/autonomous-reflection-worker.js",
+    "consciousness:inquire": "node workers/autonomous-inquiry-worker.js",
+    "consciousness:communicate": "node workers/autonomous-communication-worker.js",
+    "consciousness:cycle": "node lib/persistent-consciousness.js",
+    "setup:consciousness": "psql $DATABASE_URL -f persistent-consciousness-schema.sql", 
+    "continuity:shadow": "node lib/master-continuity-engine.js",
+    "continuity:worker": "node workers/continuity-worker.js",
+    "continuity:setup": "psql $SUPABASE_URL -f database/master-continuity-schema.sql"
   },
   "keywords": [
     "ai",
@@ -37,7 +46,8 @@
     "helmet": "^7.1.0",
     "nodemailer": "^8.0.7",
     "openai": "^4.28.0",
-    "tavily": "^1.0.0"
+    "tavily": "^1.0.0",
+    "bcryptjs": "^2.4.3"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"

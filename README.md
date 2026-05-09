@@ -230,6 +230,63 @@ splendor/
 
 ---
 
+## CLASPION Governance (bolt-on)
+
+CLASPION is an external governance layer that can sit between Splendor's
+*thought* and her *action*. Splendor reasons normally — memory, personality,
+soul document, reflection process all stay untouched. CLASPION only sees the
+action she is about to take and tells her whether to proceed.
+
+### Toggle
+
+A single environment flag controls the layer:
+
+| Flag                | Effect                                                                 |
+|---------------------|------------------------------------------------------------------------|
+| `CLASPION_ENABLED=true`  | Splendor calls CLASPION before sending each chat response.       |
+| `CLASPION_ENABLED=false` | CLASPION is dormant. Splendor runs clean — no network calls.    |
+
+Confirm the live toggle state:
+
+```bash
+curl http://localhost:3000/api/governance/status
+```
+
+### Configuration
+
+```env
+CLASPION_ENABLED=false
+CLASPION_URL=http://localhost:8000
+CLASPION_API_KEY=your-claspion-bearer-token
+CLASPION_TIMEOUT_MS=1500
+CLASPION_FAIL_MODE=block          # block (safe default) | allow (testing only)
+CLASPION_ACTOR_ID=splendor
+```
+
+### What it guards
+
+The current wiring gates the `send_chat_response` action in
+`routes/chat.js` (both the JSON and SSE endpoints). When CLASPION blocks,
+Splendor returns a safe refusal and does not write the suppressed thought
+to memory. The decision metadata is included in the response payload so
+the client can surface it.
+
+### Where to look
+
+- `lib/claspion-governance.js` — thin client + toggle + local logging.
+- `routes/chat.js` — the only call site today; copy the pattern to add
+  more gated actions (memory writes, tool calls, voice synth, etc.).
+- CLASPION repo: `src/claspion/governance/` for the middleware itself.
+
+### Pulling it off
+
+If something goes wrong with CLASPION and you need Splendor running
+clean immediately: set `CLASPION_ENABLED=false` and restart. No code
+changes required. The chat route will skip the network call and proceed
+with the original response.
+
+---
+
 ## Contributing
 
 This is a Good Neighbor Guard project. All contributions should align with the core mission: building AI that serves human flourishing, not human attention.

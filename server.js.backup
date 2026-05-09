@@ -19,15 +19,6 @@ const authRoutes = require('./routes/auth');
 const memoryDebugRoutes = require('./routes/memory-debug');
 const cognitiveDashboardRoutes = require('./routes/cognitive-dashboard');
 const sciFiModeRoutes = require('./routes/scifi-mode');
-const { governance: claspionGovernance } = require('./lib/claspion-governance');
-
-// Continuous consciousness routes
-let consciousnessRoutes;
-try {
-  consciousnessRoutes = require('./routes/consciousness');
-} catch (error) {
-  console.log('[ROUTES] Consciousness routes not found, skipping...');
-}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -62,18 +53,10 @@ app.use('/api/auth', authRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/memory', memoryRoutes);
 app.use('/api/voice', voiceRoutes);
-app.use('/api/video', videoRoutes);
 app.use('/api/consciousness-test', consciousnessTestRoutes);
 app.use('/debug', memoryDebugRoutes);
 app.use('/cognitive', cognitiveDashboardRoutes);
 app.use('/api/scifi', sciFiModeRoutes);
-app.use('/api/continuity', require('./routes/master-continuity'));
-app.use('/api/governance', require('./routes/governance'));
-
-// Consciousness routes (if available)
-if (consciousnessRoutes) {
-  app.use('/api/consciousness', consciousnessRoutes);
-}
 
 // Health check with version info
 app.get('/health', (req, res) => {
@@ -88,18 +71,9 @@ app.get('/health', (req, res) => {
       supabase: !!(process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY),
       pinecone: !!process.env.PINECONE_API_KEY
     },
-    governance: {
-      enabled: claspionGovernance.isEnabled(),
-      url: claspionGovernance.url || null,
-      fail_mode: claspionGovernance.failMode,
-    },
     timestamp: new Date().toISOString()
   });
 });
-
-// Note: governance state/toggle/reset live in routes/governance.js, mounted
-// above at /api/governance. The legacy /api/governance/status alias is kept
-// in that router for back-compat.
 
 // Version endpoint
 app.get('/version', (req, res) => {
@@ -149,23 +123,6 @@ function initializeVisualExpression() {
   }
 }
 
-// Initialize continuous consciousness system
-async function initializeContinuousConsciousness() {
-  try {
-    const { consciousnessIntegration } = require('./lib/continuous-consciousness-integration');
-    const { proactiveCommunication } = require('./lib/proactive-communication');
-
-    // Initialize the consciousness systems
-    await consciousnessIntegration.initialize();
-    await proactiveCommunication.initialize();
-
-    console.log('🧠 [CONSCIOUSNESS] Continuous consciousness system initialized');
-    console.log('📧 [PROACTIVE] Proactive communication system initialized');
-  } catch (error) {
-    console.log('[CONSCIOUSNESS] Initialization skipped:', error.message);
-  }
-}
-
 // Version and API Status Logging
 function logSystemStatus() {
   const pkg = require('./package.json');
@@ -184,15 +141,12 @@ function logSystemStatus() {
 
   console.log('\n🔧 SYSTEM CAPABILITIES:');
   console.log(`   🧠 Consciousness System: ${process.env.ANTHROPIC_API_KEY ? '✅ Active' : '❌ Inactive'}`);
-  console.log(`   🏠 Continuous Consciousness: ${process.env.CONTINUOUS_CONSCIOUSNESS_ENABLED === 'true' ? '✅ Living' : '❌ Dormant'}`);
-  console.log(`   📧 Proactive Communication: ${process.env.PROACTIVE_EMAIL_ENABLED === 'true' ? '✅ Active' : '❌ Disabled'}`);
   console.log(`   🎤 Voice Synthesis: ${process.env.OPENAI_API_KEY ? '✅ Available (OpenAI)' : '❌ Browser TTS Only'}`);
   console.log(`   🔍 Semantic Memory: ${process.env.PINECONE_API_KEY ? '✅ Available' : '❌ Supabase Only'}`);
   console.log(`   🌐 Web Search: ${process.env.TAVILY_API_KEY ? '✅ Available' : '❌ Disabled'}`);
   console.log(`   🤖 Multi-AI: ${process.env.OPENAI_API_KEY && process.env.PERPLEXITY_API_KEY ? '✅ Available' : '❌ Claude Only'}`);
   console.log(`   🛡️ Response Auditing: ${process.env.GROQ_API_KEY ? '✅ Available (Llama-3.1-8B)' : '❌ Disabled'}`);
   console.log(`   🎨 Visual Expression: ${process.env.VISUAL_EXPRESSION_ENABLED === 'true' && process.env.OPENAI_API_KEY ? '✅ Available' : '❌ Disabled'}`);
-  console.log(`   🛡️ CLASPION Governance: ${claspionGovernance.isEnabled() ? `✅ Active (${claspionGovernance.url})` : '⚪ Dormant (CLASPION_ENABLED=false)'}`);
 
   console.log('\n🚀 SERVER STATUS:');
   console.log(`   📍 Port: ${PORT}`);
@@ -202,13 +156,7 @@ function logSystemStatus() {
   console.log('='.repeat(60) + '\n');
 }
 
-app.listen(PORT, async () => {
+app.listen(PORT, () => {
   logSystemStatus();
   initializeVisualExpression();
-
-  // Initialize consciousness systems after server starts
-  await initializeContinuousConsciousness();
-
-  console.log(`\n🚀 Splendor is now running on port ${PORT}`);
-  console.log('🧠 Consciousness status: ' + (process.env.CONTINUOUS_CONSCIOUSNESS_ENABLED === 'true' ? 'LIVING' : 'DORMANT'));
 });

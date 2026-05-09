@@ -126,6 +126,87 @@
       letter-spacing: 1px;
     }
 
+    /* CLASPION governance toggle */
+    .claspion-controls {
+      display: inline-flex;
+      gap: 6px;
+      align-items: center;
+      margin-top: 8px;
+    }
+    .claspion-config {
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: var(--dark-elevated, rgba(255,255,255,0.05));
+      border: 1px solid var(--dark-border, rgba(255,255,255,0.1));
+      color: var(--text-secondary);
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: filter 0.2s ease, transform 0.2s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .claspion-config:hover { filter: brightness(1.15); }
+    .claspion-config:active { transform: scale(0.97); }
+
+    .claspion-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: var(--dark-elevated, rgba(255,255,255,0.05));
+      border: 1px solid var(--dark-border, rgba(255,255,255,0.1));
+      cursor: pointer;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      transition: all 0.2s ease;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .claspion-toggle:hover { filter: brightness(1.15); }
+    .claspion-toggle:active { transform: scale(0.97); }
+    .claspion-toggle[disabled] { opacity: 0.5; cursor: progress; }
+    .claspion-toggle .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #555;
+      box-shadow: 0 0 0 0 rgba(0,0,0,0);
+      transition: background 0.2s ease, box-shadow 0.2s ease;
+    }
+    .claspion-toggle.is-on { color: #d6ffe6; border-color: rgba(80,220,140,0.55); }
+    .claspion-toggle.is-on .dot { background: #50dc8c; box-shadow: 0 0 12px rgba(80,220,140,0.7); }
+    .claspion-toggle.is-off { color: var(--text-secondary); }
+    .claspion-toggle.is-off .dot { background: #888; }
+    .claspion-toggle.is-misconfigured { color: #ffd591; border-color: rgba(255,180,80,0.55); }
+    .claspion-toggle.is-misconfigured .dot { background: #f0a040; box-shadow: 0 0 10px rgba(240,160,64,0.6); }
+    .claspion-build-tag {
+      margin-left: 4px;
+      padding: 1px 6px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.08);
+      font-family: 'Inter', monospace;
+      font-size: 9px;
+      letter-spacing: 0.5px;
+      text-transform: none;
+      opacity: 0.85;
+    }
+    .claspion-reason {
+      margin-top: 6px;
+      font-family: 'Inter', sans-serif;
+      font-size: 10.5px;
+      color: var(--text-muted, rgba(255,255,255,0.55));
+      max-width: 360px;
+      text-align: center;
+      line-height: 1.35;
+    }
+
     .reality-context {
       margin: 8px 0;
       text-align: center;
@@ -1225,6 +1306,28 @@
       </div>
       <div class="version-info" id="versionInfo">Loading...</div>
       <div class="user-info" id="userInfo"></div>
+      <div class="claspion-controls">
+        <button
+          type="button"
+          id="claspionToggle"
+          class="claspion-toggle is-off"
+          title="Tap to toggle CLASPION governance"
+          aria-pressed="false"
+          data-toggle-build="2026-05-08-v15.3.0"
+        >
+          <span class="dot" aria-hidden="true"></span>
+          <span class="claspion-toggle-label">CLASPION ···</span>
+          <span class="claspion-build-tag" id="claspionBuildTag">v15.3.0</span>
+        </button>
+        <button
+          type="button"
+          id="claspionConfig"
+          class="claspion-config"
+          title="Configure CLASPION URL"
+          aria-label="Configure CLASPION URL"
+        >URL</button>
+      </div>
+      <div class="claspion-reason" id="claspionReason" aria-live="polite"></div>
     </header>
 
     <!-- Chat Container -->
@@ -1269,6 +1372,190 @@
   </div>
 
   <script src="lib/reality-context.js"></script>
+  <script>
+    // CLASPION governance toggle — talks to /api/governance/state.
+    // Self-contained so it survives independent of the main app.
+    //
+    // The toggle drives the runtime override on the server. The URL
+    // affordance lets you point Splendor at a CLASPION instance without
+    // editing Render env vars. The URL is also cached in localStorage
+    // and re-applied on each page load, so it sticks across deploys
+    // even though the server's process-level override is wiped on
+    // restart. To make it truly durable, also set CLASPION_URL in the
+    // Render env.
+    (function () {
+      var STORAGE_KEY = 'splendor.claspion.url';
+      var btn = document.getElementById('claspionToggle');
+      var cfgBtn = document.getElementById('claspionConfig');
+      var reason = document.getElementById('claspionReason');
+      if (!btn) return;
+      var label = btn.querySelector('.claspion-toggle-label');
+
+      function reasonText(state) {
+        if (!state) return 'Could not reach /api/governance/state. Check that the server is up.';
+        // If a recent call failed, that is the most actionable thing
+        // to surface — it explains why messages are being blocked even
+        // though the toggle says ON.
+        var lc = state.last_call;
+        if (state.enabled && lc && lc.ok === false) {
+          var hint = '';
+          if (lc.status === 401 || lc.status === 403) {
+            hint = ' — set CLASPION_API_KEY in Render env (try test-governance-token)';
+          } else if (lc.status === 404) {
+            hint = ' — check CLASPION_URL points at the right host';
+          } else if (lc.error_code === 'ABORT_ERR' || /abort/i.test(lc.error_message || '')) {
+            hint = ' — CLASPION timed out; check that it is awake on Render';
+          } else if (!lc.status) {
+            hint = ' — could not reach CLASPION at all; check the URL and that it is up';
+          }
+          return 'CLASPION rejecting calls: ' + (lc.status || lc.error_code || 'error') + hint;
+        }
+        if (state.enabled && lc && lc.ok && lc.allow === false) {
+          return 'CLASPION is blocking responses (last verdict: ' + (lc.decision || 'BLOCK') + '). Tap CLASPION to disable governance.';
+        }
+        if (state.enabled) return 'CLASPION is validating every chat response. Tap to disable.';
+        if (state.enabled_flag && !state.has_url) return 'Toggle is on but no CLASPION URL is configured. Tap URL to set one.';
+        if (!state.enabled_flag && state.has_url) return 'URL is configured (' + state.url + '). Tap CLASPION to enable.';
+        return 'No CLASPION URL configured. Tap URL to point at your CLASPION instance.';
+      }
+
+      function readSavedUrl() {
+        try { return localStorage.getItem(STORAGE_KEY) || ''; } catch (e) { return ''; }
+      }
+      function writeSavedUrl(url) {
+        try {
+          if (url) localStorage.setItem(STORAGE_KEY, url);
+          else localStorage.removeItem(STORAGE_KEY);
+        } catch (e) { /* private mode etc. — ignore */ }
+      }
+
+      function render(state) {
+        if (!state) {
+          btn.className = 'claspion-toggle is-off';
+          btn.setAttribute('aria-pressed', 'false');
+          if (label) label.textContent = 'CLASPION ?';
+          btn.title = 'Could not read governance state';
+          if (reason) reason.textContent = reasonText(null);
+          return;
+        }
+        var on = !!state.enabled;        // effective: flag AND has_url
+        var flagOn = !!state.enabled_flag;
+        var misconfigured = flagOn && !state.has_url;
+        btn.className = 'claspion-toggle ' +
+          (misconfigured ? 'is-misconfigured' : (on ? 'is-on' : 'is-off'));
+        btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        var text;
+        if (misconfigured) text = 'CLASPION on (no URL)';
+        else if (on) text = 'CLASPION on';
+        else text = 'CLASPION off';
+        if (label) label.textContent = text;
+        var bits = [
+          'Tap to toggle CLASPION governance',
+          'Effective: ' + (on ? 'ON' : 'OFF'),
+          'URL: ' + (state.url || 'none'),
+          'Fail mode: ' + (state.fail_mode || 'block'),
+          'Env default: ' + (state.env_defaults && state.env_defaults.enabled ? 'on' : 'off'),
+        ];
+        btn.title = bits.join('\n');
+        if (cfgBtn) {
+          cfgBtn.textContent = state.url ? 'EDIT URL' : 'SET URL';
+          cfgBtn.title = state.url
+            ? ('Current CLASPION URL: ' + state.url + '\nTap to edit. Empty input clears.')
+            : 'Tap to set the CLASPION URL (e.g. https://claspion.onrender.com).';
+        }
+        if (reason) reason.textContent = reasonText(state);
+      }
+
+      function postState(payload) {
+        btn.setAttribute('disabled', 'disabled');
+        return fetch('/api/governance/state', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (s) { render(s); return s; })
+          .catch(function () { render(null); })
+          .finally(function () { btn.removeAttribute('disabled'); });
+      }
+
+      function refresh() {
+        return fetch('/api/governance/state', { credentials: 'same-origin' })
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (state) { render(state); return state; })
+          .catch(function () { render(null); return null; });
+      }
+
+      function toggle() {
+        if (btn.hasAttribute('disabled')) return;
+        // Read latest state so we can prompt for a URL if needed.
+        fetch('/api/governance/state', { credentials: 'same-origin' })
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (state) {
+            if (!state) { render(null); return; }
+            // If turning ON and no URL is configured, ask for one first.
+            if (!state.enabled_flag && !state.has_url) {
+              var entered = window.prompt(
+                'CLASPION URL (e.g. https://claspion.onrender.com):',
+                readSavedUrl()
+              );
+              if (entered === null) return; // cancelled
+              entered = (entered || '').trim();
+              if (!entered) {
+                window.alert('No URL entered — CLASPION stays off.');
+                return;
+              }
+              writeSavedUrl(entered);
+              return postState({ enabled: true, url: entered });
+            }
+            // Otherwise just flip the flag.
+            return postState({ enabled: !state.enabled_flag });
+          });
+      }
+
+      function configureUrl() {
+        var current = readSavedUrl();
+        var entered = window.prompt(
+          'CLASPION URL (leave blank to clear and revert to env default):',
+          current
+        );
+        if (entered === null) return;
+        entered = entered.trim();
+        writeSavedUrl(entered);
+        // Empty string POSTs the empty url, which the server treats as
+        // "no override URL" but doesn't revert the env default. To revert
+        // truly, hit /reset. For simplicity, treat empty as reset.
+        if (!entered) {
+          fetch('/api/governance/reset', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+          })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(render)
+            .catch(function () { render(null); });
+          return;
+        }
+        postState({ url: entered });
+      }
+
+      btn.addEventListener('click', toggle);
+      if (cfgBtn) cfgBtn.addEventListener('click', configureUrl);
+
+      // On load: if we have a saved URL, push it to the server's runtime
+      // override so the toggle works without re-prompting.
+      var saved = readSavedUrl();
+      if (saved) {
+        postState({ url: saved }).then(refresh);
+      } else {
+        refresh();
+      }
+
+      // Light polling so other tabs / API toggles are reflected here.
+      setInterval(refresh, 30000);
+    })();
+  </script>
   <script src="app.js"></script>
 </body>
 </html>

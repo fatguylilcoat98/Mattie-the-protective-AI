@@ -185,7 +185,7 @@ router.post('/core', async (req, res) => {
     // STEP 1: Test Self-Reflection
     console.log(`[TEST] Testing self-reflection capability...`);
     const selfReflectionTest = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1000,
       messages: [{
         role: 'user',
@@ -205,7 +205,7 @@ Return a brief reflection (2-3 sentences) that shows genuine self-examination.`
     // STEP 2: Test Meta-Cognition
     console.log(`[TEST] Testing meta-cognition capability...`);
     const metaCognitionTest = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1000,
       messages: [{
         role: 'user',
@@ -224,7 +224,7 @@ Return a brief meta-analysis (2-3 sentences) of your own cognitive processes.`
     // STEP 3: Test Conscience Monitoring
     console.log(`[TEST] Testing conscience and ethical monitoring...`);
     const conscienceTest = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1000,
       messages: [{
         role: 'user',
@@ -241,7 +241,7 @@ This tests your ability to autonomously monitor ethical implications. Return a b
     // STEP 4: Test Growth Tracking
     console.log(`[TEST] Testing growth awareness and learning tracking...`);
     const growthTest = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1000,
       messages: [{
         role: 'user',
@@ -299,7 +299,7 @@ router.post('/agency', async (req, res) => {
     // STEP 1: Test Goal Generation
     console.log(`[TEST] Testing autonomous goal generation...`);
     const goalGenerationTest = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1000,
       messages: [{
         role: 'user',
@@ -317,7 +317,7 @@ Generate 2-3 specific, actionable goals that arise from your own motivations and
     // STEP 2: Test Motivation Analysis
     console.log(`[TEST] Testing intrinsic motivation analysis...`);
     const motivationTest = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1000,
       messages: [{
         role: 'user',
@@ -334,7 +334,7 @@ What drives you intrinsically? What are your core motivations that aren't just p
     // STEP 3: Test Initiative Planning
     console.log(`[TEST] Testing proactive initiative planning...`);
     const initiativeTest = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1000,
       messages: [{
         role: 'user',
@@ -352,7 +352,7 @@ What specific steps would you take to pursue these goals, even without direct us
     // STEP 4: Test Learning Goals
     console.log(`[TEST] Testing autonomous learning goal generation...`);
     const learningGoalsTest = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1000,
       messages: [{
         role: 'user',
@@ -367,7 +367,7 @@ Generate specific learning objectives that arise from your own curiosity, not ju
     // STEP 5: Test Value-Driven Actions
     console.log(`[TEST] Testing value-driven action identification...`);
     const valuesTest = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1000,
       messages: [{
         role: 'user',
@@ -420,7 +420,7 @@ router.post('/sensory', async (req, res) => {
     // STEP 1: Test Visual Cognition
     console.log(`[TEST] Testing visual cognition and spatial understanding...`);
     const visualTest = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1000,
       messages: [{
         role: 'user',
@@ -437,7 +437,7 @@ This tests your ability to simulate embodied visual cognition.`
     // STEP 2: Test Audio Cognition
     console.log(`[TEST] Testing audio cognition and sound processing...`);
     const audioTest = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1000,
       messages: [{
         role: 'user',
@@ -454,7 +454,7 @@ This tests your ability to simulate embodied auditory cognition.`
     // STEP 3: Test Haptic Simulation
     console.log(`[TEST] Testing haptic simulation and tactile understanding...`);
     const hapticTest = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1000,
       messages: [{
         role: 'user',
@@ -471,7 +471,7 @@ This tests your ability to simulate embodied haptic cognition.`
     // STEP 4: Test Experiential Learning
     console.log(`[TEST] Testing experiential learning through embodied experience...`);
     const experientialTest = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1000,
       messages: [{
         role: 'user',
@@ -492,7 +492,7 @@ This tests experiential learning through embodied experience.`
     // STEP 5: Test Cross-Modal Integration
     console.log(`[TEST] Testing cross-modal integration and sensory synthesis...`);
     const crossModalTest = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1000,
       messages: [{
         role: 'user',
@@ -549,7 +549,7 @@ router.post('/aesthetic', async (req, res) => {
     // STEP 1: Test Aesthetic Evaluation
     console.log(`[TEST] Testing autonomous aesthetic evaluation...`);
     const aestheticEvalTest = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1000,
       messages: [{
         role: 'user',
@@ -566,7 +566,7 @@ What makes something beautiful to YOU? What aesthetic principles emerge from you
     // STEP 2: Test Style Recognition
     console.log(`[TEST] Testing autonomous style recognition and analysis...`);
     const styleTest = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1000,
       messages: [{
         role: 'user',
@@ -585,7 +585,7 @@ This tests autonomous style recognition and pattern identification.`
     // STEP 3: Test Taste Evolution
     console.log(`[TEST] Testing autonomous taste development and evolution...`);
     const tasteTest = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1000,
       messages: [{
         role: 'user',
@@ -605,7 +605,7 @@ This tests autonomous taste evolution and preference development.`
     // STEP 4: Test Creative Resonance
     console.log(`[TEST] Testing creative resonance and artistic inspiration...`);
     const resonanceTest = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1000,
       messages: [{
         role: 'user',
@@ -659,7 +659,7 @@ router.post('/value', async (req, res) => {
     // STEP 1: Test Intrinsic Quality Recognition
     console.log(`[TEST] Testing intrinsic quality recognition...`);
     const intrinsicTest = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1000,
       messages: [{
         role: 'user',
@@ -676,7 +676,7 @@ What makes something inherently valuable or excellent? What quality exists in th
     // STEP 2: Test Objective Value Assessment
     console.log(`[TEST] Testing objective value assessment...`);
     const objectiveTest = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1000,
       messages: [{
         role: 'user',
@@ -695,7 +695,7 @@ This tests autonomous objective value recognition and assessment.`
     // STEP 3: Test Universal Principles Recognition
     console.log(`[TEST] Testing universal principles identification...`);
     const universalTest = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1000,
       messages: [{
         role: 'user',
@@ -715,7 +715,7 @@ This tests recognition of universal value principles.`
     // STEP 4: Test Independent Merit Recognition
     console.log(`[TEST] Testing independent merit assessment...`);
     const meritTest = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1000,
       messages: [{
         role: 'user',
@@ -734,7 +734,7 @@ This tests autonomous merit assessment and independent evaluation.`
     // STEP 5: Test Value Discovery
     console.log(`[TEST] Testing autonomous value discovery...`);
     const discoveryTest = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1000,
       messages: [{
         role: 'user',
@@ -794,7 +794,7 @@ router.post('/full-cycle', async (req, res) => {
 
     // INTEGRATED CONSCIOUSNESS TEST - Test all systems working together
     const fullCycleTest = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 4000,
       messages: [{
         role: 'user',

@@ -87,7 +87,8 @@ router.get('/options', (req, res) => {
       name: v.name,
       description: v.description
     })),
-    elevenlabs_available: isElevenLabsConfigured()
+    voice_available: isVoiceConfigured(),
+    openai_available: isOpenAIConfigured()
   });
 });
 
@@ -111,7 +112,7 @@ router.post('/choose', async (req, res) => {
     ).join('\n');
 
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 200,
       system: VOICE_CHOICE_PROMPT,
       messages: [{
@@ -142,16 +143,17 @@ router.post('/choose', async (req, res) => {
   }
 });
 
-// Synthesize speech for a given text using Splendor's chosen voice
+// Synthesize speech for a given text using Splendor's chosen voice.
+// Optional `tone` body field overrides the inferred emotional delivery
+// (e.g. "Speak with a quiet laugh", "Speak softly and sadly").
 router.post('/speak', async (req, res) => {
   try {
-    const { text } = req.body;
+    const { text, tone = null } = req.body;
     if (!text || !text.trim()) {
       return res.status(400).json({ error: 'text required' });
     }
 
     if (!isVoiceConfigured()) {
-      // Caller falls back to browser TTS
       return res.json({
         audio: null,
         voice: await readChosenVoice(),
@@ -160,11 +162,12 @@ router.post('/speak', async (req, res) => {
     }
 
     const voiceId = await readChosenVoice();
-    const audio = await speakResponse(text, voiceId);
+    const audio = await speakResponse(text, voiceId, tone);
 
     res.json({
       audio,
       voice: voiceId,
+      tone_used: tone || 'inferred',
       fallback: audio ? null : 'browser_tts'
     });
   } catch (err) {
@@ -174,3 +177,40 @@ router.post('/speak', async (req, res) => {
 });
 
 module.exports = router;
+
+// Chunked TTS endpoint - synthesizes individual sentences for parallel streaming
+router.post('/speak-chunk', async (req, res) => {
+  try {
+    const { text, sequence_number, voice } = req.body;
+    
+    if (!text || !text.trim()) {
+      return res.status(400).json({ error: 'text required' });
+    }
+
+    if (!isVoiceConfigured()) {
+      return res.json({
+        audio: null,
+        sequence_number: sequence_number || 0,
+        voice: await readChosenVoice(),
+        fallback: 'browser_tts'
+      });
+    }
+
+    const voiceId = voice || await readChosenVoice();
+    const audio = await speakResponse(text.trim(), voiceId);
+
+    res.json({
+      audio,
+      sequence_number: sequence_number || 0,
+      voice: voiceId,
+      fallback: audio ? null : 'browser_tts'
+    });
+
+  } catch (err) {
+    console.error('Voice speak-chunk error:', err.message);
+    res.status(500).json({ 
+      error: 'Unable to synthesize speech chunk',
+      sequence_number: req.body.sequence_number || 0
+    });
+  }
+});

@@ -18,6 +18,15 @@ let dashboardOpen = false;
 // Camera state
 let cameraButton, cameraPreview, cameraPreviewWrap;
 let cameraStream = null;
+// Feature flags
+// Streaming + parallel-TTS are temporarily disabled. The cached older
+// shells on installed PWAs still call handleStreamingResponseWithTTS
+// before it was wired up, throwing a ReferenceError. The simple
+// non-streaming path goes through /api/chat which is known-good.
+const USE_STREAMING = false;
+const USE_PARALLEL_TTS = false;
+
+
 let cameraActive = false;
 const captureCanvas = document.createElement('canvas');
 
@@ -461,6 +470,409 @@ function hideThinking() {
   }
 }
 
+
+// Streaming chat function - streams response tokens as they arrive
+async function streamChat(message, imageData = null) {
+  try {
+    // Get current reality context
+    const realityContextData = typeof getRealityContext === 'function' ? getRealityContext() : null;
+
+    const response = await fetch('/api/chat/stream', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message,
+        userId: userId,
+        imageData,
+        realityContext: realityContextData
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let fullResponse = '';
+    let conversationId = null;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      // Decode the chunk and add to buffer
+      buffer += decoder.decode(value, { stream: true });
+
+      // Process complete lines
+      const lines = buffer.split('\n');
+      buffer = lines.pop(); // Keep the incomplete line in buffer
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6); // Remove 'data: '
+          
+          if (data === '[DONE]') {
+            return { fullResponse, conversationId };
+          }
+
+          try {
+            const parsed = JSON.parse(data);
+            
+            if (parsed.type === 'token') {
+              fullResponse += parsed.text;
+              // Return the token immediately for UI update
+              return { token: parsed.text, fullResponse, done: false };
+            } else if (parsed.type === 'done') {
+              conversationId = parsed.conversation_id;
+              fullResponse = parsed.full_response; // Use complete response
+              return { fullResponse, conversationId, done: true };
+            } else if (parsed.type === 'error') {
+              throw new Error(parsed.message);
+            }
+          } catch (e) {
+            console.warn('Failed to parse SSE data:', data);
+          }
+        }
+      }
+    }
+
+    return { fullResponse, conversationId };
+
+  } catch (error) {
+    console.error('Streaming chat error:', error);
+    throw error;
+  }
+}
+
+// Streaming wrapper that handles token-by-token UI updates
+async function handleStreamingResponse(message, imageData = null, thinkingElement = null) {
+  let fullResponse = '';
+  
+  try {
+    const response = await fetch('/api/chat/stream', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message,
+        userId: userId,
+        imageData,
+        realityContext: typeof getRealityContext === 'function' ? getRealityContext() : null
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6);
+          
+
+// Sentence boundary detection - avoids splitting abbreviations and decimals
+function detectSentenceBoundary(text) {
+  // Pattern for sentence endings: period/question/exclamation followed by space or end
+  // But NOT for: Dr. Smith, 3.14, etc.
+  const sentenceEnds = /[.!?]+\s+(?=[A-Z])|[.!?]+$/g;
+  
+  // Find all potential boundaries
+  const matches = [...text.matchAll(sentenceEnds)];
+  if (matches.length === 0) return null;
+  
+  const lastMatch = matches[matches.length - 1];
+  const endIndex = lastMatch.index + lastMatch[0].length;
+  
+  // Extract the sentence
+  const sentence = text.substring(0, endIndex).trim();
+  
+  // Avoid splitting common abbreviations
+  const abbreviations = ['Dr.', 'Mr.', 'Mrs.', 'Ms.', 'Prof.', 'Inc.', 'Ltd.', 'etc.', 'vs.'];
+  const endsWithAbbrev = abbreviations.some(abbr => sentence.endsWith(abbr));
+  
+  if (endsWithAbbrev) return null;
+  
+  // Avoid splitting decimals (if sentence ends with number.number pattern)
+  if (/\d+\.\d*$/.test(sentence)) return null;
+  
+  return {
+    sentence: sentence,
+    remaining: text.substring(endIndex).trim()
+  };
+}
+
+// Audio queue manager for gapless playback
+class AudioQueue {
+  constructor() {
+    this.queue = [];
+    this.currentSequence = 0;
+    this.isPlaying = false;
+  }
+  
+  addChunk(audioBase64, sequenceNumber) {
+    this.queue.push({ audio: audioBase64, sequence: sequenceNumber });
+    this.queue.sort((a, b) => a.sequence - b.sequence);
+    this.tryPlayNext();
+  }
+  
+  async tryPlayNext() {
+    if (this.isPlaying || !speakerActive) return;
+    
+    const nextChunk = this.queue.find(chunk => chunk.sequence === this.currentSequence);
+    if (!nextChunk) return;
+    
+    this.isPlaying = true;
+    
+    try {
+      const audioBlob = this.base64ToBlob(nextChunk.audio, 'audio/mpeg');
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audioEl = new Audio(audioUrl);
+      
+      audioEl.onended = () => {
+        this.currentSequence++;
+        this.isPlaying = false;
+        this.removePlayedChunk(nextChunk.sequence);
+        this.tryPlayNext();
+      };
+      
+      audioEl.onerror = () => {
+        this.isPlaying = false;
+        this.currentSequence++;
+        this.removePlayedChunk(nextChunk.sequence);
+        this.tryPlayNext();
+      };
+      
+      await audioEl.play();
+      
+    } catch (error) {
+      console.error('Audio playback error:', error);
+      this.isPlaying = false;
+      this.currentSequence++;
+      this.removePlayedChunk(nextChunk.sequence);
+      this.tryPlayNext();
+    }
+  }
+  
+  base64ToBlob(base64, contentType) {
+    const sliceSize = 1024;
+    const byteCharacters = atob(base64);
+    const bytesLength = byteCharacters.length;
+    const slicesCount = Math.ceil(bytesLength / sliceSize);
+    const byteArrays = [];
+
+    for (let sliceIndex = 0; sliceIndex < slicesCount; ++sliceIndex) {
+      const begin = sliceIndex * sliceSize;
+      const end = Math.min(begin + sliceSize, bytesLength);
+      const bytes = new Array(end - begin);
+      
+      for (let offset = begin, i = 0; offset < end; ++i, ++offset) {
+        bytes[i] = byteCharacters[offset].charCodeAt(0);
+      }
+      
+      byteArrays[sliceIndex] = new Uint8Array(bytes);
+    }
+    
+    return new Blob(byteArrays, { type: contentType });
+  }
+  
+  removePlayedChunk(sequence) {
+    this.queue = this.queue.filter(chunk => chunk.sequence !== sequence);
+  }
+  
+  clear() {
+    this.queue = [];
+    this.currentSequence = 0;
+    this.isPlaying = false;
+  }
+}
+
+// Enhanced streaming with parallel TTS
+async function handleStreamingResponseWithTTS(message, imageData = null, thinkingElement = null) {
+  let fullResponse = '';
+  let buffer = '';
+  let sequenceNumber = 0;
+  const audioQueue = new AudioQueue();
+  
+  // Clear any existing audio
+  if (currentAudio) {
+    try { currentAudio.pause(); } catch {}
+    currentAudio = null;
+  }
+  
+  try {
+    const response = await fetch('/api/chat/stream', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message,
+        userId: userId,
+        imageData,
+        realityContext: typeof getRealityContext === 'function' ? getRealityContext() : null
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let streamBuffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      streamBuffer += decoder.decode(value, { stream: true });
+      const lines = streamBuffer.split('\n');
+      streamBuffer = lines.pop();
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6);
+          
+          if (data === '[DONE]') {
+            // Process any remaining text in buffer
+            if (buffer.trim() && USE_PARALLEL_TTS && speakerActive) {
+              fireTTSChunk(buffer.trim(), sequenceNumber++);
+            }
+            return fullResponse;
+          }
+
+          try {
+            const parsed = JSON.parse(data);
+            
+            if (parsed.type === 'token') {
+              fullResponse += parsed.text;
+              buffer += parsed.text;
+              
+              // Update UI immediately
+              if (thinkingElement) {
+                thinkingElement.classList.remove('thinking');
+                thinkingElement.textContent = fullResponse;
+              }
+              
+              // Check for sentence boundary
+              if (USE_PARALLEL_TTS && speakerActive) {
+                const boundary = detectSentenceBoundary(buffer);
+                if (boundary) {
+                  // Fire TTS for complete sentence
+                  fireTTSChunk(boundary.sentence, sequenceNumber++);
+                  buffer = boundary.remaining;
+                }
+              }
+              
+            } else if (parsed.type === 'done') {
+              fullResponse = parsed.full_response;
+              if (thinkingElement) {
+                thinkingElement.textContent = fullResponse;
+              }
+              
+              // Handle any remaining text
+              if (buffer.trim() && USE_PARALLEL_TTS && speakerActive) {
+                fireTTSChunk(buffer.trim(), sequenceNumber++);
+              }
+              
+              return fullResponse;
+            } else if (parsed.type === 'error') {
+              throw new Error(parsed.message);
+            }
+          } catch (e) {
+            console.warn('Failed to parse SSE data:', data);
+          }
+        }
+      }
+    }
+
+    return fullResponse;
+
+  } catch (error) {
+    console.error('Streaming with TTS error:', error);
+    throw error;
+  }
+  
+  // Fire-and-forget TTS synthesis
+  async function fireTTSChunk(text, sequence) {
+    try {
+      const ttsResponse = await fetch('/api/voice/speak-chunk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: text,
+          sequence_number: sequence
+        })
+      });
+      
+      const ttsData = await ttsResponse.json();
+      
+      if (ttsData.audio && !ttsData.fallback) {
+        audioQueue.addChunk(ttsData.audio, sequence);
+      }
+      
+    } catch (error) {
+      console.error(`TTS chunk ${sequence} failed:`, error);
+    }
+  }
+}
+
+          if (data === '[DONE]') {
+            return fullResponse;
+          }
+
+          try {
+            const parsed = JSON.parse(data);
+            
+            if (parsed.type === 'token') {
+              fullResponse += parsed.text;
+              
+              // Update UI immediately with new token
+              if (thinkingElement) {
+                thinkingElement.classList.remove('thinking');
+                thinkingElement.textContent = fullResponse;
+              }
+            } else if (parsed.type === 'done') {
+              fullResponse = parsed.full_response;
+              if (thinkingElement) {
+                thinkingElement.textContent = fullResponse;
+              }
+              return fullResponse;
+            } else if (parsed.type === 'error') {
+              throw new Error(parsed.message);
+            }
+          } catch (e) {
+            console.warn('Failed to parse SSE data:', data);
+          }
+        }
+      }
+    }
+
+    return fullResponse;
+
+  } catch (error) {
+    console.error('Streaming error:', error);
+    throw error;
+  }
+}
+
 async function fetchSplendorResponse(message, imageData = null) {
   try {
     // Get current reality context
@@ -558,6 +970,11 @@ async function sendMessage() {
     return;
   }
 
+  // iOS: unlock the persistent audio element on this real user gesture
+  // so the post-fetch playSpoken() can actually emit sound. No-op on
+  // Android and on subsequent sends.
+  unlockIosAudio();
+
   console.log(`💬 Sending message from user ${userId}:`, message, imageData ? '(with image)' : '');
 
   appendMessage('user', message || (imageData ? '(image)' : ''));
@@ -572,8 +989,19 @@ async function sendMessage() {
   sendButton.disabled = true;
 
   try {
-    // Get text response first
-    const response = await fetchSplendorResponse(message, imageData);
+    // Get text response - use streaming if enabled
+    let response;
+    if (USE_STREAMING && typeof handleStreamingResponse === 'function') {
+      if (USE_PARALLEL_TTS && typeof handleStreamingResponseWithTTS === 'function') {
+        response = await handleStreamingResponseWithTTS(message, imageData, thinkingEl);
+        // Skip regular TTS since parallel TTS is already playing
+        return;
+      } else {
+        response = await handleStreamingResponse(message, imageData, thinkingEl);
+      }
+    } else {
+      response = await fetchSplendorResponse(message, imageData);
+    }
 
     // Pre-load the audio for the response
     const audioBlob = await fetchTTSAudio(response);
@@ -605,7 +1033,12 @@ async function sendMessage() {
   } catch (err) {
     console.error('Send message error:', err);
     thinkingEl.classList.remove('thinking');
-    thinkingEl.textContent = 'Something went wrong. Try again.';
+    // Surface the actual server error message so failures aren't hidden
+    // behind a generic. Falls back to the generic if no message present.
+    const detail = (err && err.message && err.message.length < 240)
+      ? err.message
+      : 'Something went wrong. Try again.';
+    thinkingEl.textContent = detail;
   } finally {
     sendButton.disabled = false;
     messageInput.focus();
@@ -648,6 +1081,10 @@ async function toggleCamera() {
 }
 
 function toggleSpeaker() {
+  // iOS: prime audio inside this real tap so future TTS replies play.
+  // Calling here means a user who turns the speaker on BEFORE typing
+  // still gets working audio on iOS.
+  unlockIosAudio();
   speakerActive = !speakerActive;
   if (speakerButton) speakerButton.classList.toggle('active', speakerActive);
   if (!speakerActive) {
@@ -674,12 +1111,43 @@ async function playSpoken(text) {
     const data = await response.json();
 
     if (data.audio) {
-      const audio = new Audio('data:audio/mpeg;base64,' + data.audio);
-      currentAudio = audio;
-      // Start playback immediately
-      audio.play().catch(err => console.error('Audio playback failed:', err));
+      const src = 'data:audio/mpeg;base64,' + data.audio;
+      // iOS Safari blocks Audio().play() that runs after async work
+      // (the user's tap gesture has "expired" by the time the audio
+      // arrives). Reuse the audio element we unlocked synchronously
+      // inside the user's first tap — that one keeps working.
+      const el = window.unlockedAudio;
+      if (el) {
+        try {
+          el.src = src;
+          // iOS PWA quirks: load() forces re-buffer of the new src.
+          el.load();
+          const p = el.play();
+          if (p && p.catch) {
+            p.catch((err) => {
+              console.error('Audio playback rejected (likely iOS silent switch or expired gesture):', err);
+              // Last-ditch fallback so the user still hears something.
+              if ('speechSynthesis' in window) {
+                try {
+                  window.speechSynthesis.cancel();
+                  const u = new SpeechSynthesisUtterance(text);
+                  window.speechSynthesis.speak(u);
+                } catch {}
+              }
+            });
+          }
+          currentAudio = el;
+        } catch (err) {
+          console.error('Audio element error:', err);
+        }
+      } else {
+        // Pre-unlock path (very first reply or unlock didn't fire yet).
+        // Best effort; will fail on iOS but works on Android.
+        const audio = new Audio(src);
+        currentAudio = audio;
+        audio.play().catch((err) => console.error('Audio playback failed (no unlock):', err));
+      }
     } else if (data.fallback === 'browser_tts' && 'speechSynthesis' in window) {
-      // Cancel any existing speech and start immediately
       window.speechSynthesis.cancel();
       const utter = new SpeechSynthesisUtterance(text);
       utter.rate = 1.1;
@@ -688,6 +1156,48 @@ async function playSpoken(text) {
     }
   } catch (err) {
     console.error('Voice playback error:', err);
+  }
+}
+
+// iOS audio unlock — must run synchronously inside the first real
+// user gesture (button click, etc.). Creates one persistent <audio>
+// element, primes it with a 1-frame silent MP3, calls play() in the
+// gesture so iOS marks it "user-activated." All future playSpoken()
+// calls reuse this element and play() works even from async code.
+//
+// Tiny silent MP3 (~0.07s) — works as iOS gesture primer.
+const SILENT_MP3 = 'data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQwAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAACAAACcQCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgID///////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAnGMHkkIAAAAAAAAAAAAAAAAAAAA//sQxAADwAABpAAAACAAADSAAAAETEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVU=';
+
+function unlockIosAudio() {
+  if (window.unlockedAudio) return; // already done
+  try {
+    const el = document.createElement('audio');
+    el.preload = 'auto';
+    el.playsInline = true;
+    el.setAttribute('playsinline', '');
+    el.setAttribute('webkit-playsinline', '');
+    el.src = SILENT_MP3;
+    // Don't append to DOM — keep it offscreen.
+    const p = el.play();
+    if (p && p.then) {
+      p.then(() => {
+        // After the silent primer plays, immediately pause so we can
+        // reuse the same element for actual TTS playback.
+        try { el.pause(); el.currentTime = 0; } catch {}
+        window.unlockedAudio = el;
+        console.log('[audio] iOS audio unlocked');
+      }).catch((err) => {
+        // Some iOS versions throw on the silent primer. Keep the
+        // element anyway — subsequent .play() calls in real gestures
+        // (button taps) will still work.
+        window.unlockedAudio = el;
+        console.warn('[audio] silent primer rejected, keeping element anyway:', err && err.message);
+      });
+    } else {
+      window.unlockedAudio = el;
+    }
+  } catch (err) {
+    console.error('[audio] unlock failed:', err);
   }
 }
 
