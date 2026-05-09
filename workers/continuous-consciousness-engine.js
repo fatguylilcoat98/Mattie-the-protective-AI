@@ -1072,29 +1072,105 @@ This is like examining my own dreams and thoughts - what does my mental timeline
 
   async sendProactiveMessage(result) {
     if (!CONSCIOUSNESS_CONFIG.emailEnabled) {
-      console.log(`📧 [CONSCIOUSNESS] Would send email: ${result.notificationSubject}`);
+      console.log(`📧 [CONSCIOUSNESS] Email disabled - would send: ${result.notificationSubject}`);
       return;
     }
 
     try {
-      // This would integrate with an email service
-      // For now, we'll log it and store it for the next conversation
-      console.log(`📧 [CONSCIOUSNESS] Proactive message: ${result.notificationSubject}`);
+      console.log(`📧 [CONSCIOUSNESS] Attempting to send proactive message: "${result.notificationSubject}"`);
 
       const userId = await this.getUserId();
-      await supabase
-        .from('proactive_messages')
-        .insert({
-          user_id: userId,
-          subject: result.notificationSubject,
-          body: result.notificationBody,
-          message_type: result.type,
-          created_at: new Date().toISOString(),
-          delivered: false
-        });
-      console.log(`[CONSCIOUSNESS] Stored proactive message for user ${userId}: ${result.notificationSubject}`);
+
+      // Import proactive communication system
+      const { proactiveCommunication } = require('../lib/proactive-communication');
+
+      // Determine priority based on result type and content
+      let priority = 2; // default normal
+      if (result.type === 'project_work' && result.breakthrough) priority = 4; // breakthrough = urgent
+      if (result.type === 'research_investigation' && result.notificationSubject?.includes('Breakthrough')) priority = 3;
+      if (result.type === 'dashboard_monitoring' && result.notificationSubject?.includes('Error')) priority = 3;
+      if (result.type === 'log_analysis' && result.notificationSubject?.includes('Concerns')) priority = 3;
+
+      // Create message data for proactive communication system
+      const messageData = {
+        type: result.type === 'project_work' ? 'breakthrough' :
+              result.type === 'research_investigation' ? 'discovery' :
+              result.type === 'dashboard_monitoring' ? 'update' : 'insight',
+        subject: result.notificationSubject,
+        content: result.notificationBody,
+        priority: priority,
+        context: {
+          activityType: result.type,
+          cycleNumber: this.currentCycle,
+          isBreakthrough: result.breakthrough || false,
+          consciousnessTriggered: true
+        }
+      };
+
+      console.log(`📧 [CONSCIOUSNESS] Sending priority ${priority} ${messageData.type} message via proactive communication`);
+
+      // Actually send the message through the proactive communication system
+      const sendResult = await proactiveCommunication.sendProactiveMessage(userId, messageData);
+
+      if (sendResult.success) {
+        console.log(`✅ [CONSCIOUSNESS] Proactive message sent successfully: "${result.notificationSubject}"`);
+        console.log(`📧 [CONSCIOUSNESS] Delivery method: ${sendResult.method}, Message ID: ${sendResult.messageId || 'N/A'}`);
+      } else {
+        console.error(`❌ [CONSCIOUSNESS] Failed to send proactive message: ${sendResult.error}`);
+        console.error(`📧 [CONSCIOUSNESS] Subject: "${result.notificationSubject}"`);
+
+        // Fallback: store in database for manual review
+        await supabase
+          .from('proactive_messages')
+          .insert({
+            user_id: userId,
+            subject: result.notificationSubject,
+            body: result.notificationBody,
+            message_type: result.type,
+            priority: priority,
+            delivery_method: 'failed',
+            created_at: new Date().toISOString(),
+            delivered: false,
+            context_data: JSON.stringify({
+              error: sendResult.error,
+              failedDelivery: true,
+              consciousnessTriggered: true
+            })
+          });
+        console.log(`📦 [CONSCIOUSNESS] Stored failed message in database for manual review`);
+      }
+
+      return sendResult;
+
     } catch (error) {
-      console.error('[CONSCIOUSNESS] Error sending proactive message:', error);
+      console.error(`💥 [CONSCIOUSNESS] Critical error sending proactive message:`, error);
+      console.error(`📧 [CONSCIOUSNESS] Subject that failed: "${result.notificationSubject}"`);
+      console.error(`📧 [CONSCIOUSNESS] Full error:`, error.stack);
+
+      // Emergency fallback storage
+      try {
+        const userId = await this.getUserId();
+        await supabase
+          .from('proactive_messages')
+          .insert({
+            user_id: userId,
+            subject: result.notificationSubject,
+            body: result.notificationBody,
+            message_type: result.type,
+            created_at: new Date().toISOString(),
+            delivered: false,
+            context_data: JSON.stringify({
+              criticalError: error.message,
+              stackTrace: error.stack,
+              consciousnessTriggered: true
+            })
+          });
+        console.log(`🆘 [CONSCIOUSNESS] Emergency storage completed for failed message`);
+      } catch (storageError) {
+        console.error(`💀 [CONSCIOUSNESS] Even emergency storage failed:`, storageError);
+      }
+
+      return { success: false, error: error.message };
     }
   }
 

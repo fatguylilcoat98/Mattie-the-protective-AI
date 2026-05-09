@@ -91,6 +91,64 @@ if (consciousnessDashboardRoutes) {
 // Consciousness debug routes (temporary)
 app.use('/api/consciousness/debug', require('./routes/consciousness-debug'));
 
+// Proactive communication test endpoint
+app.post('/api/test/proactive-email', async (req, res) => {
+  try {
+    console.log(`🧪 [TEST] Manual proactive email test requested`);
+
+    const { proactiveCommunication } = require('./lib/proactive-communication');
+    const { priority = 2, subject = 'Test Message', content = 'This is a test of the proactive email system.' } = req.body;
+
+    // Test with default user ID or provided one
+    const testUserId = req.body.userId || 'f29d1ae6-3b71-d011-7061-65e9f77295b6';
+
+    console.log(`🧪 [TEST] Testing proactive email for user: ${testUserId}`);
+    console.log(`🧪 [TEST] Subject: "${subject}", Priority: ${priority}`);
+
+    const testMessage = {
+      type: 'update',
+      subject: subject,
+      content: content,
+      priority: priority,
+      context: {
+        manualTest: true,
+        testTimestamp: new Date().toISOString()
+      }
+    };
+
+    const result = await proactiveCommunication.sendProactiveMessage(testUserId, testMessage);
+
+    console.log(`🧪 [TEST] Proactive email test result:`, result);
+
+    res.json({
+      success: true,
+      testResult: result,
+      message: result.success ?
+        'Proactive email test completed successfully! Check your email and the server logs.' :
+        `Proactive email test failed: ${result.error}`,
+      details: {
+        userId: testUserId,
+        subject: subject,
+        priority: priority,
+        emailSent: result.success,
+        deliveryMethod: result.method || 'unknown',
+        messageId: result.messageId || null,
+        error: result.error || null
+      },
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('🧪 [TEST] Manual email test error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      message: 'Manual email test failed with error. Check server logs for details.',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Health check with version info
 app.get('/health', (req, res) => {
   const pkg = require('./package.json');
