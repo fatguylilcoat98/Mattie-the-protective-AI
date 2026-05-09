@@ -106,10 +106,10 @@ router.get('/memory/context/:userId', async (req, res) => {
     const { userId } = req.params;
     const { query = '', workspace_id } = req.query;
 
-    const context = await memorySystem.getSimpleMemoryContext(
+    const context = await memorySystem.memoryServices.retrieval.retrieveMemoryContext({
       userId,
-      query,
-      workspace_id
+      requestText: query,
+      workspaceId: workspace_id
     });
 
     res.json({
