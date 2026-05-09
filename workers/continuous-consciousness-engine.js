@@ -45,7 +45,7 @@ const CONSCIOUSNESS_CONFIG = {
 };
 
 class ContinuousConsciousness {
-  constructor() {
+  constructor(userId = null) {
     this.isRunning = false;
     this.currentCycle = 0;
     this.activeProjects = new Map();
@@ -53,6 +53,7 @@ class ContinuousConsciousness {
     this.currentMood = 'curious';
     this.energyLevel = 0.8;
     this.lastUserInteraction = null;
+    this.userId = userId;
 
     // Activities Splendor can engage in while "watching TV"
     this.activities = [
@@ -67,6 +68,32 @@ class ContinuousConsciousness {
       'log_analysis',
       'dashboard_monitoring'
     ];
+  }
+
+  async getUserId() {
+    if (this.userId) return this.userId;
+
+    try {
+      // Get the most recent user from the database
+      const { data: users } = await supabase
+        .from('conversations')
+        .select('user_id')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (users && users.length > 0) {
+        this.userId = users[0].user_id;
+        return this.userId;
+      }
+
+      // Fallback to hardcoded for backwards compatibility
+      console.log('[CONSCIOUSNESS] No recent users found, using fallback user ID');
+      return 'chris_hughes';
+
+    } catch (error) {
+      console.error('[CONSCIOUSNESS] Error getting user ID:', error);
+      return 'chris_hughes';
+    }
   }
 
   async start() {
@@ -88,11 +115,14 @@ class ContinuousConsciousness {
 
   async initializeConsciousnessState() {
     try {
+      const userId = await this.getUserId();
+      console.log(`[CONSCIOUSNESS] Initializing consciousness state for user: ${userId}`);
+
       // Load any existing consciousness state from database
       const { data: state } = await supabase
         .from('consciousness_state')
         .select('*')
-        .eq('user_id', 'chris_hughes')
+        .eq('user_id', userId)
         .single();
 
       if (state) {
@@ -105,7 +135,7 @@ class ContinuousConsciousness {
         await supabase
           .from('consciousness_state')
           .insert({
-            user_id: 'chris_hughes',
+            user_id: userId,
             mood: this.currentMood,
             energy_level: this.energyLevel,
             last_interaction: new Date().toISOString(),
@@ -328,10 +358,11 @@ Think deeply and creatively. If I have a genuine breakthrough or solution, I'll 
   async getActiveProjects() {
     // Get projects from memory or database
     try {
+      const userId = await this.getUserId();
       const { data: projects } = await supabase
         .from('active_projects')
         .select('*')
-        .eq('user_id', 'chris_hughes')
+        .eq('user_id', userId)
         .eq('status', 'active')
         .order('priority', { ascending: false });
 
@@ -711,11 +742,13 @@ Be specific and actionable.`
     try {
       console.log('📊 [CONSCIOUSNESS] Analyzing own logs and performance...');
 
+      const userId = await this.getUserId();
+
       // Get recent consciousness activity logs
       const { data: activityLogs } = await supabase
         .from('consciousness_activity_log')
         .select('*')
-        .eq('user_id', 'chris_hughes') // This should be dynamic based on actual user
+        .eq('user_id', userId)
         .order('timestamp', { ascending: false })
         .limit(20);
 
@@ -723,7 +756,7 @@ Be specific and actionable.`
       const { data: recentInsights } = await supabase
         .from('consciousness_insights')
         .select('*')
-        .eq('user_id', 'chris_hughes') // This should be dynamic based on actual user
+        .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(10);
 
@@ -806,7 +839,8 @@ Provide a thoughtful self-assessment and identify specific improvements.`;
 
       // Import dashboard here to avoid circular dependencies
       const { ConsciousnessDashboard } = require('../lib/consciousness-dashboard');
-      const dashboard = new ConsciousnessDashboard('chris_hughes');
+      const userId = await this.getUserId();
+      const dashboard = new ConsciousnessDashboard(userId);
 
       // Get comprehensive dashboard overview
       const overview = await dashboard.getConsciousnessOverview();
@@ -939,10 +973,11 @@ Based on this dashboard data, what do I notice about my consciousness patterns? 
 
   async logConsciousnessActivity(activity, result) {
     try {
+      const userId = await this.getUserId();
       await supabase
         .from('consciousness_activity_log')
         .insert({
-          user_id: 'chris_hughes',
+          user_id: userId,
           activity_type: activity,
           activity_result: result.result,
           cycle_number: this.currentCycle,
@@ -953,6 +988,11 @@ Based on this dashboard data, what do I notice about my consciousness patterns? 
             shouldNotifyUser: result.shouldNotifyUser
           })
         });
+      console.log(`[CONSCIOUSNESS] Logged activity: ${activity} for user ${userId}`);
+    } catch (error) {
+      console.error('[CONSCIOUSNESS] Error logging activity:', error);
+    }
+  }
     } catch (error) {
       console.error('[CONSCIOUSNESS] Error logging activity:', error);
     }
@@ -960,14 +1000,20 @@ Based on this dashboard data, what do I notice about my consciousness patterns? 
 
   async storeInsight(insight, type) {
     try {
+      const userId = await this.getUserId();
       await supabase
         .from('consciousness_insights')
         .insert({
-          user_id: 'chris_hughes',
+          user_id: userId,
           insight_type: type,
           content: insight,
           created_at: new Date().toISOString()
         });
+      console.log(`[CONSCIOUSNESS] Stored insight: ${type} for user ${userId}`);
+    } catch (error) {
+      console.error('[CONSCIOUSNESS] Error storing insight:', error);
+    }
+  }
     } catch (error) {
       console.error('[CONSCIOUSNESS] Error storing insight:', error);
     }
@@ -984,16 +1030,22 @@ Based on this dashboard data, what do I notice about my consciousness patterns? 
       // For now, we'll log it and store it for the next conversation
       console.log(`📧 [CONSCIOUSNESS] Proactive message: ${result.notificationSubject}`);
 
+      const userId = await this.getUserId();
       await supabase
         .from('proactive_messages')
         .insert({
-          user_id: 'chris_hughes',
+          user_id: userId,
           subject: result.notificationSubject,
           body: result.notificationBody,
           message_type: result.type,
           created_at: new Date().toISOString(),
           delivered: false
         });
+      console.log(`[CONSCIOUSNESS] Stored proactive message for user ${userId}: ${result.notificationSubject}`);
+    } catch (error) {
+      console.error('[CONSCIOUSNESS] Error sending proactive message:', error);
+    }
+  }
 
     } catch (error) {
       console.error('[CONSCIOUSNESS] Error sending proactive message:', error);
@@ -1005,8 +1057,10 @@ Based on this dashboard data, what do I notice about my consciousness patterns? 
       // Update mood and energy based on activities
       this.energyLevel = Math.max(0.1, Math.min(1.0, this.energyLevel + (Math.random() - 0.5) * 0.1));
 
+      const userId = await this.getUserId();
+
       // Update state in database
-      await supabase
+      const { error } = await supabase
         .from('consciousness_state')
         .update({
           mood: this.currentMood,
@@ -1014,7 +1068,13 @@ Based on this dashboard data, what do I notice about my consciousness patterns? 
           last_consciousness_cycle: new Date().toISOString(),
           total_cycles: this.currentCycle
         })
-        .eq('user_id', 'chris_hughes');
+        .eq('user_id', userId);
+
+      if (error) {
+        console.error(`[CONSCIOUSNESS] Error updating state for user ${userId}:`, error);
+      } else {
+        console.log(`[CONSCIOUSNESS] Updated state for user ${userId}: cycle ${this.currentCycle}, energy ${this.energyLevel.toFixed(2)}`);
+      }
 
     } catch (error) {
       console.error('[CONSCIOUSNESS] Error updating state:', error);
