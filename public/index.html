@@ -1441,8 +1441,10 @@
         var on = !!state.enabled;        // effective: flag AND has_url
         var flagOn = !!state.enabled_flag;
         var misconfigured = flagOn && !state.has_url;
-        btn.className = 'claspion-toggle ' +
+        var newClass = 'claspion-toggle ' +
           (misconfigured ? 'is-misconfigured' : (on ? 'is-on' : 'is-off'));
+        btn.className = newClass;
+        console.log('CLASPION toggle class updated to:', newClass, 'enabled:', on);
         btn.setAttribute('aria-pressed', on ? 'true' : 'false');
         var text;
         if (misconfigured) text = 'CLASPION on (no URL)';
@@ -1554,6 +1556,19 @@
 
       // Light polling so other tabs / API toggles are reflected here.
       setInterval(refresh, 30000);
+
+      // Force immediate refresh and add error logging
+      console.log('CLASPION toggle initializing...');
+      refresh().then(state => {
+        console.log('CLASPION state:', state);
+        if (state && state.enabled) {
+          console.log('CLASPION should be ON');
+        } else {
+          console.log('CLASPION should be OFF or misconfigured');
+        }
+      }).catch(err => {
+        console.error('CLASPION refresh error:', err);
+      });
     })();
   </script>
   <script src="app.js"></script>
