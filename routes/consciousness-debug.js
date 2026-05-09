@@ -7,10 +7,29 @@ const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
 
 const router = express.Router();
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
-);
+
+// Check if Supabase is configured
+const hasSupabaseConfig = process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY;
+
+// Create stub client methods that return proper promise-like objects
+function createStubChain() {
+  const stubResult = { data: [], error: { message: 'Supabase not configured' } };
+  const stubSingle = { data: null, error: { message: 'Supabase not configured' } };
+
+  return {
+    select: () => createStubChain(),
+    eq: () => createStubChain(),
+    order: () => createStubChain(),
+    limit: () => Promise.resolve(stubResult),
+    single: () => Promise.resolve(stubSingle)
+  };
+}
+
+const supabase = hasSupabaseConfig
+  ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY)
+  : {
+      from: () => createStubChain()
+    };
 
 // Debug endpoint to check all consciousness tables
 router.get('/tables/:userId', async (req, res) => {
