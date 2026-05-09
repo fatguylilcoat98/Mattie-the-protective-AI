@@ -15,7 +15,7 @@ const Anthropic = require('@anthropic-ai/sdk');
 const { createClient } = require('@supabase/supabase-js');
 const { generateSplendorResponse } = require('../lib/anthropic');
 const { loadSemanticMemory } = require('../lib/6-layer-memory');
-const { performWebSearch } = require('../lib/tavily');
+const { search: performWebSearch } = require('../lib/tavily');
 const fs = require('fs').promises;
 const path = require('path');
 
@@ -1098,8 +1098,7 @@ This is like examining my own dreams and thoughts - what does my mental timeline
         .update({
           mood: this.currentMood,
           energy_level: this.energyLevel,
-          total_cycles: this.currentCycle,
-          last_interaction: new Date().toISOString()
+          total_cycles: this.currentCycle
         })
         .eq('user_id', userId);
 
