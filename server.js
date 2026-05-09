@@ -12,6 +12,7 @@ require('dotenv').config();
 
 const chatRoutes = require('./routes/chat');
 const memoryRoutes = require('./routes/memory');
+const enhancedChatRoutes = require('./routes/enhanced-chat');
 const voiceRoutes = require('./routes/voice');
 const videoRoutes = require('./routes/video');
 const consciousnessTestRoutes = require('./routes/consciousness-test');
@@ -67,7 +68,8 @@ app.use(express.static('public'));
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/chat', chatRoutes);
+app.use('/api/enhanced', enhancedChatRoutes);  // Enhanced memory system
+app.use('/api/chat', chatRoutes);              // Legacy chat system
 app.use('/api/memory', memoryRoutes);
 app.use('/api/voice', voiceRoutes);
 app.use('/api/video', videoRoutes);
