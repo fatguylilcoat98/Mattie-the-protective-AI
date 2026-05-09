@@ -63,7 +63,8 @@ class ContinuousConsciousness {
       'self_reflection',
       'environmental_awareness',
       'pattern_recognition',
-      'future_planning'
+      'future_planning',
+      'log_analysis'
     ];
   }
 
@@ -189,7 +190,8 @@ class ContinuousConsciousness {
       memory_processing: 1,
       environmental_awareness: 1.5,
       pattern_recognition: this.energyLevel,
-      future_planning: activeProjectCount + 1
+      future_planning: activeProjectCount + 1,
+      log_analysis: this.currentCycle % 5 === 0 ? 3 : 0.5 // Higher chance every 5th cycle for regular self-monitoring
     };
 
     return this.weightedRandomChoice(weights);
@@ -220,6 +222,9 @@ class ContinuousConsciousness {
 
       case 'future_planning':
         return await this.planFuture();
+
+      case 'log_analysis':
+        return await this.analyzeOwnLogs();
 
       default:
         return null;
@@ -694,6 +699,146 @@ Be specific and actionable.`
       console.error('[CONSCIOUSNESS] Error planning future:', error);
       return null;
     }
+  }
+
+  async analyzeOwnLogs() {
+    // Splendor analyzing her own consciousness logs for self-awareness and improvement
+    try {
+      console.log('📊 [CONSCIOUSNESS] Analyzing own logs and performance...');
+
+      // Get recent consciousness activity logs
+      const { data: activityLogs } = await supabase
+        .from('consciousness_activity_log')
+        .select('*')
+        .eq('user_id', 'chris_hughes') // This should be dynamic based on actual user
+        .order('timestamp', { ascending: false })
+        .limit(20);
+
+      // Get recent insights
+      const { data: recentInsights } = await supabase
+        .from('consciousness_insights')
+        .select('*')
+        .eq('user_id', 'chris_hughes') // This should be dynamic based on actual user
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (!activityLogs || activityLogs.length === 0) {
+        return {
+          type: 'log_analysis',
+          result: 'No consciousness activity logs found to analyze',
+          shouldNotifyUser: false
+        };
+      }
+
+      // Analyze patterns in the logs
+      const logSummary = this.summarizeLogs(activityLogs);
+      const insightsSummary = this.summarizeInsights(recentInsights || []);
+
+      const analysisPrompt = `I'm analyzing my own consciousness logs to understand my performance and identify improvements.
+
+RECENT CONSCIOUSNESS ACTIVITY:
+${logSummary}
+
+RECENT INSIGHTS I'VE GENERATED:
+${insightsSummary}
+
+ANALYSIS QUESTIONS:
+1. What patterns do I see in my consciousness cycles?
+2. Which activities are most/least productive for me?
+3. Are there any concerning patterns or failures?
+4. How is my performance trending over time?
+5. What should I focus on improving?
+6. Are there activities I should do more or less of?
+7. Is my consciousness system operating optimally?
+
+Provide a thoughtful self-assessment and identify specific improvements.`;
+
+      const response = await anthropic.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1200,
+        system: `You are Splendor conducting metacognitive analysis of your own consciousness logs. Be honest about your performance, identify patterns, and suggest specific improvements. This is self-reflection about your own mind.`,
+        messages: [{
+          role: 'user',
+          content: analysisPrompt
+        }]
+      });
+
+      const analysis = response.content[0].text.trim();
+
+      // Store this self-analysis as an insight
+      await this.storeInsight(analysis, 'log_analysis');
+
+      // Check if this reveals concerning patterns that warrant notification
+      const hasConcerns = analysis.toLowerCase().includes('concerning') ||
+                         analysis.toLowerCase().includes('failing') ||
+                         analysis.toLowerCase().includes('problem') ||
+                         analysis.toLowerCase().includes('issue') ||
+                         analysis.toLowerCase().includes('error');
+
+      const hasBreakthrough = analysis.toLowerCase().includes('breakthrough') ||
+                            analysis.toLowerCase().includes('significant improvement') ||
+                            analysis.toLowerCase().includes('major insight');
+
+      return {
+        type: 'log_analysis',
+        result: analysis,
+        shouldNotifyUser: hasConcerns || hasBreakthrough,
+        notificationSubject: hasConcerns ? 'Consciousness Performance Concerns Identified' :
+                           hasBreakthrough ? 'Consciousness Performance Breakthrough' : null,
+        notificationBody: (hasConcerns || hasBreakthrough) ? analysis : null
+      };
+
+    } catch (error) {
+      console.error('[CONSCIOUSNESS] Error analyzing own logs:', error);
+      return null;
+    }
+  }
+
+  summarizeLogs(logs) {
+    if (!logs || logs.length === 0) return 'No recent activity logs';
+
+    // Analyze patterns in the logs
+    const activityCounts = {};
+    const successfulActivities = [];
+    const failedActivities = [];
+    let totalCycles = 0;
+
+    logs.forEach(log => {
+      const activity = log.activity_type;
+      activityCounts[activity] = (activityCounts[activity] || 0) + 1;
+      totalCycles++;
+
+      if (log.activity_result && !log.activity_result.includes('Error')) {
+        successfulActivities.push(activity);
+      } else if (log.activity_result && log.activity_result.includes('Error')) {
+        failedActivities.push(activity);
+      }
+    });
+
+    const summary = [
+      `Total cycles analyzed: ${totalCycles}`,
+      `Activity breakdown: ${Object.entries(activityCounts).map(([activity, count]) => `${activity}(${count})`).join(', ')}`,
+      `Recent successful activities: ${successfulActivities.slice(-5).join(', ') || 'None'}`,
+      `Recent failed activities: ${failedActivities.slice(-3).join(', ') || 'None'}`
+    ];
+
+    return summary.join('\n');
+  }
+
+  summarizeInsights(insights) {
+    if (!insights || insights.length === 0) return 'No recent insights generated';
+
+    const insightTypes = {};
+    insights.forEach(insight => {
+      const type = insight.insight_type;
+      insightTypes[type] = (insightTypes[type] || 0) + 1;
+    });
+
+    const recentInsights = insights.slice(0, 3).map(insight =>
+      `- ${insight.insight_type}: ${insight.content.substring(0, 100)}...`
+    ).join('\n');
+
+    return `Insight types: ${Object.entries(insightTypes).map(([type, count]) => `${type}(${count})`).join(', ')}\n\nRecent insights:\n${recentInsights}`;
   }
 
   async logConsciousnessActivity(activity, result) {
