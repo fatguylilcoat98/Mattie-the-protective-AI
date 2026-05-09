@@ -8,7 +8,12 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
-const { supabase } = require('../lib/supabase');
+// Create service client for user management (bypasses RLS)
+const { createClient } = require('@supabase/supabase-js');
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY // Use service key for user operations
+);
 
 // User login
 router.post('/login', async (req, res) => {
