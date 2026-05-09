@@ -498,8 +498,8 @@
 
     <script>
         // Configuration
-        const API_BASE = '/api'; // Update to match your API base
-        const API_KEY = 'your-api-key'; // Update with your actual API key
+        const API_BASE = '/api/enhanced'; // Enhanced memory routes
+        const API_KEY = null; // Disable API key for testing
         let currentTab = 'pending';
         let currentFilter = 'all';
 
@@ -522,7 +522,7 @@
         async function updateStats() {
             try {
                 const response = await fetch(`${API_BASE}/stats/default-user`, {
-                    headers: { 'X-API-Key': API_KEY }
+                    headers: API_KEY ? API_KEY ? { 'X-API-Key': API_KEY } : {} : {}
                 });
 
                 const data = await response.json();
@@ -545,7 +545,7 @@
 
             try {
                 const response = await fetch(`${API_BASE}/memory/context/default-user?query=pending`, {
-                    headers: { 'X-API-Key': API_KEY }
+                    headers: API_KEY ? { 'X-API-Key': API_KEY } : {}
                 });
 
                 const data = await response.json();
@@ -591,7 +591,7 @@
 
             try {
                 const response = await fetch(`${API_BASE}/memory/context/default-user?query=all`, {
-                    headers: { 'X-API-Key': API_KEY }
+                    headers: API_KEY ? { 'X-API-Key': API_KEY } : {}
                 });
 
                 const data = await response.json();
@@ -726,7 +726,7 @@
 
             try {
                 const response = await fetch(`${API_BASE}/memory/context/default-user?query=${encodeURIComponent(query)}`, {
-                    headers: { 'X-API-Key': API_KEY }
+                    headers: API_KEY ? { 'X-API-Key': API_KEY } : {}
                 });
 
                 const data = await response.json();
@@ -746,7 +746,7 @@
 
             try {
                 const response = await fetch(`${API_BASE}/test/uncertainty`, {
-                    headers: { 'X-API-Key': API_KEY }
+                    headers: API_KEY ? { 'X-API-Key': API_KEY } : {}
                 });
 
                 const data = await response.json();
@@ -769,7 +769,7 @@
         async function testUncertainty() {
             try {
                 const response = await fetch(`${API_BASE}/test/uncertainty`, {
-                    headers: { 'X-API-Key': API_KEY }
+                    headers: API_KEY ? { 'X-API-Key': API_KEY } : {}
                 });
 
                 const data = await response.json();
