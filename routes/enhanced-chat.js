@@ -108,11 +108,8 @@ router.get('/memory/context/:userId', async (req, res) => {
 
     const context = await memorySystem.getSimpleMemoryContext(
       userId,
-      requestText: query,
-      requestContext: 'answer_user_question',
-      workspaceId: workspace_id,
-      includeReflections: true,
-      allowWeaklyGrounded: true // Include uncertain memories for debugging
+      query,
+      workspace_id
     });
 
     res.json({
