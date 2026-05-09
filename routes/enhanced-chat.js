@@ -4,7 +4,7 @@
  */
 
 const express = require('express');
-const { EnhancedMemorySystem } = require('../lib/enhanced-memory-integration');
+const { EnhancedMemorySystem } = require('../lib/enhanced-memory-integration.js');
 const router = express.Router();
 
 // Initialize enhanced memory system

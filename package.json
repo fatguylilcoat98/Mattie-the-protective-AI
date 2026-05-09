@@ -24,7 +24,7 @@
     "continuity:shadow": "node lib/master-continuity-engine.js",
     "continuity:worker": "node workers/continuity-worker.js",
     "continuity:setup": "psql $SUPABASE_URL -f database/master-continuity-schema.sql",
-    "memory:deploy": "psql $SUPABASE_URL -f database/complete-fresh-deploy.sql",
+    "memory:deploy": "powershell -Command \"Get-Content 'database/complete-fresh-deploy.sql' | Write-Host\"",
     "memory:test": "node tests/memory-system-tests.js",
     "memory:test:unit": "node tests/memory-system-tests.js --unit",
     "memory:migrate": "node scripts/memory-migration.js",
