@@ -683,28 +683,168 @@
       backdrop-filter: blur(20px);
       display: flex;
       flex-direction: column;
-      padding: 20px 30px;
-      gap: 15px;
+      padding: 20px 40px 30px 40px;
+      gap: 20px;
+      position: relative;
     }
 
-    .response-area {
+    .splendor-response-bubble {
+      background: rgba(15, 20, 25, 0.9);
+      border: 1px solid var(--glass-border);
+      border-radius: 18px 18px 18px 4px;
+      padding: 16px 20px;
+      backdrop-filter: blur(15px);
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--text-primary);
+      max-width: 80%;
+      align-self: flex-start;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      position: relative;
+      margin-bottom: 10px;
+    }
+
+    .splendor-response-bubble::before {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: -8px;
+      width: 20px;
+      height: 20px;
+      background: rgba(15, 20, 25, 0.9);
+      border: 1px solid var(--glass-border);
+      border-radius: 0 0 0 18px;
+      border-top: none;
+      border-right: none;
+    }
+
+    .input-control-bar {
+      display: flex;
+      align-items: center;
       background: rgba(15, 20, 25, 0.8);
       border: 1px solid var(--glass-border);
-      border-radius: 12px;
-      padding: 16px;
+      border-radius: 25px;
+      padding: 8px 8px 8px 20px;
       backdrop-filter: blur(10px);
-      font-size: 13px;
-      line-height: 1.4;
-      color: var(--text-secondary);
-      min-height: 50px;
-      display: flex;
-      align-items: center;
+      gap: 12px;
     }
 
-    .input-row {
+    .main-input-field {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text-primary);
+      font-size: 14px;
+      font-family: inherit;
+      min-height: 40px;
+      padding: 8px 0;
+    }
+
+    .main-input-field::placeholder {
+      color: var(--text-muted);
+      opacity: 0.6;
+    }
+
+    .input-controls-right {
       display: flex;
       align-items: center;
+      gap: 8px;
+    }
+
+    .control-button {
+      background: var(--glass-surface);
+      border: 1px solid var(--glass-border);
+      color: var(--text-secondary);
+      font-size: 16px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .control-button:hover {
+      border-color: var(--neural-blue);
+      color: var(--neural-blue);
+      background: rgba(0, 229, 255, 0.1);
+      box-shadow: 0 0 15px rgba(0, 229, 255, 0.3);
+    }
+
+    .control-button.active {
+      background: linear-gradient(135deg, var(--neural-blue), var(--neural-purple));
+      color: var(--text-primary);
+      border-color: var(--neural-blue);
+      box-shadow: 0 0 20px rgba(0, 229, 255, 0.5);
+    }
+
+    .mic-button {
+      background: linear-gradient(135deg, var(--neural-blue), var(--neural-cyan));
+      color: var(--text-primary);
+      border-color: var(--neural-blue);
+      box-shadow: 0 0 15px rgba(0, 229, 255, 0.4);
+    }
+
+
+    .camera-preview-oracle {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 400px;
+      height: 300px;
+      background: var(--glass-surface);
+      border: 2px solid var(--neural-blue);
+      border-radius: 16px;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+      z-index: 2000;
+      overflow: hidden;
+    }
+
+    #cameraVideo {
+      width: 100%;
+      height: calc(100% - 60px);
+      object-fit: cover;
+    }
+
+    .camera-controls {
+      height: 60px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
       gap: 20px;
+      background: var(--dark-slate);
+      border-top: 1px solid var(--glass-border);
+    }
+
+    .capture-button, .close-camera-button {
+      background: var(--glass-surface);
+      border: 1px solid var(--glass-border);
+      color: var(--text-primary);
+      font-size: 20px;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .capture-button:hover {
+      background: linear-gradient(135deg, var(--neural-blue), var(--neural-green));
+      box-shadow: 0 4px 15px rgba(0, 229, 255, 0.4);
+    }
+
+    .close-camera-button:hover {
+      background: linear-gradient(135deg, var(--neural-red), var(--neural-orange));
+      box-shadow: 0 4px 15px rgba(255, 7, 58, 0.4);
     }
 
     .input-field {
@@ -907,12 +1047,7 @@
     </div>
 
     <div class="governance-controls">
-      <div class="interface-switcher-oracle">
-        <a href="/" class="interface-link-oracle">
-          <span class="interface-icon">💬</span>
-          <span class="interface-label">Standard</span>
-        </a>
-      </div>
+      <!-- Interface switcher removed - Oracle is now the only interface -->
     </div>
   </div>
 
@@ -954,35 +1089,38 @@
       </div>
     </div>
 
-    <!-- Chat Input -->
+    <!-- Chat Input - Exact Mockup Design -->
     <div class="chat-input">
-      <!-- Splendor Response Area -->
-      <div class="response-area" id="responseArea">
-        <span id="responseText">Christopher, I remember the details of our memory rebuild plan because you told me on May 9, 2026, during our conversation about data integrity. Is the new architecture meeting your expectations for transparency and structured context?</span>
+      <!-- Splendor Response Bubble - Exact Position -->
+      <div class="splendor-response-bubble" id="responseBubble">
+        <div class="response-content" id="responseContent">
+          Christopher, I remember the details of our memory rebuild plan because you told me on May 9, 2026, during our conversation about data integrity. Is the new architecture meeting your expectations for transparency and structured context?
+        </div>
       </div>
 
-      <!-- Input Controls -->
-      <div class="input-row">
-        <input type="text" class="input-field" id="chatInput" placeholder="Enter query for Splendor's continuity system...">
+      <!-- Input Bar with Integrated Controls - Exact Layout -->
+      <div class="input-control-bar">
+        <input type="text" class="main-input-field" id="chatInput" placeholder="">
 
-        <div class="system-indicators">
-          <div class="indicator">
-            <div class="indicator-light active" id="memoryIndicator"></div>
-            <span>MEMORY</span>
-          </div>
-
-          <div class="indicator">
-            <div class="indicator-light active" id="continuityIndicator"></div>
-            <span>CONTINUITY</span>
-          </div>
-
-          <div class="indicator">
-            <div class="indicator-light active" id="proactiveIndicator"></div>
-            <span>PROACTIVE</span>
-          </div>
+        <!-- Right Side Controls - Exact Position -->
+        <div class="input-controls-right">
+          <button id="micButton" class="control-button mic-button" title="Voice input">🎤</button>
+          <button id="pictureButton" class="control-button" title="Upload image">📎</button>
+          <button id="cameraButton" class="control-button" title="Camera">📷</button>
+          <button id="voiceButton" class="control-button" title="Text to speech">🔊</button>
         </div>
+      </div>
 
-        <button class="send-button" id="sendButton">→</button>
+      <!-- Hidden file input for pictures -->
+      <input type="file" id="pictureInput" accept="image/*" style="display: none;">
+
+      <!-- Camera preview -->
+      <div class="camera-preview-oracle" id="cameraPreview" style="display: none;">
+        <video id="cameraVideo" autoplay playsinline muted></video>
+        <div class="camera-controls">
+          <button id="captureButton" class="capture-button">📸</button>
+          <button id="closeCameraButton" class="close-camera-button">✕</button>
+        </div>
       </div>
     </div>
   </div>
@@ -999,17 +1137,23 @@
         this.memoryCardsContainer = document.getElementById('memoryCards');
         this.pulseEventsContainer = document.getElementById('pulseEvents');
         this.chatInput = document.getElementById('chatInput');
-        this.sendButton = document.getElementById('sendButton');
 
-        this.currentMode = 'idle';
+        this.currentMode = 'listening';
         this.eventQueue = [];
         this.memoryCache = [];
+        this.voiceEnabled = false;
+        this.recognition = null;
+        this.synth = null;
+        this.currentStream = null;
 
         this.initialize();
       }
 
       async initialize() {
         console.log('[ORACLE] Initializing transparent continuity interface...');
+
+        // Initialize media features
+        this.initializeMediaFeatures();
 
         // Set up event listeners
         this.setupEventListeners();
@@ -1027,13 +1171,44 @@
       setupEventListeners() {
         // Chat input handling
         this.chatInput.addEventListener('keypress', (e) => {
-          if (e.key === 'Enter') {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
             this.sendMessage();
           }
         });
 
-        this.sendButton.addEventListener('click', () => {
-          this.sendMessage();
+        // Media control buttons
+        document.getElementById('micButton').addEventListener('click', () => {
+          this.startVoiceRecognition();
+        });
+
+        document.getElementById('voiceButton').addEventListener('click', () => {
+          this.toggleVoice();
+        });
+
+        document.getElementById('cameraButton').addEventListener('click', () => {
+          this.openCamera();
+        });
+
+        document.getElementById('pictureButton').addEventListener('click', () => {
+          this.uploadPicture();
+        });
+
+        // Camera controls
+        document.getElementById('captureButton').addEventListener('click', () => {
+          this.capturePhoto();
+        });
+
+        document.getElementById('closeCameraButton').addEventListener('click', () => {
+          this.closeCamera();
+        });
+
+        // Picture upload handling
+        document.getElementById('pictureInput').addEventListener('change', (e) => {
+          const file = e.target.files[0];
+          if (file) {
+            this.sendImageToChat(file, 'upload');
+          }
         });
 
         // System mode updates based on activity
@@ -1268,25 +1443,181 @@
         this.chatInput.value = '';
         this.updateSystemMode('reasoning');
 
+        // Show user message in response bubble temporarily
+        const responseBubble = document.getElementById('responseContent');
+        const originalResponse = responseBubble.textContent;
+        responseBubble.textContent = 'Processing your query...';
+
         try {
-          // Send to chat API
-          const response = await fetch('/chat', {
+          // Send to enhanced chat API
+          const response = await fetch('/api/enhanced/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message }),
+            body: JSON.stringify({
+              message,
+              include_memory: true,
+              include_consciousness: true
+            }),
             credentials: 'same-origin'
           });
 
           if (response.ok) {
+            const data = await response.json();
+
+            // Display Splendor's actual response
+            if (data.response) {
+              responseBubble.textContent = data.response;
+            }
+
             this.addSystemEvent(); // Add activity event
             this.updateSystemMode('speaking');
             setTimeout(() => this.updateSystemMode('reflecting'), 3000);
             setTimeout(() => this.updateSystemMode('listening'), 6000);
+
+            // Auto-speak if voice is enabled
+            if (this.voiceEnabled) {
+              this.speakText(data.response);
+            }
+          } else {
+            responseBubble.textContent = 'Communication error - please try again.';
           }
         } catch (error) {
           console.error('[ORACLE] Failed to send message:', error);
+          responseBubble.textContent = originalResponse; // Restore original
           this.updateSystemMode('blocked');
           setTimeout(() => this.updateSystemMode('listening'), 2000);
+        }
+      }
+
+      // Voice and media functionality
+      initializeMediaFeatures() {
+        // Voice recognition
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+          const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+          this.recognition = new SpeechRecognition();
+          this.recognition.continuous = false;
+          this.recognition.interimResults = false;
+          this.recognition.lang = 'en-US';
+
+          this.recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            this.chatInput.value = transcript;
+            document.getElementById('micButton').classList.remove('active');
+          };
+
+          this.recognition.onerror = () => {
+            document.getElementById('micButton').classList.remove('active');
+          };
+        }
+
+        // Text to speech
+        this.voiceEnabled = false;
+        this.synth = window.speechSynthesis;
+      }
+
+      startVoiceRecognition() {
+        if (this.recognition) {
+          const micButton = document.getElementById('micButton');
+          micButton.classList.add('active');
+          this.recognition.start();
+          this.updateSystemMode('listening');
+        }
+      }
+
+      toggleVoice() {
+        this.voiceEnabled = !this.voiceEnabled;
+        const voiceButton = document.getElementById('voiceButton');
+
+        if (this.voiceEnabled) {
+          voiceButton.classList.add('active');
+        } else {
+          voiceButton.classList.remove('active');
+        }
+      }
+
+      speakText(text) {
+        if (this.synth && text) {
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.rate = 0.9;
+          utterance.pitch = 1.0;
+          utterance.volume = 0.8;
+          this.synth.speak(utterance);
+        }
+      }
+
+      async openCamera() {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'user' }
+          });
+
+          const cameraPreview = document.getElementById('cameraPreview');
+          const cameraVideo = document.getElementById('cameraVideo');
+
+          cameraVideo.srcObject = stream;
+          cameraPreview.style.display = 'block';
+
+          this.currentStream = stream;
+        } catch (error) {
+          console.error('[ORACLE] Camera error:', error);
+          alert('Camera access denied or unavailable');
+        }
+      }
+
+      closeCamera() {
+        const cameraPreview = document.getElementById('cameraPreview');
+        cameraPreview.style.display = 'none';
+
+        if (this.currentStream) {
+          this.currentStream.getTracks().forEach(track => track.stop());
+          this.currentStream = null;
+        }
+      }
+
+      capturePhoto() {
+        const video = document.getElementById('cameraVideo');
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0);
+
+        // Convert to blob and send
+        canvas.toBlob(blob => {
+          this.sendImageToChat(blob, 'camera_capture');
+        }, 'image/jpeg', 0.8);
+
+        this.closeCamera();
+      }
+
+      uploadPicture() {
+        document.getElementById('pictureInput').click();
+      }
+
+      async sendImageToChat(file, source) {
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('message', `[Image uploaded via ${source}]`);
+
+        try {
+          this.updateSystemMode('reasoning');
+
+          const response = await fetch('/api/enhanced/chat', {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin'
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            document.getElementById('responseContent').textContent = data.response;
+            this.addSystemEvent();
+            this.updateSystemMode('speaking');
+          }
+        } catch (error) {
+          console.error('[ORACLE] Image upload error:', error);
+          this.updateSystemMode('blocked');
         }
       }
 

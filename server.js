@@ -217,14 +217,19 @@ app.post('/api/cache/clear', (req, res) => {
   });
 });
 
-// Serve Oracle Interface
-app.get('/oracle', (req, res) => {
+// Serve Oracle Interface as default
+app.get('/', (req, res) => {
   res.sendFile(__dirname + '/public/oracle-interface.html');
 });
 
-// Serve the PWA
-app.get('*', (req, res) => {
+// Legacy standard interface (for reference only)
+app.get('/standard', (req, res) => {
   res.sendFile(__dirname + '/public/index.html');
+});
+
+// Serve the Oracle Interface for all other routes
+app.get('*', (req, res) => {
+  res.sendFile(__dirname + '/public/oracle-interface.html');
 });
 
 // Error handling
