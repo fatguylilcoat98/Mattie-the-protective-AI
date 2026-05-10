@@ -207,7 +207,7 @@
       height: 100vh;
       display: grid;
       grid-template-columns: 400px 1fr 400px;
-      grid-template-rows: 80px 1fr;
+      grid-template-rows: 80px 1fr 120px;
       gap: 0;
       padding-top: 80px;
     }
@@ -228,6 +228,98 @@
         rgba(191, 90, 242, 0.04) 40%,
         transparent 70%);
       overflow: hidden;
+    }
+
+    /* Conversation Interface - Bottom Panel */
+    .conversation-interface {
+      grid-column: 1 / 4;
+      grid-row: 3;
+      background: linear-gradient(180deg, transparent 0%, var(--glass-surface) 60%);
+      border-top: 1px solid var(--glass-border);
+      backdrop-filter: blur(20px);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 15px 40px 20px 40px;
+      gap: 12px;
+    }
+
+    .response-bubble {
+      background: linear-gradient(135deg, rgba(30, 35, 45, 0.95), rgba(20, 25, 35, 0.9));
+      border: 1px solid rgba(0, 229, 255, 0.3);
+      border-radius: 18px 18px 18px 6px;
+      padding: 16px 20px;
+      backdrop-filter: blur(15px);
+      font-size: 14px;
+      line-height: 1.4;
+      color: var(--text-primary);
+      max-width: 85%;
+      align-self: center;
+      box-shadow:
+        0 6px 25px rgba(0, 0, 0, 0.4),
+        0 0 0 1px rgba(0, 229, 255, 0.2);
+      margin-bottom: 8px;
+    }
+
+    .input-controls {
+      display: flex;
+      align-items: center;
+      background: linear-gradient(135deg, rgba(25, 30, 40, 0.9), rgba(15, 20, 30, 0.8));
+      border: 1px solid rgba(0, 229, 255, 0.3);
+      border-radius: 25px;
+      padding: 6px 6px 6px 20px;
+      backdrop-filter: blur(12px);
+      gap: 10px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .message-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text-primary);
+      font-size: 14px;
+      font-family: inherit;
+      min-height: 40px;
+      padding: 10px 0;
+    }
+
+    .message-input::placeholder {
+      color: rgba(176, 196, 222, 0.5);
+    }
+
+    .input-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .action-btn {
+      background: linear-gradient(135deg, rgba(35, 40, 50, 0.8), rgba(25, 30, 40, 0.9));
+      border: 1px solid rgba(0, 229, 255, 0.4);
+      color: var(--text-secondary);
+      font-size: 16px;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .action-btn:hover {
+      border-color: var(--neural-blue);
+      color: var(--neural-blue);
+      box-shadow: 0 0 15px rgba(0, 229, 255, 0.4);
+    }
+
+    .action-btn.mic-active {
+      background: linear-gradient(135deg, var(--neural-blue), var(--neural-cyan));
+      color: var(--text-primary);
+      box-shadow: 0 0 20px rgba(0, 229, 255, 0.6);
     }
 
     .neural-sphere-container {
@@ -1070,6 +1162,26 @@
 
       <div class="pulse-events" id="pulseEvents">
         <!-- Events will be populated by JavaScript -->
+      </div>
+    </div>
+
+    <!-- Conversation Interface - Bottom Panel -->
+    <div class="conversation-interface">
+      <!-- Response Bubble -->
+      <div class="response-bubble" id="responseBubble">
+        <span id="responseText">Christopher, I remember the details of our memory rebuild plan because you told me on May 9, 2026, during our conversation about data integrity. Is the new architecture meeting your expectations for transparency and structured context?</span>
+      </div>
+
+      <!-- Input Controls -->
+      <div class="input-controls">
+        <input type="text" class="message-input" id="messageInput" placeholder="">
+
+        <div class="input-actions">
+          <button class="action-btn mic-active" id="micButton" title="Voice input">🎤</button>
+          <button class="action-btn" id="attachButton" title="Attach file">📎</button>
+          <button class="action-btn" id="cameraButton" title="Camera">📷</button>
+          <button class="action-btn" id="voiceButton" title="Text to speech">🔊</button>
+        </div>
       </div>
     </div>
 
