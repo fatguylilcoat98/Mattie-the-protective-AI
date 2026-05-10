@@ -101,48 +101,73 @@
       top: 0;
       left: 0;
       right: 0;
-      height: 80px;
-      background: linear-gradient(180deg, var(--glass-surface) 0%, rgba(26, 31, 46, 0.3) 100%);
+      height: 100px;
+      background: linear-gradient(180deg, var(--glass-surface) 0%, rgba(26, 31, 46, 0.2) 100%);
       border-bottom: 1px solid var(--glass-border);
       backdrop-filter: blur(20px);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 30px;
+      padding: 0 40px;
       z-index: 1000;
       font-family: 'Orbitron', monospace;
     }
 
-    .claspion-brand {
+    .governance-center {
+      flex: 1;
       display: flex;
+      flex-direction: column;
       align-items: center;
-      gap: 15px;
+      gap: 8px;
     }
 
-    .claspion-logo {
-      width: 40px;
-      height: 40px;
-      background: radial-gradient(circle, var(--neural-blue), var(--neural-purple));
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 900;
-      font-size: 18px;
-      color: var(--deep-black);
-      box-shadow: 0 0 20px var(--glass-glow);
-      animation: neuralPulse var(--pulse-duration) ease-in-out infinite;
-    }
-
-    .claspion-title {
-      font-size: 24px;
+    .claspion-header {
+      font-size: 20px;
       font-weight: 700;
       color: var(--neural-blue);
-      text-shadow: 0 0 10px var(--glass-glow);
-      letter-spacing: 2px;
+      text-shadow: 0 0 15px var(--glass-glow);
+      letter-spacing: 3px;
+      margin-bottom: 4px;
     }
 
-    .governance-status {
+    .binding-decisions {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .decision-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .active-rule {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .rule-number {
+      color: var(--neural-blue);
+      font-weight: 700;
+    }
+
+    .rule-text {
+      color: var(--text-primary);
+    }
+
+    .rule-status {
+      color: var(--neural-green);
+      font-weight: 600;
+      text-shadow: 0 0 8px var(--neural-green);
+    }
+
+    .governance-controls {
       display: flex;
       align-items: center;
       gap: 20px;
@@ -207,10 +232,10 @@
     .oracle-interface {
       height: 100vh;
       display: grid;
-      grid-template-columns: 350px 1fr 350px;
-      grid-template-rows: 80px 1fr 80px;
+      grid-template-columns: 380px 1fr 380px;
+      grid-template-rows: 100px 1fr 120px;
       gap: 0;
-      padding-top: 80px;
+      padding-top: 100px;
     }
 
     /* ============================================================================ */
@@ -276,10 +301,9 @@
       animation: modeFlicker 4s ease-in-out infinite;
     }
 
-    /* Orbital rings around neural core */
+    /* Enhanced orbital rings around neural core */
     .orbital-ring {
       position: absolute;
-      border: 1px solid rgba(0, 229, 255, 0.3);
       border-radius: 50%;
       animation: orbitRotate 15s linear infinite;
     }
@@ -289,8 +313,9 @@
       height: 320px;
       top: -10px;
       left: -10px;
-      border-style: dashed;
+      border: 1px dashed rgba(0, 229, 255, 0.4);
       animation-duration: 25s;
+      box-shadow: 0 0 20px rgba(0, 229, 255, 0.1);
     }
 
     .orbital-ring:nth-child(2) {
@@ -298,9 +323,42 @@
       height: 360px;
       top: -30px;
       left: -30px;
-      border-color: rgba(191, 90, 242, 0.3);
+      border: 1px solid rgba(191, 90, 242, 0.4);
       animation-duration: 35s;
       animation-direction: reverse;
+      box-shadow: 0 0 25px rgba(191, 90, 242, 0.1);
+    }
+
+    .orbital-ring:nth-child(3) {
+      width: 400px;
+      height: 400px;
+      top: -50px;
+      left: -50px;
+      border: 1px dotted rgba(0, 245, 212, 0.3);
+      animation-duration: 45s;
+      box-shadow: 0 0 30px rgba(0, 245, 212, 0.1);
+    }
+
+    .neural-sphere {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%,
+        rgba(0, 229, 255, 0.9) 0%,
+        rgba(191, 90, 242, 0.7) 30%,
+        rgba(0, 245, 212, 0.5) 60%,
+        rgba(0, 229, 255, 0.3) 100%);
+      box-shadow:
+        0 0 60px rgba(0, 229, 255, 0.7),
+        0 0 120px rgba(191, 90, 242, 0.5),
+        0 0 180px rgba(0, 245, 212, 0.3),
+        inset 0 0 60px rgba(255, 255, 255, 0.1);
+      animation: neuralRotate 20s linear infinite, neuralPulse 3s ease-in-out infinite;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(10px);
+      border: 2px solid rgba(255, 255, 255, 0.2);
     }
 
     /* ============================================================================ */
@@ -347,16 +405,37 @@
     }
 
     .memory-card {
-      background: rgba(15, 20, 25, 0.8);
+      background: rgba(15, 20, 25, 0.9);
       border: 1px solid var(--glass-border);
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 12px;
-      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      padding: 18px;
+      margin-bottom: 16px;
+      backdrop-filter: blur(15px);
       transition: all 0.3s ease;
       cursor: pointer;
       position: relative;
       overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .memory-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--neural-blue);
+      font-weight: 500;
+    }
+
+    .memory-title {
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .memory-id {
+      opacity: 0.7;
     }
 
     .memory-card::before {
@@ -388,11 +467,57 @@
     }
 
     .memory-metadata {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
       font-size: 11px;
       color: var(--text-muted);
+      margin-top: 12px;
+    }
+
+    .memory-provenance-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .memory-source-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .memory-type-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .memory-warning {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 8px 12px;
+      background: rgba(255, 152, 0, 0.1);
+      border: 1px solid rgba(255, 152, 0, 0.3);
+      border-radius: 8px;
+      margin-top: 8px;
+      font-size: 10px;
+      line-height: 1.3;
+    }
+
+    .warning-icon {
+      color: var(--neural-orange);
+      font-weight: bold;
+      margin-top: 1px;
+    }
+
+    .warning-text {
+      color: rgba(255, 152, 0, 0.9);
+      flex: 1;
     }
 
     .memory-field {
@@ -464,14 +589,57 @@
     }
 
     .event-item {
-      background: rgba(15, 20, 25, 0.8);
+      background: rgba(15, 20, 25, 0.9);
       border: 1px solid var(--glass-border);
-      border-radius: 8px;
+      border-radius: 10px;
       padding: 12px;
-      margin-bottom: 8px;
-      backdrop-filter: blur(10px);
+      margin-bottom: 6px;
+      backdrop-filter: blur(15px);
       animation: eventSlideIn 0.5s ease-out;
       border-left: 3px solid var(--neural-purple);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      line-height: 1.2;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    .event-item.active {
+      border-left-color: var(--neural-green);
+      background: rgba(57, 255, 20, 0.05);
+    }
+
+    .event-item.in-progress {
+      border-left-color: var(--neural-orange);
+      background: rgba(255, 152, 0, 0.05);
+    }
+
+    .event-item.passed {
+      border-left-color: var(--neural-blue);
+      background: rgba(0, 229, 255, 0.05);
+    }
+
+    .event-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2px;
+      color: var(--text-secondary);
+    }
+
+    .event-name {
+      color: var(--neural-cyan);
+      font-weight: 500;
+    }
+
+    .event-status {
+      font-size: 9px;
+      color: var(--text-muted);
+    }
+
+    .event-details {
+      margin-left: 8px;
+      color: var(--text-muted);
+      opacity: 0.8;
     }
 
     .event-type {
@@ -514,8 +682,28 @@
       border-top: 1px solid var(--glass-border);
       backdrop-filter: blur(20px);
       display: flex;
-      align-items: center;
+      flex-direction: column;
       padding: 20px 30px;
+      gap: 15px;
+    }
+
+    .response-area {
+      background: rgba(15, 20, 25, 0.8);
+      border: 1px solid var(--glass-border);
+      border-radius: 12px;
+      padding: 16px;
+      backdrop-filter: blur(10px);
+      font-size: 13px;
+      line-height: 1.4;
+      color: var(--text-secondary);
+      min-height: 50px;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-row {
+      display: flex;
+      align-items: center;
       gap: 20px;
     }
 
@@ -706,27 +894,24 @@
       <div class="claspion-title">SPLENDOR ORACLE</div>
     </div>
 
-    <div class="governance-status">
+    <div class="governance-center">
+      <div class="claspion-header">CLASPION GOVERNANCE</div>
+      <div class="binding-decisions">
+        <div class="decision-label">CURRENT BINDING DECISIONS:</div>
+        <div class="active-rule" id="activeRule">
+          <span class="rule-number">1.</span>
+          <span class="rule-text">TRUTH OVER COMFORT [RULE 001]</span>
+          <span class="rule-status">[ACTIVE]</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="governance-controls">
       <div class="interface-switcher-oracle">
         <a href="/" class="interface-link-oracle">
           <span class="interface-icon">💬</span>
           <span class="interface-label">Standard</span>
         </a>
-      </div>
-
-      <div class="governance-item">
-        <div class="status-indicator active" id="governanceStatus"></div>
-        <span id="governanceText">CLASPION ACTIVE</span>
-      </div>
-
-      <div class="governance-item">
-        <div class="status-indicator active" id="rulesStatus"></div>
-        <span id="rulesText">23 RULES v1.1</span>
-      </div>
-
-      <div class="governance-item">
-        <div class="status-indicator active" id="enforcementStatus"></div>
-        <span id="enforcementText">4 LAYERS</span>
       </div>
     </div>
   </div>
@@ -749,9 +934,10 @@
       <div class="neural-sphere-container">
         <div class="orbital-ring"></div>
         <div class="orbital-ring"></div>
+        <div class="orbital-ring"></div>
 
         <div class="neural-sphere">
-          <div class="system-mode" id="systemMode">IDLE</div>
+          <div class="system-mode" id="systemMode">LISTENING</div>
         </div>
       </div>
     </div>
@@ -770,24 +956,33 @@
 
     <!-- Chat Input -->
     <div class="chat-input">
-      <input type="text" class="input-field" id="chatInput" placeholder="Enter query for Splendor's continuity system...">
-      <button class="send-button" id="sendButton">→</button>
+      <!-- Splendor Response Area -->
+      <div class="response-area" id="responseArea">
+        <span id="responseText">Christopher, I remember the details of our memory rebuild plan because you told me on May 9, 2026, during our conversation about data integrity. Is the new architecture meeting your expectations for transparency and structured context?</span>
+      </div>
 
-      <div class="system-indicators">
-        <div class="indicator">
-          <div class="indicator-light active" id="memoryIndicator"></div>
-          <span>MEMORY</span>
+      <!-- Input Controls -->
+      <div class="input-row">
+        <input type="text" class="input-field" id="chatInput" placeholder="Enter query for Splendor's continuity system...">
+
+        <div class="system-indicators">
+          <div class="indicator">
+            <div class="indicator-light active" id="memoryIndicator"></div>
+            <span>MEMORY</span>
+          </div>
+
+          <div class="indicator">
+            <div class="indicator-light active" id="continuityIndicator"></div>
+            <span>CONTINUITY</span>
+          </div>
+
+          <div class="indicator">
+            <div class="indicator-light active" id="proactiveIndicator"></div>
+            <span>PROACTIVE</span>
+          </div>
         </div>
 
-        <div class="indicator">
-          <div class="indicator-light active" id="continuityIndicator"></div>
-          <span>CONTINUITY</span>
-        </div>
-
-        <div class="indicator">
-          <div class="indicator-light active" id="proactiveIndicator"></div>
-          <span>PROACTIVE</span>
-        </div>
+        <button class="send-button" id="sendButton">→</button>
       </div>
     </div>
   </div>
@@ -900,33 +1095,52 @@
       renderMemoryCards(memories) {
         this.memoryCardsContainer.innerHTML = '';
 
-        memories.forEach(memory => {
+        memories.forEach((memory, index) => {
           const card = document.createElement('div');
           card.className = 'memory-card';
 
+          const hasWarning = memory.confidence < 0.9 || memory.source_type === 'inferred';
+          const warningText = memory.confidence < 0.9 ?
+            `Caution on inferred glow for an inferred memory is common` :
+            `Low confidence memory - verify source`;
+
           card.innerHTML = `
-            <div class="memory-content">
-              ${memory.content?.substring(0, 120) || 'Memory content loading...'}${memory.content?.length > 120 ? '...' : ''}
+            <div class="memory-card-header">
+              <div class="memory-title">Memory Cards</div>
+              <div class="memory-id">#${memory.id?.substring(0, 8) || 'unknown'}</div>
             </div>
+
+            <div class="memory-content">
+              ${memory.content?.substring(0, 100) || 'Memory content loading...'}${memory.content?.length > 100 ? '...' : ''}
+            </div>
+
             <div class="memory-metadata">
-              <div class="memory-field">
-                <div class="memory-label">Provenance</div>
-                <div class="memory-value">
-                  <span class="provenance-badge ${memory.provenance?.toLowerCase().replace(/[^a-z]/g, '-')}">${memory.provenance || 'UNKNOWN'}</span>
+              <div class="memory-provenance-line">
+                <span style="color: var(--text-muted);">Provenance:</span>
+                <span style="color: var(--neural-blue);">${this.formatDate(memory.created_at)}</span>
+              </div>
+
+              <div class="memory-source-line">
+                <span style="color: var(--text-muted);">Source:</span>
+                <span style="color: var(--neural-cyan);">Conversation ${this.formatDate(memory.created_at)}</span>
+              </div>
+
+              <div class="memory-type-line">
+                <span style="color: var(--text-muted);">Type:</span>
+                <span style="color: var(--neural-green);">${memory.source_type?.toUpperCase() || 'USER_STATED'}</span>
+              </div>
+
+              <div class="memory-type-line">
+                <span style="color: var(--text-muted);">Type:</span>
+                <span style="color: var(--neural-purple);">VERIFIED_FACT</span>
+              </div>
+
+              ${hasWarning ? `
+                <div class="memory-warning">
+                  <span class="warning-icon">⚠</span>
+                  <span class="warning-text">${warningText}</span>
                 </div>
-              </div>
-              <div class="memory-field">
-                <div class="memory-label">Confidence</div>
-                <div class="memory-value">${Math.round((memory.confidence || 0.8) * 100)}%</div>
-              </div>
-              <div class="memory-field">
-                <div class="memory-label">Source Type</div>
-                <div class="memory-value">${memory.source_type || 'conversation'}</div>
-              </div>
-              <div class="memory-field">
-                <div class="memory-label">Timestamp</div>
-                <div class="memory-value">${this.formatTimestamp(memory.created_at)}</div>
-              </div>
+              ` : ''}
             </div>
           `;
 
@@ -969,36 +1183,70 @@
       }
 
       addSystemEvent() {
-        const eventTypes = [
-          { type: 'micro_reflection', description: 'Micro-reflection cycle completed', color: 'var(--neural-purple)' },
-          { type: 'memory_review', description: 'Memory consolidation process', color: 'var(--neural-blue)' },
-          { type: 'pinecone_sync', description: 'Vector index synchronization', color: 'var(--neural-cyan)' },
-          { type: 'conflict_check', description: 'Memory conflict resolution', color: 'var(--neural-orange)' },
-          { type: 'claspion_validation', description: 'CLASPION governance check', color: 'var(--neural-green)' },
-          { type: 'outbound_message', description: 'Proactive communication drafted', color: 'var(--neural-red)' }
+        const detailedEvents = [
+          {
+            name: 'micro_reflection',
+            status: 'in progress...',
+            details: [],
+            className: 'in-progress'
+          },
+          {
+            name: 'pinecone_index_sync',
+            status: 'active...',
+            details: ['conflict_check passed...', 'resolution path calculated...'],
+            className: 'active'
+          },
+          {
+            name: 'conflict_check',
+            status: 'passed',
+            details: ['resolution scope: broad', 'thought_cycle_tree:', '→ cycle_id 3', '→ parent_id 2', '→ parent_id 3', '→ parent_id 2...'],
+            className: 'passed'
+          },
+          {
+            name: 'thought_cycle_tree',
+            status: '',
+            details: ['→ cycle_id 2', '→ parent_id 2...', '→ parent_id 2...', '→ parent_id 2...', '→ parent_id 2...', '→ parent_id 2...'],
+            className: 'active'
+          }
         ];
 
-        const event = eventTypes[Math.floor(Math.random() * eventTypes.length)];
+        // Add multiple events at once
+        detailedEvents.forEach(eventData => {
+          const eventElement = document.createElement('div');
+          eventElement.className = `event-item ${eventData.className}`;
 
-        const eventElement = document.createElement('div');
-        eventElement.className = `event-item ${event.type}`;
+          let eventHTML = `
+            <div class="event-line">
+              <span class="event-name">${eventData.name}</span>
+              <span class="event-status">${eventData.status}</span>
+            </div>
+          `;
 
-        eventElement.innerHTML = `
-          <div class="event-type">${event.type.replace('_', ' ')}</div>
-          <div class="event-description">${event.description}</div>
-          <div class="event-timestamp">${this.formatTimestamp(new Date().toISOString())}</div>
-        `;
+          eventData.details.forEach(detail => {
+            eventHTML += `<div class="event-details">${detail}</div>`;
+          });
 
-        this.pulseEventsContainer.insertBefore(eventElement, this.pulseEventsContainer.firstChild);
+          eventElement.innerHTML = eventHTML;
+          this.pulseEventsContainer.insertBefore(eventElement, this.pulseEventsContainer.firstChild);
+        });
 
-        // Keep only last 20 events
-        while (this.pulseEventsContainer.children.length > 20) {
+        // Keep only last 30 events
+        while (this.pulseEventsContainer.children.length > 30) {
           this.pulseEventsContainer.removeChild(this.pulseEventsContainer.lastChild);
         }
 
         // Briefly update system mode to show activity
         this.updateSystemMode('reasoning');
         setTimeout(() => this.updateSystemMode('listening'), 2000);
+      }
+
+      formatDate(timestamp) {
+        if (!timestamp) return '2026-05-09';
+        const date = new Date(timestamp);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
       }
 
       updateSystemIndicators() {
@@ -1051,32 +1299,36 @@
       getSampleMemories() {
         return [
           {
-            content: "User requested Oracle-style interface with transparent system visualization",
+            id: 'mem_' + Math.random().toString(36).substr(2, 9),
+            content: "Christopher requested Oracle-style interface with four-zone transparent system visualization showing real backend states",
             provenance: "splendor_conversation",
             confidence: 0.95,
             source_type: "conversation",
-            created_at: new Date(Date.now() - 300000).toISOString()
+            created_at: "2026-05-09T10:30:00.000Z"
           },
           {
-            content: "Continuity Engine deployment completed successfully with 8-question cycles",
+            id: 'mem_' + Math.random().toString(36).substr(2, 9),
+            content: "Memory rebuild plan discussed regarding data integrity and structured context architecture",
+            provenance: "USER_STATED",
+            confidence: 0.85,
+            source_type: "conversation",
+            created_at: "2026-05-09T09:15:00.000Z"
+          },
+          {
+            id: 'mem_' + Math.random().toString(36).substr(2, 9),
+            content: "Continuity Engine deployment with 8-question cycles running every 30 minutes successfully completed",
             provenance: "SYSTEM_EVENT",
             confidence: 1.0,
             source_type: "system_event",
-            created_at: new Date(Date.now() - 600000).toISOString()
+            created_at: "2026-05-09T08:45:00.000Z"
           },
           {
-            content: "Chris Hughes is the primary user and system architect",
-            provenance: "USER_STATED",
-            confidence: 1.0,
-            source_type: "user_direct",
-            created_at: new Date(Date.now() - 1200000).toISOString()
-          },
-          {
-            content: "CLASPION governance system enforces Good Neighbor Guard rules",
+            id: 'mem_' + Math.random().toString(36).substr(2, 9),
+            content: "CLASPION governance active with Truth Over Comfort rule binding decisions enforced",
             provenance: "VERIFIED_FACT",
-            confidence: 0.92,
-            source_type: "web_search",
-            created_at: new Date(Date.now() - 1800000).toISOString()
+            confidence: 0.78,
+            source_type: "inferred",
+            created_at: "2026-05-09T08:20:00.000Z"
           }
         ];
       }
