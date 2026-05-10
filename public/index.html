@@ -1294,6 +1294,7 @@
         <div class="reality-clock" id="realityClock">Loading...</div>
         <div class="reality-date" id="realityDate">Loading...</div>
       </div>
+      <div class="version-info" id="versionInfo">Loading...</div>
       <div class="user-info" id="userInfo"></div>
       <div
         id="claspionStatus"
@@ -1358,7 +1359,10 @@
       var lastState = null;
 
       function updateStatus(state) {
+        console.log('[CLASPION-STATUS] Updating status:', state);
+
         if (!state) {
+          console.log('[CLASPION-STATUS] No state - setting inactive');
           statusEl.className = 'claspion-status inactive';
           statusEl.title = 'CLASPION governance - Unable to connect';
           if (statusLabel) statusLabel.textContent = 'CLASPION';
@@ -1377,6 +1381,8 @@
           hasWarnings = true;
         }
 
+        console.log('[CLASPION-STATUS] Active:', isActive, 'Warnings:', hasWarnings);
+
         // Set status class
         var statusClass = 'claspion-status ';
         var statusText = 'CLASPION';
@@ -1385,6 +1391,7 @@
           statusClass += 'inactive';
           statusText = 'CLASPION';
           statusEl.title = 'CLASPION governance - Inactive';
+          console.log('[CLASPION-STATUS] Setting inactive');
         } else if (hasWarnings) {
           statusClass += 'warning';
           statusText = 'CLASPION';
@@ -1396,41 +1403,53 @@
             issues.push('Quarantine mode');
           }
           statusEl.title = 'CLASPION governance - Warning: ' + issues.join(', ');
+          console.log('[CLASPION-STATUS] Setting warning');
         } else {
           statusClass += 'active';
           statusText = 'CLASPION';
           var details = [
             'CLASPION governance - Active',
-            '23 Core Rules enforced',
-            state.enforcement_layers ? state.enforcement_layers.length + ' enforcement layers' : '',
+            (state.core_rules_count || 23) + ' Core Rules enforced',
+            state.enforcement_layers ? state.enforcement_layers.length + ' enforcement layers' : '4 enforcement layers',
             'Rule version: ' + (state.rules_version || '1.1')
           ].filter(Boolean);
           statusEl.title = details.join('\n');
+          console.log('[CLASPION-STATUS] Setting active');
         }
 
         statusEl.className = statusClass;
         if (statusLabel) statusLabel.textContent = statusText;
 
         lastState = state;
+        console.log('[CLASPION-STATUS] Final class:', statusClass);
       }
 
       function fetchStatus() {
+        console.log('[CLASPION-STATUS] Fetching governance status...');
+
         // Try enhanced governance state first
         fetch('/api/governance/enhanced/state', {
           credentials: 'same-origin',
           cache: 'no-cache',
         })
           .then(function (r) {
+            console.log('[CLASPION-STATUS] Enhanced API response status:', r.status);
             if (r.ok) return r.json();
+
             // Fallback to basic governance state
+            console.log('[CLASPION-STATUS] Enhanced API failed, trying basic API...');
             return fetch('/api/governance/state', {
               credentials: 'same-origin',
               cache: 'no-cache',
             }).then(function (r2) {
+              console.log('[CLASPION-STATUS] Basic API response status:', r2.status);
               return r2.ok ? r2.json() : null;
             });
           })
-          .then(updateStatus)
+          .then(function(state) {
+            console.log('[CLASPION-STATUS] Received state:', state);
+            updateStatus(state);
+          })
           .catch(function (err) {
             console.error('[CLASPION-STATUS] Failed to fetch governance state:', err);
             updateStatus(null);
@@ -1438,11 +1457,17 @@
       }
 
       // Click to show detailed status (for debugging)
-      statusEl.addEventListener('click', function () {
+      statusEl.addEventListener('click', function (e) {
+        console.log('[CLASPION-STATUS] Click event triggered');
+        e.preventDefault();
+
         if (!lastState) {
-          alert('CLASPION status unavailable');
+          console.log('[CLASPION-STATUS] No state available');
+          alert('CLASPION status unavailable - check console for errors');
           return;
         }
+
+        console.log('[CLASPION-STATUS] Showing status for:', lastState);
 
         var message = 'CLASPION Enhanced Governance Status:\n\n';
 
@@ -1471,10 +1496,10 @@
           message += '❌ Status: INACTIVE\n';
           message += '⚠️ CLASPION governance is not active\n';
 
-          if (!lastState.has_url) {
+          if (lastState.has_url === false) {
             message += '🔗 No CLASPION URL configured\n';
           }
-          if (!lastState.has_api_key) {
+          if (lastState.has_api_key === false) {
             message += '🔑 No API key configured\n';
           }
         }
@@ -1491,6 +1516,19 @@
       // Refresh every 30 seconds
       setInterval(fetchStatus, 30000);
     })();
+
+    // Load version info
+    fetch('/version', { credentials: 'same-origin' })
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(info) {
+        var versionEl = document.getElementById('versionInfo');
+        if (versionEl && info && info.version) {
+          versionEl.textContent = 'v' + info.version;
+        }
+      })
+      .catch(function(err) {
+        console.log('[VERSION] Could not load version info');
+      });
   </script>
   <script src="app.js"></script>
 </body>
