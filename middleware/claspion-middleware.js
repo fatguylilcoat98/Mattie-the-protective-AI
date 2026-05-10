@@ -256,13 +256,19 @@ function claspionResponseMiddleware() {
 
     // Wrap res.send
     res.send = function(body) {
-      validateResponse(body, req, res);
+      // Set headers before sending response
+      setResponseHeaders(req, res);
+      // Validate in background (don't block response)
+      setImmediate(() => validateResponseAsync(body, req, res));
       return originalSend.call(this, body);
     };
 
     // Wrap res.json
     res.json = function(body) {
-      validateResponse(body, req, res);
+      // Set headers before sending response
+      setResponseHeaders(req, res);
+      // Validate in background (don't block response)
+      setImmediate(() => validateResponseAsync(body, req, res));
       return originalJson.call(this, body);
     };
 
@@ -271,10 +277,27 @@ function claspionResponseMiddleware() {
 }
 
 /**
- * Validates outgoing responses
+ * Set response headers before sending (safe to do)
  * @private
  */
-async function validateResponse(body, req, res) {
+function setResponseHeaders(req, res) {
+  try {
+    if (!res.headersSent) {
+      res.set({
+        'X-Claspion-Response-Validated': 'true',
+        'X-Claspion-Response-Correlation': req.correlationId || 'unknown'
+      });
+    }
+  } catch (error) {
+    // Ignore header setting errors
+  }
+}
+
+/**
+ * Validates outgoing responses asynchronously (don't block)
+ * @private
+ */
+async function validateResponseAsync(body, req, res) {
   try {
     // Build response validation request
     const responseAction = {
@@ -291,20 +314,17 @@ async function validateResponse(body, req, res) {
       original_request: req.path
     });
 
-    // Add response governance headers
-    res.set({
-      'X-Claspion-Response-Decision': validation.decision,
-      'X-Claspion-Response-Basis': validation.basis_state
-    });
-
     // Log if blocked (rare for responses)
     if (!validation.allow) {
       console.warn(`[CLASPION-MIDDLEWARE] Response blocked: ${validation.reason}`);
     }
 
+    // Log successful validation
+    console.log(`[CLASPION-MIDDLEWARE] Response validated: ${validation.decision} for ${req.path}`);
+
   } catch (error) {
     // Don't block responses on validation errors
-    console.error('[CLASPION-MIDDLEWARE] Response validation error:', error);
+    console.error('[CLASPION-MIDDLEWARE] Response validation error:', error.message);
   }
 }
 
