@@ -20,6 +20,7 @@ const authRoutes = require('./routes/auth');
 const memoryDebugRoutes = require('./routes/memory-debug');
 const cognitiveDashboardRoutes = require('./routes/cognitive-dashboard');
 const sciFiModeRoutes = require('./routes/scifi-mode');
+const oracleApiRoutes = require('./routes/oracle-api');
 const { governance: claspionGovernance } = require('./lib/claspion-governance');
 const { enhancedGovernance } = require('./lib/claspion-enhanced-integration');
 const { claspionMiddleware, claspionResponseMiddleware } = require('./middleware/claspion-middleware');
@@ -88,6 +89,7 @@ app.use('/api/consciousness-test', consciousnessTestRoutes);
 app.use('/debug', memoryDebugRoutes);
 app.use('/cognitive', cognitiveDashboardRoutes);
 app.use('/api/scifi', sciFiModeRoutes);
+app.use('/api/oracle', oracleApiRoutes);
 app.use('/api/continuity', require('./routes/master-continuity'));
 app.use('/api/governance', require('./routes/governance'));
 
@@ -213,6 +215,11 @@ app.post('/api/cache/clear', (req, res) => {
       memory_cache: 'Client should clear conversation memory'
     }
   });
+});
+
+// Serve Oracle Interface
+app.get('/oracle', (req, res) => {
+  res.sendFile(__dirname + '/public/oracle-interface.html');
 });
 
 // Serve the PWA
