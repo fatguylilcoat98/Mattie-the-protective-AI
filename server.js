@@ -217,17 +217,7 @@ app.post('/api/cache/clear', (req, res) => {
   });
 });
 
-// Serve Oracle Interface as default
-app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/public/oracle-interface.html');
-});
-
-// Legacy standard interface (for reference only)
-app.get('/standard', (req, res) => {
-  res.sendFile(__dirname + '/public/index.html');
-});
-
-// Serve the Oracle Interface for all other routes
+// Oracle Interface is the ONLY interface - serves everything
 app.get('*', (req, res) => {
   res.sendFile(__dirname + '/public/oracle-interface.html');
 });

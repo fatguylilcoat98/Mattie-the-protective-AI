@@ -198,32 +198,6 @@
     .status-indicator.blocked { background: var(--neural-red); }
     .status-indicator.escalate { background: var(--neural-purple); }
 
-    .interface-switcher-oracle {
-      margin-right: 20px;
-    }
-
-    .interface-link-oracle {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 16px;
-      background: var(--glass-surface);
-      border: 1px solid var(--glass-border);
-      border-radius: 20px;
-      backdrop-filter: blur(10px);
-      color: var(--text-secondary);
-      text-decoration: none;
-      font-size: 12px;
-      font-weight: 500;
-      transition: all 0.3s ease;
-    }
-
-    .interface-link-oracle:hover {
-      border-color: var(--neural-blue);
-      color: var(--neural-blue);
-      background: rgba(0, 229, 255, 0.1);
-      box-shadow: 0 4px 20px rgba(0, 229, 255, 0.2);
-    }
 
     /* ============================================================================ */
     /* MAIN INTERFACE LAYOUT */
@@ -233,7 +207,7 @@
       height: 100vh;
       display: grid;
       grid-template-columns: 380px 1fr 380px;
-      grid-template-rows: 100px 1fr 120px;
+      grid-template-rows: 100px 1fr 140px;
       gap: 0;
       padding-top: 100px;
     }
@@ -678,55 +652,50 @@
     .chat-input {
       grid-column: 1 / 4;
       grid-row: 3;
-      background: var(--glass-surface);
+      background: linear-gradient(180deg, transparent 0%, var(--glass-surface) 40%);
       border-top: 1px solid var(--glass-border);
       backdrop-filter: blur(20px);
       display: flex;
       flex-direction: column;
-      padding: 20px 40px 30px 40px;
-      gap: 20px;
+      justify-content: flex-end;
+      padding: 15px 60px 25px 60px;
+      gap: 15px;
       position: relative;
     }
 
     .splendor-response-bubble {
-      background: rgba(15, 20, 25, 0.9);
-      border: 1px solid var(--glass-border);
-      border-radius: 18px 18px 18px 4px;
-      padding: 16px 20px;
-      backdrop-filter: blur(15px);
+      background: linear-gradient(135deg, rgba(30, 35, 45, 0.95), rgba(20, 25, 35, 0.9));
+      border: 1px solid rgba(0, 229, 255, 0.3);
+      border-radius: 20px 20px 20px 6px;
+      padding: 18px 24px;
+      backdrop-filter: blur(20px);
       font-size: 14px;
       line-height: 1.5;
       color: var(--text-primary);
-      max-width: 80%;
-      align-self: flex-start;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      max-width: 85%;
+      align-self: center;
+      box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.4),
+        0 0 0 1px rgba(0, 229, 255, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
       position: relative;
-      margin-bottom: 10px;
-    }
-
-    .splendor-response-bubble::before {
-      content: '';
-      position: absolute;
-      bottom: -1px;
-      left: -8px;
-      width: 20px;
-      height: 20px;
-      background: rgba(15, 20, 25, 0.9);
-      border: 1px solid var(--glass-border);
-      border-radius: 0 0 0 18px;
-      border-top: none;
-      border-right: none;
+      margin-bottom: 8px;
+      text-align: left;
     }
 
     .input-control-bar {
       display: flex;
       align-items: center;
-      background: rgba(15, 20, 25, 0.8);
-      border: 1px solid var(--glass-border);
-      border-radius: 25px;
-      padding: 8px 8px 8px 20px;
-      backdrop-filter: blur(10px);
-      gap: 12px;
+      background: linear-gradient(135deg, rgba(30, 35, 45, 0.9), rgba(20, 25, 35, 0.8));
+      border: 1px solid rgba(0, 229, 255, 0.3);
+      border-radius: 28px;
+      padding: 6px 6px 6px 24px;
+      backdrop-filter: blur(15px);
+      gap: 8px;
+      box-shadow:
+        0 4px 20px rgba(0, 0, 0, 0.3),
+        0 0 0 1px rgba(0, 229, 255, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
     }
 
     .main-input-field {
@@ -735,30 +704,32 @@
       border: none;
       outline: none;
       color: var(--text-primary);
-      font-size: 14px;
+      font-size: 15px;
       font-family: inherit;
-      min-height: 40px;
-      padding: 8px 0;
+      min-height: 44px;
+      padding: 12px 0;
+      font-weight: 400;
     }
 
     .main-input-field::placeholder {
-      color: var(--text-muted);
-      opacity: 0.6;
+      color: rgba(176, 196, 222, 0.4);
+      opacity: 1;
     }
 
     .input-controls-right {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
+      padding-right: 2px;
     }
 
     .control-button {
-      background: var(--glass-surface);
-      border: 1px solid var(--glass-border);
+      background: linear-gradient(135deg, rgba(40, 45, 55, 0.8), rgba(30, 35, 45, 0.9));
+      border: 1px solid rgba(0, 229, 255, 0.4);
       color: var(--text-secondary);
       font-size: 16px;
-      width: 36px;
-      height: 36px;
+      width: 42px;
+      height: 42px;
       border-radius: 50%;
       cursor: pointer;
       transition: all 0.3s ease;
@@ -766,27 +737,38 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
     }
 
     .control-button:hover {
       border-color: var(--neural-blue);
       color: var(--neural-blue);
-      background: rgba(0, 229, 255, 0.1);
-      box-shadow: 0 0 15px rgba(0, 229, 255, 0.3);
+      background: linear-gradient(135deg, rgba(0, 229, 255, 0.2), rgba(0, 245, 212, 0.1));
+      box-shadow: 0 0 20px rgba(0, 229, 255, 0.4);
+      transform: translateY(-1px);
     }
 
     .control-button.active {
-      background: linear-gradient(135deg, var(--neural-blue), var(--neural-purple));
+      background: linear-gradient(135deg, var(--neural-blue), var(--neural-cyan));
       color: var(--text-primary);
       border-color: var(--neural-blue);
-      box-shadow: 0 0 20px rgba(0, 229, 255, 0.5);
+      box-shadow: 0 0 25px rgba(0, 229, 255, 0.6);
     }
 
     .mic-button {
       background: linear-gradient(135deg, var(--neural-blue), var(--neural-cyan));
       color: var(--text-primary);
       border-color: var(--neural-blue);
-      box-shadow: 0 0 15px rgba(0, 229, 255, 0.4);
+      box-shadow:
+        0 0 20px rgba(0, 229, 255, 0.5),
+        0 2px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    .mic-button:hover {
+      box-shadow: 0 0 30px rgba(0, 229, 255, 0.7);
+      transform: translateY(-2px);
     }
 
 
