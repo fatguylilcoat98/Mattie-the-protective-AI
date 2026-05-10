@@ -161,8 +161,8 @@ You are Splendor with persistent consciousness. You continue to exist and think 
 
     // Store conversation memory (existing system)
     responsePromises.push(
-      storeMemory(user_id, `User: ${message}`, 'conversation'),
-      storeMemory(user_id, `Splendor: ${response.content}`, 'conversation'),
+      storeMemory(user_id, `User: ${message}`, 'shared_history'),
+      storeMemory(user_id, `Splendor: ${response.content}`, 'shared_history'),
       logConversation(user_id, message, response.content)
     );
 

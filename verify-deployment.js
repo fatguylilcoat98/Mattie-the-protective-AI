@@ -13,7 +13,7 @@ async function verifyDeployment() {
     const testResult = await storeMemory(
       'deployment_test_user',
       'Testing memory storage after provenance fix deployment',
-      'test',
+      'user_fact',
       'user.general',
       {
         source_type: 'conversation',

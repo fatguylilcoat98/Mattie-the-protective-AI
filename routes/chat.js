@@ -96,9 +96,9 @@ router.post('/', async (req, res) => {
 
     // Fire-and-forget memory writes after the response has been sent.
     // Errors are logged but never delay the user-visible reply.
-    storeMemory(userId, `User: ${message}`, 'conversation')
+    storeMemory(userId, `User: ${message}`, 'shared_history')
       .catch((e) => console.error('Memory storage (user) failed:', e.message));
-    storeMemory(userId, `Splendor: ${response}`, 'conversation')
+    storeMemory(userId, `Splendor: ${response}`, 'shared_history')
       .catch((e) => console.error('Memory storage (assistant) failed:', e.message));
 
   } catch (error) {
