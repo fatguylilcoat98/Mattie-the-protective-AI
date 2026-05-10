@@ -482,15 +482,18 @@ export class MemoryWriteServiceImpl implements MemoryWriteService {
       case 'user_direct_statement':
         return 'USER_STATED';
       case 'conversation':
-        return 'VERIFIED_FACT';
+        return 'splendor_conversation';
       case 'reflection':
         return 'INFERRED';
       case 'system_event':
         return 'SYSTEM_EVENT';
       case 'manual_admin':
         return 'ADMIN_APPROVED';
+      case 'web_search':
+      case 'external_search':
+        return 'VERIFIED_FACT';
       default:
-        return 'GENERATED';
+        return 'splendor_conversation';
     }
   }
 

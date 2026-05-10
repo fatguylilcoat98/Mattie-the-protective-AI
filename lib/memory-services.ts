@@ -47,7 +47,8 @@ export type Provenance =
   | 'INFERRED'
   | 'GENERATED'
   | 'SYSTEM_EVENT'
-  | 'ADMIN_APPROVED';
+  | 'ADMIN_APPROVED'
+  | 'splendor_conversation';
 
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'archived';
 export type TrustLevel = 'trusted' | 'caution' | 'untrusted' | 'reference_only';
