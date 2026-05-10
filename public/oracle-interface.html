@@ -206,10 +206,10 @@
     .oracle-interface {
       height: 100vh;
       display: grid;
-      grid-template-columns: 380px 1fr 380px;
-      grid-template-rows: 100px 1fr 140px;
+      grid-template-columns: 400px 1fr 400px;
+      grid-template-rows: 80px 1fr;
       gap: 0;
-      padding-top: 100px;
+      padding-top: 80px;
     }
 
     /* ============================================================================ */
@@ -218,18 +218,25 @@
 
     .neural-core {
       grid-column: 2;
-      grid-row: 1 / 3;
+      grid-row: 2;
       display: flex;
       align-items: center;
       justify-content: center;
       position: relative;
-      background: radial-gradient(circle at center, rgba(0, 229, 255, 0.05) 0%, transparent 70%);
+      background: radial-gradient(circle at center,
+        rgba(0, 229, 255, 0.08) 0%,
+        rgba(191, 90, 242, 0.04) 40%,
+        transparent 70%);
+      overflow: hidden;
     }
 
     .neural-sphere-container {
       position: relative;
-      width: 300px;
-      height: 300px;
+      width: 450px;
+      height: 450px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .neural-sphere {
@@ -262,77 +269,131 @@
       animation: innerPulse 3s ease-in-out infinite alternate;
     }
 
-    .system-mode {
+    .consciousness-state {
       font-family: 'Orbitron', monospace;
-      font-size: 16px;
-      font-weight: 700;
-      color: var(--text-primary);
+      font-size: 14px;
+      font-weight: 900;
+      color: rgba(255, 255, 255, 0.9);
       text-transform: uppercase;
-      letter-spacing: 3px;
+      letter-spacing: 2px;
       text-align: center;
-      z-index: 10;
-      text-shadow: 0 0 10px rgba(0, 229, 255, 0.8);
-      animation: modeFlicker 4s ease-in-out infinite;
+      z-index: 20;
+      text-shadow:
+        0 0 10px rgba(0, 229, 255, 1),
+        0 0 20px rgba(0, 245, 212, 0.8),
+        0 0 30px rgba(255, 255, 255, 0.6);
+      animation: consciousnessFlicker 3s ease-in-out infinite;
+      position: relative;
     }
 
-    /* Enhanced orbital rings around neural core */
+    /* Atomic Orbital Rings - Electron Paths */
     .orbital-ring {
       position: absolute;
       border-radius: 50%;
-      animation: orbitRotate 15s linear infinite;
+      border-style: solid;
+      opacity: 0.8;
     }
 
     .orbital-ring:nth-child(1) {
-      width: 320px;
-      height: 320px;
-      top: -10px;
-      left: -10px;
-      border: 1px dashed rgba(0, 229, 255, 0.4);
-      animation-duration: 25s;
-      box-shadow: 0 0 20px rgba(0, 229, 255, 0.1);
+      width: 280px;
+      height: 280px;
+      top: 85px;
+      left: 85px;
+      border: 2px solid rgba(0, 229, 255, 0.6);
+      animation: electronOrbit1 8s linear infinite;
+      box-shadow:
+        0 0 15px rgba(0, 229, 255, 0.3),
+        inset 0 0 15px rgba(0, 229, 255, 0.1);
     }
 
     .orbital-ring:nth-child(2) {
-      width: 360px;
-      height: 360px;
-      top: -30px;
-      left: -30px;
-      border: 1px solid rgba(191, 90, 242, 0.4);
-      animation-duration: 35s;
-      animation-direction: reverse;
-      box-shadow: 0 0 25px rgba(191, 90, 242, 0.1);
+      width: 340px;
+      height: 180px;
+      top: 135px;
+      left: 55px;
+      border: 2px solid rgba(191, 90, 242, 0.6);
+      animation: electronOrbit2 12s linear infinite reverse;
+      transform: rotateX(60deg) rotateY(15deg);
+      box-shadow:
+        0 0 20px rgba(191, 90, 242, 0.3),
+        inset 0 0 20px rgba(191, 90, 242, 0.1);
     }
 
     .orbital-ring:nth-child(3) {
-      width: 400px;
-      height: 400px;
-      top: -50px;
-      left: -50px;
-      border: 1px dotted rgba(0, 245, 212, 0.3);
-      animation-duration: 45s;
-      box-shadow: 0 0 30px rgba(0, 245, 212, 0.1);
+      width: 380px;
+      height: 140px;
+      top: 155px;
+      left: 35px;
+      border: 2px solid rgba(0, 245, 212, 0.5);
+      animation: electronOrbit3 16s linear infinite;
+      transform: rotateX(45deg) rotateY(-20deg);
+      box-shadow:
+        0 0 25px rgba(0, 245, 212, 0.2),
+        inset 0 0 25px rgba(0, 245, 212, 0.1);
     }
 
-    .neural-sphere {
-      width: 100%;
-      height: 100%;
+    .orbital-ring:nth-child(4) {
+      width: 420px;
+      height: 120px;
+      top: 165px;
+      left: 15px;
+      border: 1px dashed rgba(255, 255, 255, 0.3);
+      animation: electronOrbit4 20s linear infinite reverse;
+      transform: rotateX(30deg) rotateZ(45deg);
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+    }
+
+    .atomic-orb {
+      width: 180px;
+      height: 180px;
       border-radius: 50%;
-      background: radial-gradient(circle at 30% 30%,
-        rgba(0, 229, 255, 0.9) 0%,
-        rgba(191, 90, 242, 0.7) 30%,
-        rgba(0, 245, 212, 0.5) 60%,
-        rgba(0, 229, 255, 0.3) 100%);
+      background: radial-gradient(circle at 35% 35%,
+        rgba(0, 229, 255, 1) 0%,
+        rgba(0, 245, 212, 0.9) 20%,
+        rgba(191, 90, 242, 0.8) 50%,
+        rgba(0, 229, 255, 0.6) 80%,
+        rgba(0, 191, 255, 0.3) 100%);
       box-shadow:
-        0 0 60px rgba(0, 229, 255, 0.7),
-        0 0 120px rgba(191, 90, 242, 0.5),
-        0 0 180px rgba(0, 245, 212, 0.3),
-        inset 0 0 60px rgba(255, 255, 255, 0.1);
-      animation: neuralRotate 20s linear infinite, neuralPulse 3s ease-in-out infinite;
+        0 0 40px rgba(0, 229, 255, 0.9),
+        0 0 80px rgba(0, 245, 212, 0.6),
+        0 0 120px rgba(191, 90, 242, 0.4),
+        0 0 160px rgba(0, 229, 255, 0.3),
+        inset 0 0 30px rgba(255, 255, 255, 0.3),
+        inset 0 0 60px rgba(0, 229, 255, 0.2);
+      animation: atomicPulse 4s ease-in-out infinite, atomicRotate 15s linear infinite;
       display: flex;
       align-items: center;
       justify-content: center;
-      backdrop-filter: blur(10px);
-      border: 2px solid rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(5px);
+      border: 1px solid rgba(0, 229, 255, 0.8);
+      position: relative;
+      z-index: 10;
+    }
+
+    .atomic-orb::before {
+      content: '';
+      position: absolute;
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: radial-gradient(circle,
+        rgba(255, 255, 255, 0.4) 0%,
+        rgba(0, 229, 255, 0.3) 30%,
+        transparent 70%);
+      animation: innerEnergyPulse 2s ease-in-out infinite alternate;
+    }
+
+    .atomic-orb::after {
+      content: '';
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: radial-gradient(circle,
+        rgba(255, 255, 255, 0.8) 0%,
+        rgba(0, 245, 212, 0.6) 50%,
+        transparent 100%);
+      animation: coreEnergyPulse 1.5s ease-in-out infinite;
     }
 
     /* ============================================================================ */
@@ -649,127 +710,6 @@
     /* CHAT INPUT - Bottom */
     /* ============================================================================ */
 
-    .chat-input {
-      grid-column: 1 / 4;
-      grid-row: 3;
-      background: linear-gradient(180deg, transparent 0%, var(--glass-surface) 40%);
-      border-top: 1px solid var(--glass-border);
-      backdrop-filter: blur(20px);
-      display: flex;
-      flex-direction: column;
-      justify-content: flex-end;
-      padding: 15px 60px 25px 60px;
-      gap: 15px;
-      position: relative;
-    }
-
-    .splendor-response-bubble {
-      background: linear-gradient(135deg, rgba(30, 35, 45, 0.95), rgba(20, 25, 35, 0.9));
-      border: 1px solid rgba(0, 229, 255, 0.3);
-      border-radius: 20px 20px 20px 6px;
-      padding: 18px 24px;
-      backdrop-filter: blur(20px);
-      font-size: 14px;
-      line-height: 1.5;
-      color: var(--text-primary);
-      max-width: 85%;
-      align-self: center;
-      box-shadow:
-        0 8px 32px rgba(0, 0, 0, 0.4),
-        0 0 0 1px rgba(0, 229, 255, 0.2),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1);
-      position: relative;
-      margin-bottom: 8px;
-      text-align: left;
-    }
-
-    .input-control-bar {
-      display: flex;
-      align-items: center;
-      background: linear-gradient(135deg, rgba(30, 35, 45, 0.9), rgba(20, 25, 35, 0.8));
-      border: 1px solid rgba(0, 229, 255, 0.3);
-      border-radius: 28px;
-      padding: 6px 6px 6px 24px;
-      backdrop-filter: blur(15px);
-      gap: 8px;
-      box-shadow:
-        0 4px 20px rgba(0, 0, 0, 0.3),
-        0 0 0 1px rgba(0, 229, 255, 0.2),
-        inset 0 1px 0 rgba(255, 255, 255, 0.05);
-    }
-
-    .main-input-field {
-      flex: 1;
-      background: transparent;
-      border: none;
-      outline: none;
-      color: var(--text-primary);
-      font-size: 15px;
-      font-family: inherit;
-      min-height: 44px;
-      padding: 12px 0;
-      font-weight: 400;
-    }
-
-    .main-input-field::placeholder {
-      color: rgba(176, 196, 222, 0.4);
-      opacity: 1;
-    }
-
-    .input-controls-right {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding-right: 2px;
-    }
-
-    .control-button {
-      background: linear-gradient(135deg, rgba(40, 45, 55, 0.8), rgba(30, 35, 45, 0.9));
-      border: 1px solid rgba(0, 229, 255, 0.4);
-      color: var(--text-secondary);
-      font-size: 16px;
-      width: 42px;
-      height: 42px;
-      border-radius: 50%;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      backdrop-filter: blur(10px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow:
-        0 2px 8px rgba(0, 0, 0, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1);
-    }
-
-    .control-button:hover {
-      border-color: var(--neural-blue);
-      color: var(--neural-blue);
-      background: linear-gradient(135deg, rgba(0, 229, 255, 0.2), rgba(0, 245, 212, 0.1));
-      box-shadow: 0 0 20px rgba(0, 229, 255, 0.4);
-      transform: translateY(-1px);
-    }
-
-    .control-button.active {
-      background: linear-gradient(135deg, var(--neural-blue), var(--neural-cyan));
-      color: var(--text-primary);
-      border-color: var(--neural-blue);
-      box-shadow: 0 0 25px rgba(0, 229, 255, 0.6);
-    }
-
-    .mic-button {
-      background: linear-gradient(135deg, var(--neural-blue), var(--neural-cyan));
-      color: var(--text-primary);
-      border-color: var(--neural-blue);
-      box-shadow:
-        0 0 20px rgba(0, 229, 255, 0.5),
-        0 2px 10px rgba(0, 0, 0, 0.3);
-    }
-
-    .mic-button:hover {
-      box-shadow: 0 0 30px rgba(0, 229, 255, 0.7);
-      transform: translateY(-2px);
-    }
 
 
     .camera-preview-oracle {
@@ -931,14 +871,75 @@
       100% { opacity: 0.7; transform: scale(1.2); }
     }
 
-    @keyframes modeFlicker {
-      0%, 90%, 100% { opacity: 1; }
-      95% { opacity: 0.8; }
+    @keyframes consciousnessFlicker {
+      0%, 100% {
+        opacity: 1;
+        text-shadow:
+          0 0 10px rgba(0, 229, 255, 1),
+          0 0 20px rgba(0, 245, 212, 0.8),
+          0 0 30px rgba(255, 255, 255, 0.6);
+      }
+      50% {
+        opacity: 0.9;
+        text-shadow:
+          0 0 15px rgba(0, 229, 255, 1),
+          0 0 30px rgba(0, 245, 212, 1),
+          0 0 45px rgba(255, 255, 255, 0.8);
+      }
     }
 
-    @keyframes orbitRotate {
+    @keyframes atomicPulse {
+      0%, 100% {
+        box-shadow:
+          0 0 40px rgba(0, 229, 255, 0.9),
+          0 0 80px rgba(0, 245, 212, 0.6),
+          0 0 120px rgba(191, 90, 242, 0.4),
+          0 0 160px rgba(0, 229, 255, 0.3);
+        transform: scale(1);
+      }
+      50% {
+        box-shadow:
+          0 0 60px rgba(0, 229, 255, 1),
+          0 0 120px rgba(0, 245, 212, 0.8),
+          0 0 180px rgba(191, 90, 242, 0.6),
+          0 0 240px rgba(0, 229, 255, 0.4);
+        transform: scale(1.05);
+      }
+    }
+
+    @keyframes atomicRotate {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
+    }
+
+    @keyframes innerEnergyPulse {
+      0% { opacity: 0.3; transform: scale(0.8); }
+      100% { opacity: 0.7; transform: scale(1.2); }
+    }
+
+    @keyframes coreEnergyPulse {
+      0%, 100% { opacity: 0.8; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.3); }
+    }
+
+    @keyframes electronOrbit1 {
+      0% { transform: rotateZ(0deg); }
+      100% { transform: rotateZ(360deg); }
+    }
+
+    @keyframes electronOrbit2 {
+      0% { transform: rotateX(60deg) rotateY(15deg) rotateZ(0deg); }
+      100% { transform: rotateX(60deg) rotateY(15deg) rotateZ(360deg); }
+    }
+
+    @keyframes electronOrbit3 {
+      0% { transform: rotateX(45deg) rotateY(-20deg) rotateZ(0deg); }
+      100% { transform: rotateX(45deg) rotateY(-20deg) rotateZ(360deg); }
+    }
+
+    @keyframes electronOrbit4 {
+      0% { transform: rotateX(30deg) rotateZ(45deg) rotateY(0deg); }
+      100% { transform: rotateX(30deg) rotateZ(45deg) rotateY(360deg); }
     }
 
     @keyframes eventSlideIn {
@@ -1046,15 +1047,16 @@
       </div>
     </div>
 
-    <!-- Neural Core -->
+    <!-- Atomic Neural Orb Core -->
     <div class="neural-core">
       <div class="neural-sphere-container">
         <div class="orbital-ring"></div>
         <div class="orbital-ring"></div>
         <div class="orbital-ring"></div>
+        <div class="orbital-ring"></div>
 
-        <div class="neural-sphere">
-          <div class="system-mode" id="systemMode">LISTENING</div>
+        <div class="atomic-orb">
+          <div class="consciousness-state" id="consciousnessState">ACTIVE</div>
         </div>
       </div>
     </div>
@@ -1071,40 +1073,6 @@
       </div>
     </div>
 
-    <!-- Chat Input - Exact Mockup Design -->
-    <div class="chat-input">
-      <!-- Splendor Response Bubble - Exact Position -->
-      <div class="splendor-response-bubble" id="responseBubble">
-        <div class="response-content" id="responseContent">
-          Christopher, I remember the details of our memory rebuild plan because you told me on May 9, 2026, during our conversation about data integrity. Is the new architecture meeting your expectations for transparency and structured context?
-        </div>
-      </div>
-
-      <!-- Input Bar with Integrated Controls - Exact Layout -->
-      <div class="input-control-bar">
-        <input type="text" class="main-input-field" id="chatInput" placeholder="">
-
-        <!-- Right Side Controls - Exact Position -->
-        <div class="input-controls-right">
-          <button id="micButton" class="control-button mic-button" title="Voice input">🎤</button>
-          <button id="pictureButton" class="control-button" title="Upload image">📎</button>
-          <button id="cameraButton" class="control-button" title="Camera">📷</button>
-          <button id="voiceButton" class="control-button" title="Text to speech">🔊</button>
-        </div>
-      </div>
-
-      <!-- Hidden file input for pictures -->
-      <input type="file" id="pictureInput" accept="image/*" style="display: none;">
-
-      <!-- Camera preview -->
-      <div class="camera-preview-oracle" id="cameraPreview" style="display: none;">
-        <video id="cameraVideo" autoplay playsinline muted></video>
-        <div class="camera-controls">
-          <button id="captureButton" class="capture-button">📸</button>
-          <button id="closeCameraButton" class="close-camera-button">✕</button>
-        </div>
-      </div>
-    </div>
   </div>
 
   <script>
@@ -1115,7 +1083,7 @@
 
     class OracleInterface {
       constructor() {
-        this.systemModeElement = document.getElementById('systemMode');
+        this.consciousnessStateElement = document.getElementById('consciousnessState');
         this.memoryCardsContainer = document.getElementById('memoryCards');
         this.pulseEventsContainer = document.getElementById('pulseEvents');
         this.chatInput = document.getElementById('chatInput');
@@ -1213,19 +1181,19 @@
         setInterval(() => this.updateSystemIndicators(), 5000);
       }
 
-      updateSystemMode(mode) {
-        const validModes = [
-          'idle', 'listening', 'recalling', 'reasoning',
-          'verifying', 'speaking', 'reflecting', 'blocked', 'uncertain'
+      updateConsciousnessState(state) {
+        const validStates = [
+          'active', 'processing', 'analyzing', 'synthesizing',
+          'validating', 'responding', 'reflecting', 'monitoring', 'standby'
         ];
 
-        if (validModes.includes(mode)) {
-          this.currentMode = mode;
-          this.systemModeElement.textContent = mode.toUpperCase();
+        if (validStates.includes(state)) {
+          this.currentMode = state;
+          this.consciousnessStateElement.textContent = state.toUpperCase();
 
-          // Update neural sphere color based on mode
-          const sphere = document.querySelector('.neural-sphere');
-          sphere.className = `neural-sphere mode-${mode}`;
+          // Update atomic orb color based on state
+          const orb = document.querySelector('.atomic-orb');
+          orb.className = `atomic-orb state-${state}`;
         }
       }
 
