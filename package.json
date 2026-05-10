@@ -1,6 +1,6 @@
 {
   "name": "splendor",
-  "version": "15.4.3",
+  "version": "15.5.0",
   "description": "Splendor — The Remarkable AI · The Good Neighbor Guard",
   "main": "server.js",
   "scripts": {
@@ -23,6 +23,8 @@
     "setup:consciousness": "psql $DATABASE_URL -f persistent-consciousness-schema.sql", 
     "continuity:shadow": "node lib/master-continuity-engine.js",
     "continuity:worker": "node workers/continuity-worker.js",
+    "continuity:engine": "node workers/continuity-worker.js",
+    "continuity:8question": "node lib/continuity-engine.js",
     "continuity:setup": "psql $SUPABASE_URL -f database/master-continuity-schema.sql",
     "memory:deploy": "powershell -Command \"Get-Content 'database/complete-fresh-deploy.sql' | Write-Host\"",
     "memory:test": "node tests/memory-system-tests.js",
