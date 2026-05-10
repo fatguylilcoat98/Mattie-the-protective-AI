@@ -21,6 +21,8 @@ const memoryDebugRoutes = require('./routes/memory-debug');
 const cognitiveDashboardRoutes = require('./routes/cognitive-dashboard');
 const sciFiModeRoutes = require('./routes/scifi-mode');
 const { governance: claspionGovernance } = require('./lib/claspion-governance');
+const { enhancedGovernance } = require('./lib/claspion-enhanced-integration');
+const { claspionMiddleware, claspionResponseMiddleware } = require('./middleware/claspion-middleware');
 
 // Continuous consciousness routes
 let consciousnessRoutes;
@@ -65,6 +67,15 @@ app.use(cors({
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static('public'));
+
+// CLASPION Enhanced Governance Middleware (Rule 19 & 23: Always on, watches every action)
+// Per Good Neighbor Guard Core Rules v1.1 - this enforces all 23 foundational rules
+app.use(claspionResponseMiddleware()); // Validate outgoing responses
+app.use(claspionMiddleware({
+  exemptPaths: ['/health', '/version', '/api/governance/state', '/favicon.ico'],
+  exemptMethods: ['OPTIONS'],
+  logAll: true
+}));
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -269,6 +280,11 @@ function logSystemStatus() {
   console.log(`   🛡️ Response Auditing: ${process.env.GROQ_API_KEY ? '✅ Available (Llama-3.1-8B)' : '❌ Disabled'}`);
   console.log(`   🎨 Visual Expression: ${process.env.VISUAL_EXPRESSION_ENABLED === 'true' && process.env.OPENAI_API_KEY ? '✅ Available' : '❌ Disabled'}`);
   console.log(`   🛡️ CLASPION Governance: ${claspionGovernance.isEnabled() ? `✅ Active (${claspionGovernance.url})` : '⚪ Dormant (CLASPION_ENABLED=false)'}`);
+
+  const governanceState = enhancedGovernance.getGovernanceState();
+  console.log(`   🛡️ Good Neighbor Guard: ✅ Active (${governanceState.core_rules_count} Core Rules v${governanceState.rules_version})`);
+  console.log(`   🛡️ Enforcement Layers: ${governanceState.enforcement_layers.length} (${governanceState.enforcement_layers.join(', ')})`);
+  console.log(`   🛡️ Quarantine Mode: ${governanceState.quarantine_mode ? '🚨 ACTIVE' : '✅ Normal'}`);
 
   console.log('\n🚀 SERVER STATUS:');
   console.log(`   📍 Port: ${PORT}`);
