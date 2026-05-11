@@ -15,6 +15,15 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Resolve bare "three" imports used by the post-processing addons. -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "/lib/three.module.min.js"
+      }
+    }
+  </script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { height: 100%; width: 100%; overflow: hidden; }
@@ -803,9 +812,13 @@
 
   <!-- 3D neural orb (Three.js, vanilla module — no React) -->
   <script type="module">
-    let THREE;
+    let THREE, EffectComposer, RenderPass, UnrealBloomPass, OutputPass;
     try {
-      THREE = await import('/lib/three.module.min.js');
+      THREE = await import('three');
+      ({ EffectComposer }   = await import('/lib/three/postprocessing/EffectComposer.js'));
+      ({ RenderPass }       = await import('/lib/three/postprocessing/RenderPass.js'));
+      ({ UnrealBloomPass }  = await import('/lib/three/postprocessing/UnrealBloomPass.js'));
+      ({ OutputPass }       = await import('/lib/three/postprocessing/OutputPass.js'));
     } catch (err) {
       console.error('Three.js failed to load:', err);
       const bubble = document.getElementById('responseBubble');
@@ -818,10 +831,29 @@
     const canvas = document.getElementById('orbCanvas');
     const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    // Bright emissive materials + ACES tonemap so the bloom pass has
+    // something punchy to bloom on.
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
     camera.position.set(0, 0, 8);
+
+    // ── Post-processing: UnrealBloomPass for the photorealistic glow ──
+    // Render → bloom → tonemap/output. Resolution is set in resize().
+    const composer = new EffectComposer(renderer);
+    const renderPass = new RenderPass(scene, camera);
+    const bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(1, 1), // resized in resize()
+      1.4,   // strength
+      0.85,  // radius
+      0.18   // threshold (anything brighter than this blooms)
+    );
+    const outputPass = new OutputPass();
+    composer.addPass(renderPass);
+    composer.addPass(bloomPass);
+    composer.addPass(outputPass);
 
     // Lights
     const ambient = new THREE.AmbientLight(0x0a1a2a, 0.25);
@@ -944,6 +976,8 @@
       const dpr = renderer.getPixelRatio();
       if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
         renderer.setSize(w, h, false);
+        composer.setSize(w, h);
+        bloomPass.setSize(w, h);
         camera.aspect = w / h;
         camera.updateProjectionMatrix();
       }
@@ -1018,7 +1052,7 @@
       root.position.y = Math.sin(t * 0.6) * 0.1;
       root.rotation.y = t * 0.05;
 
-      renderer.render(scene, camera);
+      composer.render();
       requestAnimationFrame(frame);
     }
     frame();
