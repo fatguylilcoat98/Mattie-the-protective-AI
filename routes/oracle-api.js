@@ -7,7 +7,7 @@
 */
 
 const express = require('express');
-const { supabase, getMemoriesForUser } = require('../lib/supabase');
+const { supabase, getMemoriesForUser, stringToUUID } = require('../lib/supabase');
 const { continuityEngine } = require('../lib/continuity-engine');
 const router = express.Router();
 
@@ -19,9 +19,12 @@ const router = express.Router();
 router.get('/memories/recent', async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 20;
-    const userId = req.query.user_id || 'chris_hughes'; // Default to primary user
+    const userIdRaw = req.query.user_id || 'chris_hughes'; // Default to primary user
+    // memory_items.user_id is a UUID column — hash any string handle into
+    // the deterministic UUID the rest of the system already uses for it.
+    const userId = stringToUUID(userIdRaw);
 
-    console.log('[ORACLE-API] Fetching recent memories, limit:', limit);
+    console.log('[ORACLE-API] Fetching recent memories, limit:', limit, 'userId:', userIdRaw);
 
     // Fetch recent memories with full metadata
     const { data: memories, error } = await supabase
@@ -75,7 +78,8 @@ router.get('/memories/recent', async (req, res) => {
 // Get memory statistics for dashboard
 router.get('/memories/stats', async (req, res) => {
   try {
-    const userId = req.query.user_id || 'chris_hughes';
+    const userIdRaw = req.query.user_id || 'chris_hughes';
+    const userId = stringToUUID(userIdRaw);
 
     // Get memory counts by provenance
     const { data: provenanceStats, error: provenanceError } = await supabase

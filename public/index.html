@@ -160,113 +160,20 @@
       color: #b8ffb0;
     }
 
-    /* Neural orb */
+    /* Neural orb — Three.js canvas fills the center grid cell */
     .neural-center {
       grid-area: canvas;
       display: flex; align-items: center; justify-content: center;
       background: radial-gradient(circle, rgba(0, 229, 255, 0.07), transparent 65%);
       overflow: hidden;
       position: relative;
-      perspective: 800px;
-    }
-    .orb-container {
-      position: relative;
-      width: min(380px, 78vmin);
-      height: min(380px, 78vmin);
-      display: flex; align-items: center; justify-content: center;
-      transform-style: preserve-3d;
-    }
-    .neural-orb {
-      width: 38%; height: 38%;
-      border-radius: 50%;
-      background: radial-gradient(circle at 32% 30%,
-        rgba(200, 250, 255, 1) 0%,
-        rgba(0, 229, 255, 0.95) 22%,
-        rgba(0, 180, 220, 0.85) 50%,
-        rgba(0, 80, 130, 0.6) 100%);
-      box-shadow:
-        0 0 35px rgba(0, 229, 255, 0.9),
-        0 0 75px rgba(0, 200, 220, 0.55),
-        0 0 140px rgba(0, 245, 212, 0.35),
-        inset -8px -10px 22px rgba(0, 60, 90, 0.7),
-        inset 8px 8px 22px rgba(200, 250, 255, 0.7);
-      animation: orbPulse 3s ease-in-out infinite;
-      z-index: 10;
-    }
-    .orbit-ring {
-      position: absolute;
-      border-radius: 50%;
-      border: 1.5px solid rgba(0, 229, 255, 0.55);
-      box-shadow: 0 0 10px rgba(0, 229, 255, 0.35);
-    }
-    .orbit-ring.r1 {
-      width: 62%; height: 62%;
-      animation: r1 8s linear infinite;
-    }
-    .orbit-ring.r2 {
-      width: 76%; height: 76%;
-      border-color: rgba(191, 90, 242, 0.5);
-      box-shadow: 0 0 12px rgba(191, 90, 242, 0.4);
-      animation: r2 12s linear infinite;
-    }
-    .orbit-ring.r3 {
-      width: 90%; height: 90%;
-      border-color: rgba(0, 245, 212, 0.45);
-      box-shadow: 0 0 10px rgba(0, 245, 212, 0.3);
-      animation: r3 16s linear infinite;
-    }
-    .orbit-ring.r4 {
-      width: 100%; height: 100%;
-      border-color: rgba(255, 107, 157, 0.35);
-      box-shadow: 0 0 8px rgba(255, 107, 157, 0.25);
-      animation: r4 20s linear infinite;
-    }
-
-    @keyframes r1 { from { transform: rotateX(72deg) rotateZ(0deg); } to { transform: rotateX(72deg) rotateZ(360deg); } }
-    @keyframes r2 { from { transform: rotateY(72deg) rotateZ(0deg); } to { transform: rotateY(72deg) rotateZ(-360deg); } }
-    @keyframes r3 { from { transform: rotateX(60deg) rotateY(45deg) rotateZ(0deg); } to { transform: rotateX(60deg) rotateY(45deg) rotateZ(360deg); } }
-    @keyframes r4 { from { transform: rotateX(45deg) rotateY(-45deg) rotateZ(0deg); } to { transform: rotateX(45deg) rotateY(-45deg) rotateZ(-360deg); } }
-
-    @keyframes orbPulse {
-      0%, 100% {
-        box-shadow:
-          0 0 35px rgba(0, 229, 255, 0.9),
-          0 0 75px rgba(0, 200, 220, 0.55),
-          0 0 140px rgba(0, 245, 212, 0.35),
-          inset -8px -10px 22px rgba(0, 60, 90, 0.7),
-          inset 8px 8px 22px rgba(200, 250, 255, 0.7);
-      }
-      50% {
-        box-shadow:
-          0 0 50px rgba(0, 229, 255, 1),
-          0 0 110px rgba(0, 200, 220, 0.75),
-          0 0 180px rgba(0, 245, 212, 0.5),
-          inset -8px -10px 22px rgba(0, 60, 90, 0.7),
-          inset 8px 8px 22px rgba(220, 250, 255, 0.85);
-      }
-    }
-
-    /* State variants — driven by JS */
-    body.state-thinking .neural-orb { background: radial-gradient(circle at 32% 30%, rgba(255, 180, 250, 1) 0%, rgba(191, 90, 242, 0.95) 22%, rgba(120, 40, 200, 0.85) 60%, rgba(60, 20, 100, 0.6) 100%); animation-duration: 1.5s; }
-    body.state-listening .neural-orb { background: radial-gradient(circle at 32% 30%, rgba(180, 255, 200, 1) 0%, rgba(57, 255, 20, 0.95) 22%, rgba(0, 200, 100, 0.85) 60%, rgba(0, 100, 50, 0.6) 100%); animation-duration: 2s; }
-    body.state-pulse .neural-orb { animation-duration: 1.2s; }
-
-    /* Audio-reactive orb — when Splendor is speaking, JS drives
-       --voice-level (0..1) and the orb scales + glows to the audio */
-    .neural-orb {
       --voice-level: 0;
-      transform: scale(calc(1 + var(--voice-level) * 0.35));
-      transition: transform 80ms linear;
     }
-    body.state-speaking .neural-orb {
-      animation: none;
-      filter: drop-shadow(0 0 calc(30px + var(--voice-level) * 60px) rgba(0, 229, 255, calc(0.7 + var(--voice-level) * 0.3)));
+    #orbCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
     }
-    body.state-speaking .orbit-ring {
-      filter: drop-shadow(0 0 calc(6px + var(--voice-level) * 14px) currentColor);
-    }
-    body.state-speaking .orbit-ring.r1 { animation-duration: calc(8s / (1 + var(--voice-level))); }
-    body.state-speaking .orbit-ring.r2 { animation-duration: calc(12s / (1 + var(--voice-level))); }
 
     /* Conversation console */
     .conversation-panel {
@@ -313,17 +220,21 @@
     }
     .message-input::placeholder { color: rgba(176, 196, 222, 0.5); }
 
-    .input-controls { display: flex; gap: 5px; flex-shrink: 0; }
+    .input-controls { display: flex; gap: 6px; flex-shrink: 0; }
     .control-btn {
-      width: 36px; height: 36px;
-      border-radius: 50%;
+      height: 34px;
+      min-width: 56px;
+      padding: 0 12px;
+      border-radius: 18px;
       border: 1px solid rgba(0, 229, 255, 0.45);
       background: linear-gradient(135deg, rgba(35, 40, 55, 0.9), rgba(25, 30, 45, 0.8));
       color: #b0c4de;
       cursor: pointer;
-      transition: all 0.25s ease;
-      display: flex; align-items: center; justify-content: center;
-      padding: 0; font-size: 14px;
+      transition: all 0.2s ease;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-family: inherit;
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 1px; text-transform: uppercase;
       flex-shrink: 0;
     }
     .control-btn:hover:not(:disabled) {
@@ -333,7 +244,7 @@
     }
     .control-btn.active {
       background: linear-gradient(135deg, #00e5ff, #00f5d4);
-      color: #ffffff; border-color: #00e5ff;
+      color: #042026; border-color: #00e5ff;
       box-shadow: 0 0 16px rgba(0, 229, 255, 0.65);
     }
     .send-btn {
@@ -343,6 +254,34 @@
     }
     .send-btn:hover:not(:disabled) { box-shadow: 0 0 20px rgba(0, 229, 255, 0.75); }
     .send-btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; transform: none; }
+
+    /* Camera modal */
+    .camera-modal {
+      position: fixed; inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      display: none;
+      align-items: center; justify-content: center;
+      z-index: 2000;
+      padding: 20px;
+    }
+    .camera-modal.open { display: flex; }
+    .camera-box {
+      background: rgba(10, 18, 32, 0.98);
+      border: 1px solid rgba(0, 229, 255, 0.5);
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: 0 0 40px rgba(0, 229, 255, 0.4);
+      max-width: 460px; width: 100%;
+    }
+    #cameraVideo {
+      width: 100%; max-height: 60vh;
+      background: #000; border-radius: 8px;
+      object-fit: cover;
+    }
+    .camera-actions {
+      display: flex; gap: 8px; justify-content: center;
+      margin-top: 12px;
+    }
 
     /* Responsive */
     @media (max-width: 1024px) {
@@ -367,11 +306,12 @@
       .response-bubble { font-size: 12px; padding: 9px 12px; max-height: 70px; border-radius: 12px; }
       .input-bar { padding: 4px 4px 4px 12px; border-radius: 22px; }
       .message-input { font-size: 12px; padding: 7px 0; }
-      .control-btn { width: 30px; height: 30px; font-size: 12px; }
+      .control-btn { height: 30px; min-width: 50px; font-size: 10px; padding: 0 9px; letter-spacing: 0.6px; }
+      .input-controls { gap: 4px; }
     }
     @media (max-width: 380px) {
       .oracle-main { grid-template-columns: 28% 1fr 28%; }
-      .control-btn { width: 28px; height: 28px; }
+      .control-btn { height: 28px; min-width: 44px; font-size: 9.5px; padding: 0 7px; }
     }
   </style>
 </head>
@@ -396,14 +336,8 @@
       </div>
     </aside>
 
-    <main class="neural-center">
-      <div class="orb-container">
-        <div class="orbit-ring r1"></div>
-        <div class="orbit-ring r2"></div>
-        <div class="orbit-ring r3"></div>
-        <div class="orbit-ring r4"></div>
-        <div class="neural-orb" id="neuralOrb"></div>
-      </div>
+    <main class="neural-center" id="neuralCenter">
+      <canvas id="orbCanvas"></canvas>
     </main>
 
     <aside class="pulse-panel">
@@ -421,29 +355,23 @@
       <div class="input-bar">
         <input type="text" class="message-input" id="messageInput" placeholder="Ask Splendor anything…" autocomplete="off">
         <div class="input-controls">
-          <button class="control-btn send-btn" id="sendButton" title="Send" disabled>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M22 2 11 13"/>
-              <path d="M22 2 15 22 11 13 2 9 22 2z"/>
-            </svg>
-          </button>
-          <button class="control-btn" id="micButton" title="Voice input">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="9" y="2" width="6" height="12" rx="3"/>
-              <path d="M5 10a7 7 0 0 0 14 0"/>
-              <line x1="12" y1="17" x2="12" y2="22"/>
-            </svg>
-          </button>
-          <button class="control-btn" id="voiceButton" title="Splendor's voice (off)" aria-pressed="false">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
-              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
-            </svg>
-          </button>
+          <button class="control-btn send-btn" id="sendButton" type="button" disabled>SEND</button>
+          <button class="control-btn" id="micButton" type="button" aria-pressed="false">MIC</button>
+          <button class="control-btn" id="voiceButton" type="button" aria-pressed="false">SPEAK</button>
+          <button class="control-btn" id="cameraButton" type="button">CAMERA</button>
         </div>
       </div>
     </section>
+  </div>
+
+  <div class="camera-modal" id="cameraModal" aria-hidden="true">
+    <div class="camera-box">
+      <video id="cameraVideo" autoplay playsinline muted></video>
+      <div class="camera-actions">
+        <button class="control-btn send-btn" id="captureButton" type="button">CAPTURE</button>
+        <button class="control-btn" id="closeCameraButton" type="button">CLOSE</button>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -454,7 +382,10 @@
     const sendButton = document.getElementById('sendButton');
     const micButton = document.getElementById('micButton');
     const voiceButton = document.getElementById('voiceButton');
-    const neuralOrb = document.getElementById('neuralOrb');
+
+    // Live audio level for the 3D orb. The Three.js animation loop
+    // reads window.__orbVoiceLevel each frame to scale + glow.
+    window.__orbVoiceLevel = 0;
 
     function setState(name) {
       document.body.classList.remove('state-thinking', 'state-listening', 'state-pulse', 'state-speaking');
@@ -495,7 +426,7 @@
         cancelAnimationFrame(rafId);
         rafId = null;
       }
-      neuralOrb.style.setProperty('--voice-level', 0);
+      window.__orbVoiceLevel = 0;
       if (document.body.classList.contains('state-speaking')) setState(null);
     }
 
@@ -509,7 +440,7 @@
       for (let i = start; i < end; i++) sum += freqData[i];
       const avg = sum / (end - start);          // 0..255
       const level = Math.min(1, avg / 110);     // normalise to ~0..1
-      neuralOrb.style.setProperty('--voice-level', level.toFixed(3));
+      window.__orbVoiceLevel = level;
       rafId = requestAnimationFrame(tickOrbFromAudio);
     }
 
@@ -757,11 +688,289 @@
       }
     });
 
+    // Camera — capture a frame and POST it to /api/enhanced/chat as
+    // multipart so Splendor can analyse the image.
+    const cameraModal = document.getElementById('cameraModal');
+    const cameraVideo = document.getElementById('cameraVideo');
+    const cameraButton = document.getElementById('cameraButton');
+    const captureButton = document.getElementById('captureButton');
+    const closeCameraButton = document.getElementById('closeCameraButton');
+    let cameraStream = null;
+
+    async function openCamera() {
+      try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user' }
+        });
+        cameraVideo.srcObject = cameraStream;
+        cameraModal.classList.add('open');
+        cameraButton.classList.add('active');
+      } catch (err) {
+        alert('Camera access denied or unavailable');
+      }
+    }
+
+    function closeCamera() {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(t => t.stop());
+        cameraStream = null;
+      }
+      cameraVideo.srcObject = null;
+      cameraModal.classList.remove('open');
+      cameraButton.classList.remove('active');
+    }
+
+    async function captureFrame() {
+      if (!cameraVideo.videoWidth) return;
+      const canvas = document.createElement('canvas');
+      canvas.width = cameraVideo.videoWidth;
+      canvas.height = cameraVideo.videoHeight;
+      canvas.getContext('2d').drawImage(cameraVideo, 0, 0);
+      const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.85));
+      closeCamera();
+      if (!blob) return;
+      responseBubble.textContent = 'Analyzing image…';
+      setState('thinking');
+      try {
+        const fd = new FormData();
+        fd.append('image', blob, 'capture.jpg');
+        fd.append('message', '[Camera capture]');
+        const res = await fetch('/api/enhanced/chat', {
+          method: 'POST',
+          credentials: 'same-origin',
+          body: fd
+        });
+        if (!res.ok) throw new Error('chat ' + res.status);
+        const data = await res.json();
+        const replyText = data.response || data.message || '(no response)';
+        responseBubble.textContent = replyText;
+        setState(null);
+        fetchEvents();
+        fetchMemories();
+        await speakResponse(replyText);
+      } catch (err) {
+        responseBubble.textContent = 'I could not analyze that image. Please try again.';
+        setState(null);
+      }
+    }
+
+    cameraButton.addEventListener('click', openCamera);
+    captureButton.addEventListener('click', captureFrame);
+    closeCameraButton.addEventListener('click', closeCamera);
+
     // Initial + polling
     fetchMemories();
     fetchEvents();
     setInterval(fetchEvents, 5000);
     setInterval(fetchMemories, 30000);
+  </script>
+
+  <!-- 3D neural orb (Three.js, vanilla module — no React) -->
+  <script type="module">
+    import * as THREE from '/lib/three.module.min.js';
+
+    const canvas = document.getElementById('orbCanvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+    camera.position.set(0, 0, 8);
+
+    // Lights
+    const ambient = new THREE.AmbientLight(0x0a1a2a, 0.25);
+    const l1 = new THREE.PointLight(0x00e5ff, 4, 50);
+    const l2 = new THREE.PointLight(0x4ff0b7, 2.5, 50); l2.position.set(5, 5, 5);
+    const l3 = new THREE.PointLight(0xbf5af2, 1.8, 50); l3.position.set(-5, -5, -5);
+    const l4 = new THREE.PointLight(0x00f5d4, 1.2, 50); l4.position.set(0, 8, 0);
+    scene.add(ambient, l1, l2, l3, l4);
+
+    const root = new THREE.Group();
+    scene.add(root);
+
+    // Core consciousness sphere (bright white emissive)
+    const coreMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      emissive: 0x00e5ff,
+      emissiveIntensity: 2.5,
+      transparent: true,
+      opacity: 0.95
+    });
+    const core = new THREE.Mesh(new THREE.SphereGeometry(0.5, 24, 24), coreMat);
+    root.add(core);
+
+    // Neural pathway sphere (slightly larger, transparent, stretched)
+    const innerMat = new THREE.MeshStandardMaterial({
+      color: 0x00e5ff,
+      emissive: 0x4ff0b7,
+      emissiveIntensity: 1.0,
+      transparent: true,
+      opacity: 0.45,
+      metalness: 0.3,
+      roughness: 0.2
+    });
+    const inner = new THREE.Mesh(new THREE.SphereGeometry(0.8, 16, 16), innerMat);
+    inner.scale.set(1.3, 0.7, 1.1);
+    root.add(inner);
+
+    // Outer neural-network body
+    const bodyMat = new THREE.MeshStandardMaterial({
+      color: 0x00e5ff,
+      emissive: 0x4ff0b7,
+      emissiveIntensity: 1.2,
+      transparent: true,
+      opacity: 0.55,
+      metalness: 0.1,
+      roughness: 0.4
+    });
+    const body = new THREE.Mesh(new THREE.IcosahedronGeometry(1.0, 3), bodyMat);
+    root.add(body);
+
+    // Wireframe energy shells
+    function shell(r, color, opacity, segments = 24) {
+      return new THREE.Mesh(
+        new THREE.SphereGeometry(r, segments, segments),
+        new THREE.MeshBasicMaterial({ color, transparent: true, opacity, wireframe: true })
+      );
+    }
+    const shell1 = shell(1.4, 0x00e5ff, 0.18, 20);
+    const shell2 = shell(1.8, 0x4ff0b7, 0.10, 24);
+    const shell3 = shell(2.2, 0x00e5ff, 0.05, 32);
+    root.add(shell1, shell2, shell3);
+
+    // Orbital rings — multiple torus rings at different orientations
+    function ring(radius, tube, color, opacity, eulerXYZ, scaleXYZ = [1, 1, 1]) {
+      const m = new THREE.Mesh(
+        new THREE.TorusGeometry(radius, tube, 16, 100),
+        new THREE.MeshBasicMaterial({ color, transparent: true, opacity })
+      );
+      m.rotation.set(...eulerXYZ);
+      m.scale.set(...scaleXYZ);
+      return m;
+    }
+    const r1 = ring(2.8, 0.025, 0x00e5ff, 0.9,  [Math.PI / 2, 0, 0]);
+    const r2 = ring(3.2, 0.030, 0xbf5af2, 0.7,  [Math.PI / 4, Math.PI / 3, 0], [1, 0.8, 1]);
+    const r3 = ring(3.6, 0.025, 0x4ff0b7, 0.6,  [0, Math.PI / 6, Math.PI / 4], [1.2, 0.6, 1.2]);
+    const r4 = ring(4.0, 0.020, 0x00f5d4, 0.5,  [Math.PI / 3, -Math.PI / 4, Math.PI / 6], [0.9, 1.1, 0.9]);
+    const r5 = ring(1.8, 0.012, 0xff6b9d, 0.35, [Math.PI / 6, Math.PI / 2, 0]);
+    const r6 = ring(2.2, 0.010, 0xffd700, 0.25, [-Math.PI / 4, 0, Math.PI / 3]);
+    root.add(r1, r2, r3, r4, r5, r6);
+
+    // Neural connection nodes (12 small bright spheres)
+    const nodeGroup = new THREE.Group();
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * Math.PI * 2;
+      const radius = 0.6 + Math.sin(i) * 0.2;
+      const m = new THREE.Mesh(
+        new THREE.SphereGeometry(0.06, 8, 8),
+        new THREE.MeshStandardMaterial({
+          color: 0x4ff0b7, emissive: 0x4ff0b7, emissiveIntensity: 3
+        })
+      );
+      m.position.set(Math.cos(angle) * radius, Math.sin(angle * 1.3) * radius * 0.5, Math.sin(angle) * radius);
+      nodeGroup.add(m);
+    }
+    root.add(nodeGroup);
+
+    // Particle stream orbiting the core
+    const particleCount = 60;
+    const particleGroup = new THREE.Group();
+    const particles = [];
+    for (let i = 0; i < particleCount; i++) {
+      const m = new THREE.Mesh(
+        new THREE.SphereGeometry(0.025, 6, 6),
+        new THREE.MeshBasicMaterial({ color: 0x4ff0b7 })
+      );
+      particles.push({
+        mesh: m,
+        angle: (i / particleCount) * Math.PI * 2,
+        radius: 2 + Math.sin(i * 0.5) * 0.5,
+        height: Math.sin(i * 0.3) * 0.8,
+        speed: 0.5 + Math.random() * 0.5
+      });
+      particleGroup.add(m);
+    }
+    root.add(particleGroup);
+
+    function resize() {
+      const w = canvas.clientWidth, h = canvas.clientHeight;
+      if (canvas.width !== w * renderer.getPixelRatio() || canvas.height !== h * renderer.getPixelRatio()) {
+        renderer.setSize(w, h, false);
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+      }
+    }
+
+    const COLORS = {
+      idle:      { primary: 0x00e5ff, secondary: 0x4ff0b7 },
+      listening: { primary: 0x39ff14, secondary: 0x00f5d4 },
+      thinking:  { primary: 0xbf5af2, secondary: 0xff6b9d },
+      speaking:  { primary: 0x00e5ff, secondary: 0x00f5d4 }
+    };
+
+    function currentStateName() {
+      const cl = document.body.classList;
+      if (cl.contains('state-listening')) return 'listening';
+      if (cl.contains('state-thinking'))  return 'thinking';
+      if (cl.contains('state-speaking'))  return 'speaking';
+      return 'idle';
+    }
+
+    const t0 = performance.now();
+    function frame() {
+      resize();
+      const t = (performance.now() - t0) / 1000;
+      const v = Math.max(0, Math.min(1, window.__orbVoiceLevel || 0));
+      const state = currentStateName();
+      const mul = state === 'listening' ? 2 :
+                  state === 'thinking'  ? 1.5 :
+                  state === 'speaking'  ? (1 + v * 1.5) : 1;
+
+      r1.rotation.x = t * 0.4 * mul; r1.rotation.z = t * 0.2 * mul;
+      r2.rotation.y = t * 0.5 * mul; r2.rotation.z = -t * 0.3 * mul;
+      r3.rotation.x = -t * 0.3 * mul; r3.rotation.y = t * 0.4 * mul;
+      r4.rotation.z = t * 0.6 * mul; r4.rotation.x = t * 0.2 * mul;
+      r5.rotation.y = t * 0.25 * mul;
+      r6.rotation.z = t * 0.18 * mul;
+
+      shell1.scale.setScalar(1 + Math.sin(t * 1.5) * 0.05 + v * 0.18);
+      shell1.rotation.y = t * 0.1;
+      shell2.scale.setScalar(1 + Math.sin(t * 2.2 + Math.PI / 3) * 0.08 + v * 0.22);
+      shell2.rotation.x = t * 0.15;
+      shell3.scale.setScalar(1 + Math.sin(t * 0.8 + (Math.PI * 2) / 3) * 0.06 + v * 0.16);
+      shell3.rotation.z = t * 0.08;
+
+      const corePulse = 1 + Math.sin(t * 2) * 0.1 + v * 0.5;
+      body.scale.setScalar(corePulse);
+      body.rotation.y = t * 0.1 * mul;
+      inner.scale.set(1.3 * corePulse, 0.7 * corePulse, 1.1 * corePulse);
+      inner.rotation.y = -t * 0.15;
+      core.scale.setScalar(1 + v * 0.45);
+      coreMat.emissiveIntensity = 2.5 + v * 3;
+
+      for (const p of particles) {
+        const ot = t * p.speed;
+        p.mesh.position.set(
+          Math.cos(p.angle + ot) * p.radius,
+          Math.sin(ot * 2) * p.height,
+          Math.sin(p.angle + ot) * p.radius
+        );
+      }
+
+      // Recolor lights + core to match the live state
+      const c = COLORS[state] || COLORS.idle;
+      l1.color.setHex(c.primary);
+      l2.color.setHex(c.secondary);
+      coreMat.emissive.setHex(c.primary);
+      bodyMat.emissive.setHex(c.secondary);
+
+      root.position.y = Math.sin(t * 0.6) * 0.1;
+      root.rotation.y = t * 0.05;
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(frame);
+    }
+    frame();
   </script>
 </body>
 </html>
