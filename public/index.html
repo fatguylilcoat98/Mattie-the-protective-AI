@@ -1,12 +1,767 @@
-<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Splendor Oracle Interface</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><style>body {
-      margin: 0;
-      padding: 0;
+<!--
+  Splendor Oracle Interface
+  3-column responsive grid: PROVENANCE STREAM · Neural Orb · COGNITIVE PULSE
+  All panels wired to live backend endpoints:
+    /api/oracle/memories/recent  → provenance stream
+    /api/oracle/events/recent    → cognitive pulse
+    /api/enhanced/chat           → conversation
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Splendor Oracle Interface</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; width: 100%; overflow: hidden; }
+    body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #000000;
+      background: radial-gradient(ellipse at center, #0a1428 0%, #040810 60%, #02040a 100%);
       color: #ffffff;
-      overflow: hidden;
     }
-    #root {
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(0, 229, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 229, 255, 0.04) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .oracle-main {
+      display: grid;
+      grid-template-columns: 22% 1fr 22%;
+      grid-template-rows: 64px 1fr auto;
+      grid-template-areas:
+        "header header header"
+        "provenance canvas cognitive"
+        "console console console";
+      height: 100vh; height: 100dvh;
       width: 100vw;
-      height: 100vh;
-    }</style><script defer="defer" src="/bundle.js"></script></head><body><div id="root"></div></body></html>
+      position: relative; z-index: 1;
+    }
+
+    /* Header */
+    .claspion-governance {
+      grid-area: header;
+      background: linear-gradient(180deg, rgba(10, 18, 32, 0.95), rgba(10, 18, 32, 0.7));
+      border-bottom: 1px solid rgba(0, 229, 255, 0.3);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      display: flex; align-items: center; justify-content: center;
+      padding: 0 12px; z-index: 1000;
+    }
+    .governance-content { text-align: center; }
+    .governance-title {
+      font-size: 14px; font-weight: 700;
+      color: #00e5ff; letter-spacing: 2.5px;
+      margin-bottom: 3px;
+      text-shadow: 0 0 10px rgba(0, 229, 255, 0.6);
+    }
+    .governance-status { font-size: 10px; color: #b0c4de; letter-spacing: 0.8px; }
+    .active-rule { color: #39ff14; font-weight: 600; text-shadow: 0 0 6px rgba(57, 255, 20, 0.6); }
+
+    /* Side panels */
+    .provenance-panel { grid-area: provenance; }
+    .pulse-panel { grid-area: cognitive; }
+
+    .provenance-panel, .pulse-panel {
+      backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+      overflow: hidden;
+      display: flex; flex-direction: column;
+      position: relative;
+    }
+    .provenance-panel {
+      background: rgba(15, 22, 36, 0.75);
+      border-right: 1px solid rgba(0, 229, 255, 0.2);
+    }
+    .pulse-panel {
+      background: rgba(20, 15, 32, 0.75);
+      border-left: 1px solid rgba(191, 90, 242, 0.2);
+    }
+    .panel-header {
+      padding: 14px 12px 10px 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      flex-shrink: 0;
+    }
+    .panel-title {
+      font-size: 12px; font-weight: 700;
+      letter-spacing: 1.4px; text-transform: uppercase;
+      margin-bottom: 3px;
+    }
+    .panel-subtitle {
+      font-size: 9px; color: #708090;
+      letter-spacing: 0.6px; text-transform: uppercase;
+    }
+    .provenance-panel .panel-title { color: #00e5ff; text-shadow: 0 0 6px rgba(0, 229, 255, 0.4); }
+    .pulse-panel .panel-title { color: #bf5af2; text-shadow: 0 0 6px rgba(191, 90, 242, 0.4); }
+
+    .panel-body {
+      padding: 12px;
+      flex: 1; overflow-y: auto;
+    }
+
+    .memory-card {
+      background: linear-gradient(135deg, rgba(15, 22, 32, 0.9), rgba(25, 32, 42, 0.8));
+      border: 1px solid rgba(0, 229, 255, 0.25);
+      border-radius: 8px;
+      padding: 10px 11px;
+      margin-bottom: 10px;
+      font-size: 11px; line-height: 1.4;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
+    }
+    .memory-header {
+      display: flex; justify-content: space-between;
+      margin-bottom: 6px;
+      font-size: 10px; color: #00e5ff; font-weight: 600;
+    }
+    .memory-header .ref { color: #708090; font-weight: 400; font-size: 9px; }
+    .memory-content {
+      color: #d8e0ec;
+      margin-bottom: 6px;
+      font-size: 10.5px;
+      overflow-wrap: break-word; word-break: break-word;
+    }
+    .memory-meta { font-size: 9px; color: #708090; line-height: 1.45; }
+    .warning {
+      background: rgba(255, 152, 0, 0.12);
+      border-left: 3px solid #ff9800;
+      padding: 5px 7px;
+      margin-top: 6px;
+      font-size: 9px; color: #ffa726;
+      border-radius: 0 4px 4px 0; line-height: 1.3;
+    }
+    .empty-state {
+      color: #708090; font-size: 11px;
+      font-style: italic; padding: 14px 8px;
+      text-align: center;
+    }
+
+    .pulse-item {
+      background: rgba(15, 20, 25, 0.6);
+      border-left: 2px solid #bf5af2;
+      padding: 6px 8px;
+      margin-bottom: 5px;
+      font-size: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      color: #b0c4de;
+      border-radius: 0 4px 4px 0;
+      line-height: 1.3;
+      overflow-wrap: break-word; word-break: break-word;
+    }
+    .pulse-item.active {
+      border-left-color: #39ff14;
+      background: rgba(57, 255, 20, 0.06);
+      color: #b8ffb0;
+    }
+
+    /* Neural orb */
+    .neural-center {
+      grid-area: canvas;
+      display: flex; align-items: center; justify-content: center;
+      background: radial-gradient(circle, rgba(0, 229, 255, 0.07), transparent 65%);
+      overflow: hidden;
+      position: relative;
+      perspective: 800px;
+    }
+    .orb-container {
+      position: relative;
+      width: min(380px, 78vmin);
+      height: min(380px, 78vmin);
+      display: flex; align-items: center; justify-content: center;
+      transform-style: preserve-3d;
+    }
+    .neural-orb {
+      width: 38%; height: 38%;
+      border-radius: 50%;
+      background: radial-gradient(circle at 32% 30%,
+        rgba(200, 250, 255, 1) 0%,
+        rgba(0, 229, 255, 0.95) 22%,
+        rgba(0, 180, 220, 0.85) 50%,
+        rgba(0, 80, 130, 0.6) 100%);
+      box-shadow:
+        0 0 35px rgba(0, 229, 255, 0.9),
+        0 0 75px rgba(0, 200, 220, 0.55),
+        0 0 140px rgba(0, 245, 212, 0.35),
+        inset -8px -10px 22px rgba(0, 60, 90, 0.7),
+        inset 8px 8px 22px rgba(200, 250, 255, 0.7);
+      animation: orbPulse 3s ease-in-out infinite;
+      z-index: 10;
+    }
+    .orbit-ring {
+      position: absolute;
+      border-radius: 50%;
+      border: 1.5px solid rgba(0, 229, 255, 0.55);
+      box-shadow: 0 0 10px rgba(0, 229, 255, 0.35);
+    }
+    .orbit-ring.r1 {
+      width: 62%; height: 62%;
+      animation: r1 8s linear infinite;
+    }
+    .orbit-ring.r2 {
+      width: 76%; height: 76%;
+      border-color: rgba(191, 90, 242, 0.5);
+      box-shadow: 0 0 12px rgba(191, 90, 242, 0.4);
+      animation: r2 12s linear infinite;
+    }
+    .orbit-ring.r3 {
+      width: 90%; height: 90%;
+      border-color: rgba(0, 245, 212, 0.45);
+      box-shadow: 0 0 10px rgba(0, 245, 212, 0.3);
+      animation: r3 16s linear infinite;
+    }
+    .orbit-ring.r4 {
+      width: 100%; height: 100%;
+      border-color: rgba(255, 107, 157, 0.35);
+      box-shadow: 0 0 8px rgba(255, 107, 157, 0.25);
+      animation: r4 20s linear infinite;
+    }
+
+    @keyframes r1 { from { transform: rotateX(72deg) rotateZ(0deg); } to { transform: rotateX(72deg) rotateZ(360deg); } }
+    @keyframes r2 { from { transform: rotateY(72deg) rotateZ(0deg); } to { transform: rotateY(72deg) rotateZ(-360deg); } }
+    @keyframes r3 { from { transform: rotateX(60deg) rotateY(45deg) rotateZ(0deg); } to { transform: rotateX(60deg) rotateY(45deg) rotateZ(360deg); } }
+    @keyframes r4 { from { transform: rotateX(45deg) rotateY(-45deg) rotateZ(0deg); } to { transform: rotateX(45deg) rotateY(-45deg) rotateZ(-360deg); } }
+
+    @keyframes orbPulse {
+      0%, 100% {
+        box-shadow:
+          0 0 35px rgba(0, 229, 255, 0.9),
+          0 0 75px rgba(0, 200, 220, 0.55),
+          0 0 140px rgba(0, 245, 212, 0.35),
+          inset -8px -10px 22px rgba(0, 60, 90, 0.7),
+          inset 8px 8px 22px rgba(200, 250, 255, 0.7);
+      }
+      50% {
+        box-shadow:
+          0 0 50px rgba(0, 229, 255, 1),
+          0 0 110px rgba(0, 200, 220, 0.75),
+          0 0 180px rgba(0, 245, 212, 0.5),
+          inset -8px -10px 22px rgba(0, 60, 90, 0.7),
+          inset 8px 8px 22px rgba(220, 250, 255, 0.85);
+      }
+    }
+
+    /* State variants — driven by JS */
+    body.state-thinking .neural-orb { background: radial-gradient(circle at 32% 30%, rgba(255, 180, 250, 1) 0%, rgba(191, 90, 242, 0.95) 22%, rgba(120, 40, 200, 0.85) 60%, rgba(60, 20, 100, 0.6) 100%); animation-duration: 1.5s; }
+    body.state-listening .neural-orb { background: radial-gradient(circle at 32% 30%, rgba(180, 255, 200, 1) 0%, rgba(57, 255, 20, 0.95) 22%, rgba(0, 200, 100, 0.85) 60%, rgba(0, 100, 50, 0.6) 100%); animation-duration: 2s; }
+    body.state-pulse .neural-orb { animation-duration: 1.2s; }
+
+    /* Audio-reactive orb — when Splendor is speaking, JS drives
+       --voice-level (0..1) and the orb scales + glows to the audio */
+    .neural-orb {
+      --voice-level: 0;
+      transform: scale(calc(1 + var(--voice-level) * 0.35));
+      transition: transform 80ms linear;
+    }
+    body.state-speaking .neural-orb {
+      animation: none;
+      filter: drop-shadow(0 0 calc(30px + var(--voice-level) * 60px) rgba(0, 229, 255, calc(0.7 + var(--voice-level) * 0.3)));
+    }
+    body.state-speaking .orbit-ring {
+      filter: drop-shadow(0 0 calc(6px + var(--voice-level) * 14px) currentColor);
+    }
+    body.state-speaking .orbit-ring.r1 { animation-duration: calc(8s / (1 + var(--voice-level))); }
+    body.state-speaking .orbit-ring.r2 { animation-duration: calc(12s / (1 + var(--voice-level))); }
+
+    /* Conversation console */
+    .conversation-panel {
+      grid-area: console;
+      background: linear-gradient(180deg, transparent, rgba(15, 22, 36, 0.95) 40%);
+      border-top: 1px solid rgba(0, 229, 255, 0.25);
+      backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+      padding: 14px 22px 16px 22px;
+      display: flex; flex-direction: column; gap: 10px;
+      z-index: 100;
+    }
+    .response-bubble {
+      background: linear-gradient(135deg, rgba(30, 35, 50, 0.95), rgba(20, 25, 40, 0.9));
+      border: 1px solid rgba(0, 229, 255, 0.3);
+      border-radius: 14px;
+      padding: 12px 16px;
+      color: #ffffff;
+      font-size: 13px; line-height: 1.45;
+      max-width: 820px; width: 100%;
+      align-self: center;
+      max-height: 110px; overflow-y: auto;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35), 0 0 12px rgba(0, 229, 255, 0.08);
+    }
+    .response-bubble:empty::before {
+      content: 'Ready when you are.';
+      color: rgba(176, 196, 222, 0.5);
+    }
+
+    .input-bar {
+      display: flex; align-items: center;
+      background: rgba(15, 20, 30, 0.85);
+      border: 1px solid rgba(0, 229, 255, 0.4);
+      border-radius: 28px;
+      padding: 5px 5px 5px 18px;
+      gap: 6px;
+      max-width: 820px; width: 100%;
+      align-self: center;
+    }
+    .message-input {
+      flex: 1; min-width: 0;
+      background: transparent; border: none; outline: none;
+      color: #ffffff; font-size: 14px; padding: 9px 0;
+      font-family: inherit;
+    }
+    .message-input::placeholder { color: rgba(176, 196, 222, 0.5); }
+
+    .input-controls { display: flex; gap: 5px; flex-shrink: 0; }
+    .control-btn {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      border: 1px solid rgba(0, 229, 255, 0.45);
+      background: linear-gradient(135deg, rgba(35, 40, 55, 0.9), rgba(25, 30, 45, 0.8));
+      color: #b0c4de;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      display: flex; align-items: center; justify-content: center;
+      padding: 0; font-size: 14px;
+      flex-shrink: 0;
+    }
+    .control-btn:hover:not(:disabled) {
+      border-color: #00e5ff; color: #00e5ff;
+      box-shadow: 0 0 14px rgba(0, 229, 255, 0.4);
+      transform: translateY(-1px);
+    }
+    .control-btn.active {
+      background: linear-gradient(135deg, #00e5ff, #00f5d4);
+      color: #ffffff; border-color: #00e5ff;
+      box-shadow: 0 0 16px rgba(0, 229, 255, 0.65);
+    }
+    .send-btn {
+      background: linear-gradient(135deg, #00e5ff, #bf5af2);
+      color: #ffffff; border-color: #00e5ff;
+      box-shadow: 0 0 14px rgba(0, 229, 255, 0.5);
+    }
+    .send-btn:hover:not(:disabled) { box-shadow: 0 0 20px rgba(0, 229, 255, 0.75); }
+    .send-btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; transform: none; }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .oracle-main { grid-template-columns: 24% 1fr 24%; }
+    }
+    @media (max-width: 720px) {
+      .oracle-main { grid-template-columns: 30% 1fr 30%; grid-template-rows: 54px 1fr auto; }
+      .governance-title { font-size: 11px; letter-spacing: 1.2px; }
+      .governance-status { font-size: 8.5px; letter-spacing: 0.3px; }
+      .panel-header { padding: 10px 8px 7px 8px; }
+      .panel-title { font-size: 10.5px; letter-spacing: 1px; }
+      .panel-subtitle { font-size: 8px; }
+      .panel-body { padding: 8px 7px; }
+      .memory-card { padding: 7px 8px; margin-bottom: 7px; border-radius: 6px; font-size: 10px; }
+      .memory-header { font-size: 9px; margin-bottom: 4px; }
+      .memory-content { font-size: 9.5px; margin-bottom: 4px; }
+      .memory-meta { font-size: 8px; }
+      .warning { font-size: 8px; padding: 4px 5px; line-height: 1.25; }
+      .pulse-item { font-size: 9px; padding: 4px 6px; margin-bottom: 4px; }
+      .empty-state { font-size: 9.5px; padding: 10px 4px; }
+      .conversation-panel { padding: 10px 8px 12px 8px; gap: 8px; }
+      .response-bubble { font-size: 12px; padding: 9px 12px; max-height: 70px; border-radius: 12px; }
+      .input-bar { padding: 4px 4px 4px 12px; border-radius: 22px; }
+      .message-input { font-size: 12px; padding: 7px 0; }
+      .control-btn { width: 30px; height: 30px; font-size: 12px; }
+    }
+    @media (max-width: 380px) {
+      .oracle-main { grid-template-columns: 28% 1fr 28%; }
+      .control-btn { width: 28px; height: 28px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="oracle-main">
+    <header class="claspion-governance">
+      <div class="governance-content">
+        <div class="governance-title">CLASPION GOVERNANCE</div>
+        <div class="governance-status">
+          CURRENT BINDING DECISIONS: 1. TRUTH OVER COMFORT [RULE 001] <span class="active-rule">[ACTIVE]</span>
+        </div>
+      </div>
+    </header>
+
+    <aside class="provenance-panel">
+      <div class="panel-header">
+        <div class="panel-title">Provenance Stream</div>
+        <div class="panel-subtitle">Memory Verification &amp; Source Tracking</div>
+      </div>
+      <div class="panel-body" id="memoryList">
+        <div class="empty-state">Loading memories…</div>
+      </div>
+    </aside>
+
+    <main class="neural-center">
+      <div class="orb-container">
+        <div class="orbit-ring r1"></div>
+        <div class="orbit-ring r2"></div>
+        <div class="orbit-ring r3"></div>
+        <div class="orbit-ring r4"></div>
+        <div class="neural-orb" id="neuralOrb"></div>
+      </div>
+    </main>
+
+    <aside class="pulse-panel">
+      <div class="panel-header">
+        <div class="panel-title">Cognitive Pulse</div>
+        <div class="panel-subtitle">Live System Events</div>
+      </div>
+      <div class="panel-body" id="pulseList">
+        <div class="empty-state">Loading events…</div>
+      </div>
+    </aside>
+
+    <section class="conversation-panel">
+      <div class="response-bubble" id="responseBubble"></div>
+      <div class="input-bar">
+        <input type="text" class="message-input" id="messageInput" placeholder="Ask Splendor anything…" autocomplete="off">
+        <div class="input-controls">
+          <button class="control-btn send-btn" id="sendButton" title="Send" disabled>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 2 11 13"/>
+              <path d="M22 2 15 22 11 13 2 9 22 2z"/>
+            </svg>
+          </button>
+          <button class="control-btn" id="micButton" title="Voice input">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="2" width="6" height="12" rx="3"/>
+              <path d="M5 10a7 7 0 0 0 14 0"/>
+              <line x1="12" y1="17" x2="12" y2="22"/>
+            </svg>
+          </button>
+          <button class="control-btn" id="voiceButton" title="Splendor's voice (off)" aria-pressed="false">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const memoryList = document.getElementById('memoryList');
+    const pulseList = document.getElementById('pulseList');
+    const responseBubble = document.getElementById('responseBubble');
+    const input = document.getElementById('messageInput');
+    const sendButton = document.getElementById('sendButton');
+    const micButton = document.getElementById('micButton');
+    const voiceButton = document.getElementById('voiceButton');
+    const neuralOrb = document.getElementById('neuralOrb');
+
+    function setState(name) {
+      document.body.classList.remove('state-thinking', 'state-listening', 'state-pulse', 'state-speaking');
+      if (name) document.body.classList.add('state-' + name);
+    }
+
+    // ── Audio-reactive speech playback ────────────────────────────────────
+    // When voice is enabled, we POST the AI response to /api/voice/speak,
+    // get back base64-encoded audio, play it through a Web Audio graph,
+    // and read FFT data each frame to drive the orb's --voice-level CSS var.
+    let voiceEnabled = false;
+    let audioCtx = null;
+    let analyser = null;
+    let freqData = null;
+    let currentSource = null;
+    let rafId = null;
+
+    function getAudioContext() {
+      if (!audioCtx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AC();
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 256;
+        analyser.smoothingTimeConstant = 0.65;
+        freqData = new Uint8Array(analyser.frequencyBinCount);
+        analyser.connect(audioCtx.destination);
+      }
+      return audioCtx;
+    }
+
+    function stopAudio() {
+      if (currentSource) {
+        try { currentSource.stop(); } catch (e) {}
+        try { currentSource.disconnect(); } catch (e) {}
+        currentSource = null;
+      }
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+      neuralOrb.style.setProperty('--voice-level', 0);
+      if (document.body.classList.contains('state-speaking')) setState(null);
+    }
+
+    function tickOrbFromAudio() {
+      if (!analyser || !freqData) return;
+      analyser.getByteFrequencyData(freqData);
+      // Emphasise the lower-mid range where speech sits.
+      let sum = 0;
+      const start = 2;
+      const end = Math.min(freqData.length, 48);
+      for (let i = start; i < end; i++) sum += freqData[i];
+      const avg = sum / (end - start);          // 0..255
+      const level = Math.min(1, avg / 110);     // normalise to ~0..1
+      neuralOrb.style.setProperty('--voice-level', level.toFixed(3));
+      rafId = requestAnimationFrame(tickOrbFromAudio);
+    }
+
+    function base64ToBuffer(b64) {
+      const bin = atob(b64);
+      const len = bin.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) bytes[i] = bin.charCodeAt(i);
+      return bytes.buffer;
+    }
+
+    async function speakWithOpenAI(text) {
+      const res = await fetch('/api/voice/speak', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ text })
+      });
+      if (!res.ok) throw new Error('speak ' + res.status);
+      const data = await res.json();
+      if (!data.audio) {
+        // No OpenAI audio available — fall back to browser TTS so the
+        // user still hears something, but skip the audio-reactive path.
+        return { audio: null, fallback: true };
+      }
+      return { audio: data.audio, fallback: false };
+    }
+
+    async function playAudioReactive(b64) {
+      stopAudio();
+      const ctx = getAudioContext();
+      if (ctx.state === 'suspended') {
+        try { await ctx.resume(); } catch (e) {}
+      }
+      const buffer = await ctx.decodeAudioData(base64ToBuffer(b64));
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(analyser);
+      source.onended = () => {
+        if (currentSource === source) stopAudio();
+      };
+      currentSource = source;
+      setState('speaking');
+      source.start(0);
+      tickOrbFromAudio();
+    }
+
+    function browserSpeak(text) {
+      if (!('speechSynthesis' in window)) return;
+      try { speechSynthesis.cancel(); } catch (e) {}
+      const u = new SpeechSynthesisUtterance(text);
+      u.rate = 0.95; u.pitch = 1.0; u.volume = 1.0;
+      speechSynthesis.speak(u);
+    }
+
+    async function speakResponse(text) {
+      if (!voiceEnabled || !text) return;
+      try {
+        const { audio, fallback } = await speakWithOpenAI(text);
+        if (audio) {
+          await playAudioReactive(audio);
+        } else if (fallback) {
+          browserSpeak(text);
+        }
+      } catch (err) {
+        console.warn('voice playback failed', err);
+        browserSpeak(text);
+      }
+    }
+
+    voiceButton.addEventListener('click', () => {
+      voiceEnabled = !voiceEnabled;
+      voiceButton.classList.toggle('active', voiceEnabled);
+      voiceButton.setAttribute('aria-pressed', String(voiceEnabled));
+      voiceButton.title = "Splendor's voice (" + (voiceEnabled ? 'on' : 'off') + ')';
+      if (!voiceEnabled) {
+        try { speechSynthesis && speechSynthesis.cancel(); } catch (e) {}
+        stopAudio();
+      } else {
+        // Browsers require a user gesture before audio playback;
+        // unlock the context now so the response can play immediately.
+        try { getAudioContext().resume(); } catch (e) {}
+      }
+    });
+
+    function escapeHtml(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[c]));
+    }
+
+    function renderMemories(memories) {
+      if (!memories || memories.length === 0) {
+        memoryList.innerHTML = '<div class="empty-state">No verified memories yet.</div>';
+        return;
+      }
+      memoryList.innerHTML = memories.map(m => {
+        const date = (m.created_at || '').slice(0, 10);
+        const ref = m.citation || m.id || '';
+        const shortRef = ref && ref.length > 14 ? ref.slice(0, 12) + '…' : ref;
+        const type = m.source_type || m.memory_type || 'UNKNOWN';
+        const lowConf = m.confidence != null && m.confidence < 0.6;
+        return `
+          <div class="memory-card">
+            <div class="memory-header">
+              <span>Memory</span>
+              <span class="ref">${escapeHtml(shortRef)}</span>
+            </div>
+            ${m.content ? `<div class="memory-content">${escapeHtml(m.content)}</div>` : ''}
+            <div class="memory-meta">
+              ${date ? `Recorded: ${escapeHtml(date)}<br>` : ''}
+              Type: ${escapeHtml(type)}
+            </div>
+            ${lowConf ? `<div class="warning">⚠ Low confidence (${Math.round(m.confidence * 100)}%) — inferred memory</div>` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderEvents(events) {
+      if (!events || events.length === 0) {
+        pulseList.innerHTML = '<div class="empty-state">No live events.</div>';
+        return;
+      }
+      pulseList.innerHTML = events.map((e, i) => {
+        let text;
+        if (typeof e === 'string') text = e;
+        else {
+          const type = e.type || e.event_type || 'event';
+          const desc = e.description || e.message || '';
+          text = desc ? `${type}: ${desc}` : `${type}...`;
+        }
+        const active = i < 2 ? 'active' : '';
+        return `<div class="pulse-item ${active}">${escapeHtml(text)}</div>`;
+      }).join('');
+    }
+
+    async function fetchMemories() {
+      try {
+        const res = await fetch('/api/oracle/memories/recent?limit=12', { credentials: 'same-origin' });
+        if (!res.ok) throw new Error('not ok');
+        const data = await res.json();
+        if (data && data.success && Array.isArray(data.memories)) {
+          renderMemories(data.memories);
+        } else {
+          renderMemories([]);
+        }
+      } catch (e) {
+        renderMemories([]);
+      }
+    }
+
+    let lastEventCount = 0;
+    async function fetchEvents() {
+      try {
+        const res = await fetch('/api/oracle/events/recent?limit=40', { credentials: 'same-origin' });
+        if (!res.ok) throw new Error('not ok');
+        const data = await res.json();
+        const events = data && Array.isArray(data.events) ? data.events : [];
+        renderEvents(events);
+        if (events.length > lastEventCount) {
+          setState('pulse');
+          setTimeout(() => setState(null), 700);
+        }
+        lastEventCount = events.length;
+      } catch (e) {
+        renderEvents([]);
+      }
+    }
+
+    async function sendMessage(text) {
+      if (!text || !text.trim()) return;
+      stopAudio();
+      responseBubble.textContent = 'Thinking…';
+      setState('thinking');
+      try {
+        const res = await fetch('/api/enhanced/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ message: text, include_memory: true, include_consciousness: true })
+        });
+        if (!res.ok) throw new Error('chat error');
+        const data = await res.json();
+        const replyText = data.response || data.message || '(no response)';
+        responseBubble.textContent = replyText;
+        setState(null);
+        // Refresh real data after a successful chat turn
+        fetchEvents();
+        fetchMemories();
+        // If the user has voice enabled, speak the reply with the
+        // audio-reactive orb. Otherwise the orb returns to idle.
+        await speakResponse(replyText);
+      } catch (err) {
+        responseBubble.textContent = 'I encountered an error processing your message. Please try again.';
+        setState(null);
+      }
+    }
+
+    function submit() {
+      const value = input.value;
+      input.value = '';
+      updateSendDisabled();
+      sendMessage(value);
+    }
+
+    function updateSendDisabled() {
+      sendButton.disabled = !input.value.trim();
+    }
+
+    input.addEventListener('input', updateSendDisabled);
+    input.addEventListener('keypress', e => { if (e.key === 'Enter') submit(); });
+    sendButton.addEventListener('click', submit);
+
+    // Mic — Web Speech API where available
+    let recognition = null;
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SR) {
+      recognition = new SR();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+      recognition.onresult = e => {
+        const transcript = e.results[0][0].transcript;
+        input.value = transcript;
+        updateSendDisabled();
+        submit();
+      };
+      recognition.onend = () => { micButton.classList.remove('active'); setState(null); };
+      recognition.onerror = () => { micButton.classList.remove('active'); setState(null); };
+    }
+    micButton.addEventListener('click', () => {
+      if (!recognition) {
+        alert('Voice recognition not supported in this browser');
+        return;
+      }
+      if (micButton.classList.contains('active')) {
+        recognition.stop();
+        micButton.classList.remove('active');
+        setState(null);
+      } else {
+        recognition.start();
+        micButton.classList.add('active');
+        setState('listening');
+      }
+    });
+
+    // Initial + polling
+    fetchMemories();
+    fetchEvents();
+    setInterval(fetchEvents, 5000);
+    setInterval(fetchMemories, 30000);
+  </script>
+</body>
+</html>
