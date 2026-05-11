@@ -5,27 +5,68 @@ import './OracleInterface.css'
 
 const OracleInterface = ({ onSystemStateChange }) => {
   const [message, setMessage] = useState('')
-  const [response, setResponse] = useState("Christopher, I remember the details of our memory rebuild plan because you told me on May 9, 2026, during our conversation about data integrity. Is the new architecture meeting your expectations for transparency and structured context?")
+  const [response, setResponse] = useState('')
   const [isRecording, setIsRecording] = useState(false)
   const [voiceEnabled, setVoiceEnabled] = useState(false)
   const [cameraActive, setCameraActive] = useState(false)
-  const [pulseEvents, setPulseEvents] = useState([
-    'micro_reflection in progress...',
-    'pinecone_index_sync active...',
-    'conflict_check passed...',
-    'resolution scope: broad',
-    'thought_cycle_tree:',
-    '→ cycle_id 3',
-    '→ parent_id 2',
-    '→ parent_id 3'
-  ])
+  const [pulseEvents, setPulseEvents] = useState([])
+  const [memories, setMemories] = useState([])
 
   const fileInputRef = useRef(null)
   const cameraVideoRef = useRef(null)
   const recognitionRef = useRef(null)
   const mediaStreamRef = useRef(null)
 
+  // Fetch real memory items for Provenance Stream
+  const fetchMemories = async () => {
+    try {
+      const res = await fetch('/api/oracle/memories/recent?limit=12', { credentials: 'same-origin' })
+      if (!res.ok) return
+      const data = await res.json()
+      if (data.success && Array.isArray(data.memories)) {
+        setMemories(data.memories)
+      }
+    } catch (e) {
+      // Endpoint may not be configured; leave memories empty rather than fake data
+    }
+  }
+
+  // Fetch real cognitive events for Cognitive Pulse
+  const fetchEvents = async () => {
+    try {
+      const res = await fetch('/api/oracle/events/recent?limit=40', { credentials: 'same-origin' })
+      if (!res.ok) return
+      const data = await res.json()
+      if (data.success && Array.isArray(data.events)) {
+        const formatted = data.events.map(ev => {
+          if (typeof ev === 'string') return ev
+          const ts = ev.type || ev.event_type || 'event'
+          const desc = ev.description || ev.message || ''
+          return desc ? `${ts}: ${desc}` : `${ts}...`
+        })
+        setPulseEvents(prev => {
+          // If new event count is greater, pulse the orb briefly
+          if (formatted.length > prev.length && onSystemStateChange) {
+            onSystemStateChange('memory_retrieval')
+            setTimeout(() => onSystemStateChange('idle'), 800)
+          }
+          return formatted
+        })
+      }
+    } catch (e) {
+      // Leave empty rather than show fake events
+    }
+  }
+
   useEffect(() => {
+    // Initial real-data fetch
+    fetchMemories()
+    fetchEvents()
+
+    // Poll for new events every 5s, memories every 30s
+    const eventsTimer = setInterval(fetchEvents, 5000)
+    const memoriesTimer = setInterval(fetchMemories, 30000)
+
     // Initialize voice recognition
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
@@ -51,6 +92,8 @@ const OracleInterface = ({ onSystemStateChange }) => {
     }
 
     return () => {
+      clearInterval(eventsTimer)
+      clearInterval(memoriesTimer)
       if (mediaStreamRef.current) {
         mediaStreamRef.current.getTracks().forEach(track => track.stop())
       }
@@ -231,18 +274,21 @@ const OracleInterface = ({ onSystemStateChange }) => {
           <div className="panel-subtitle">Memory Verification & Source Tracking</div>
         </div>
         <div className="memory-cards">
-          <MemoryCard
-            date="2026-05-09"
-            type="USER_STATED"
-            reference="image_8.png"
-            warning="Caution on inferred glow for an inferred memory is common"
-          />
-          <MemoryCard
-            date="2026-05-09"
-            type="VERIFIED_FACT"
-            reference="image_9.png"
-            warning="Caution glow for caution warnify an inferred memory context"
-          />
+          {memories.length === 0 && (
+            <div className="empty-state">No verified memories yet.</div>
+          )}
+          {memories.map((mem) => (
+            <MemoryCard
+              key={mem.id}
+              date={(mem.created_at || '').slice(0, 10)}
+              type={mem.source_type || mem.memory_type || 'UNKNOWN'}
+              reference={mem.citation || mem.id}
+              warning={mem.confidence != null && mem.confidence < 0.6
+                ? `Low confidence (${Math.round(mem.confidence * 100)}%) — inferred memory`
+                : null}
+              content={mem.content}
+            />
+          ))}
         </div>
       </div>
 
@@ -252,7 +298,11 @@ const OracleInterface = ({ onSystemStateChange }) => {
           <div className="panel-title">COGNITIVE PULSE</div>
           <div className="panel-subtitle">Live System Events</div>
         </div>
-        <CognitivePulse events={pulseEvents} />
+        {pulseEvents.length === 0 ? (
+          <div className="empty-state" style={{padding: '14px'}}>No live events.</div>
+        ) : (
+          <CognitivePulse events={pulseEvents} />
+        )}
       </div>
 
       {/* Conversation Interface - Bottom */}
