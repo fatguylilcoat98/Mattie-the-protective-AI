@@ -273,6 +273,18 @@ const OracleInterface = ({ onSystemStateChange }) => {
 
           <div className="control-buttons">
             <button
+              className="control-btn send-btn"
+              onClick={handleSendMessage}
+              title="Send message"
+              disabled={!message.trim()}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 2 11 13"/>
+                <path d="M22 2 15 22 11 13 2 9 22 2z"/>
+              </svg>
+            </button>
+
+            <button
               className={`control-btn mic-btn ${isRecording ? 'active' : ''}`}
               onClick={toggleVoiceRecognition}
               title="Voice input"

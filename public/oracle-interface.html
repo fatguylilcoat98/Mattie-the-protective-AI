@@ -382,6 +382,16 @@
       box-shadow: 0 0 14px rgba(0, 229, 255, 0.5);
     }
 
+    .send-btn {
+      background: linear-gradient(135deg, #00e5ff, #bf5af2);
+      color: #ffffff;
+      border-color: #00e5ff;
+      box-shadow: 0 0 14px rgba(0, 229, 255, 0.55);
+    }
+    .send-btn:hover {
+      box-shadow: 0 0 18px rgba(0, 229, 255, 0.8);
+    }
+
     /* Animations */
     @keyframes orbPulse {
       0%, 100% {
@@ -632,6 +642,12 @@
       <div class="input-bar">
         <input type="text" class="message-input" placeholder="" id="messageInput" autocomplete="off">
         <div class="input-controls">
+          <button class="control-btn send-btn" id="sendButton" title="Send" aria-label="Send message">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 2 11 13"/>
+              <path d="M22 2 15 22 11 13 2 9 22 2z"/>
+            </svg>
+          </button>
           <button class="control-btn active" id="micButton" title="Voice">🎤</button>
           <button class="control-btn" id="attachButton" title="Attach">📎</button>
           <button class="control-btn" id="cameraButton" title="Camera">📷</button>
@@ -645,6 +661,7 @@
     const input = document.getElementById('messageInput');
     const responseBubble = document.getElementById('responseBubble');
     const micButton = document.getElementById('micButton');
+    const sendButton = document.getElementById('sendButton');
 
     async function sendMessage(text) {
       if (!text || !text.trim()) return;
@@ -664,13 +681,17 @@
       }
     }
 
+    function submit() {
+      const value = input.value;
+      input.value = '';
+      sendMessage(value);
+    }
+
     input.addEventListener('keypress', function (e) {
-      if (e.key === 'Enter') {
-        const value = this.value;
-        this.value = '';
-        sendMessage(value);
-      }
+      if (e.key === 'Enter') submit();
     });
+
+    sendButton.addEventListener('click', submit);
 
     micButton.addEventListener('click', function () {
       this.classList.toggle('active');
