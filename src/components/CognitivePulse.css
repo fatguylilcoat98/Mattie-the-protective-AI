@@ -39,3 +39,16 @@
     transform: translateX(2px);
   }
 }
+
+@media (max-width: 720px) {
+  .pulse-events {
+    padding: 10px;
+    max-height: none;
+  }
+  .pulse-event {
+    font-size: 9px;
+    padding: 6px 8px;
+    margin-bottom: 5px;
+    line-height: 1.25;
+  }
+}
