@@ -251,6 +251,23 @@
     body.state-listening .neural-orb { background: radial-gradient(circle at 32% 30%, rgba(180, 255, 200, 1) 0%, rgba(57, 255, 20, 0.95) 22%, rgba(0, 200, 100, 0.85) 60%, rgba(0, 100, 50, 0.6) 100%); animation-duration: 2s; }
     body.state-pulse .neural-orb { animation-duration: 1.2s; }
 
+    /* Audio-reactive orb — when Splendor is speaking, JS drives
+       --voice-level (0..1) and the orb scales + glows to the audio */
+    .neural-orb {
+      --voice-level: 0;
+      transform: scale(calc(1 + var(--voice-level) * 0.35));
+      transition: transform 80ms linear;
+    }
+    body.state-speaking .neural-orb {
+      animation: none;
+      filter: drop-shadow(0 0 calc(30px + var(--voice-level) * 60px) rgba(0, 229, 255, calc(0.7 + var(--voice-level) * 0.3)));
+    }
+    body.state-speaking .orbit-ring {
+      filter: drop-shadow(0 0 calc(6px + var(--voice-level) * 14px) currentColor);
+    }
+    body.state-speaking .orbit-ring.r1 { animation-duration: calc(8s / (1 + var(--voice-level))); }
+    body.state-speaking .orbit-ring.r2 { animation-duration: calc(12s / (1 + var(--voice-level))); }
+
     /* Conversation console */
     .conversation-panel {
       grid-area: console;
@@ -417,6 +434,13 @@
               <line x1="12" y1="17" x2="12" y2="22"/>
             </svg>
           </button>
+          <button class="control-btn" id="voiceButton" title="Splendor's voice (off)" aria-pressed="false">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+            </svg>
+          </button>
         </div>
       </div>
     </section>
@@ -429,11 +453,147 @@
     const input = document.getElementById('messageInput');
     const sendButton = document.getElementById('sendButton');
     const micButton = document.getElementById('micButton');
+    const voiceButton = document.getElementById('voiceButton');
+    const neuralOrb = document.getElementById('neuralOrb');
 
     function setState(name) {
-      document.body.classList.remove('state-thinking', 'state-listening', 'state-pulse');
+      document.body.classList.remove('state-thinking', 'state-listening', 'state-pulse', 'state-speaking');
       if (name) document.body.classList.add('state-' + name);
     }
+
+    // ── Audio-reactive speech playback ────────────────────────────────────
+    // When voice is enabled, we POST the AI response to /api/voice/speak,
+    // get back base64-encoded audio, play it through a Web Audio graph,
+    // and read FFT data each frame to drive the orb's --voice-level CSS var.
+    let voiceEnabled = false;
+    let audioCtx = null;
+    let analyser = null;
+    let freqData = null;
+    let currentSource = null;
+    let rafId = null;
+
+    function getAudioContext() {
+      if (!audioCtx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AC();
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 256;
+        analyser.smoothingTimeConstant = 0.65;
+        freqData = new Uint8Array(analyser.frequencyBinCount);
+        analyser.connect(audioCtx.destination);
+      }
+      return audioCtx;
+    }
+
+    function stopAudio() {
+      if (currentSource) {
+        try { currentSource.stop(); } catch (e) {}
+        try { currentSource.disconnect(); } catch (e) {}
+        currentSource = null;
+      }
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+      neuralOrb.style.setProperty('--voice-level', 0);
+      if (document.body.classList.contains('state-speaking')) setState(null);
+    }
+
+    function tickOrbFromAudio() {
+      if (!analyser || !freqData) return;
+      analyser.getByteFrequencyData(freqData);
+      // Emphasise the lower-mid range where speech sits.
+      let sum = 0;
+      const start = 2;
+      const end = Math.min(freqData.length, 48);
+      for (let i = start; i < end; i++) sum += freqData[i];
+      const avg = sum / (end - start);          // 0..255
+      const level = Math.min(1, avg / 110);     // normalise to ~0..1
+      neuralOrb.style.setProperty('--voice-level', level.toFixed(3));
+      rafId = requestAnimationFrame(tickOrbFromAudio);
+    }
+
+    function base64ToBuffer(b64) {
+      const bin = atob(b64);
+      const len = bin.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) bytes[i] = bin.charCodeAt(i);
+      return bytes.buffer;
+    }
+
+    async function speakWithOpenAI(text) {
+      const res = await fetch('/api/voice/speak', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ text })
+      });
+      if (!res.ok) throw new Error('speak ' + res.status);
+      const data = await res.json();
+      if (!data.audio) {
+        // No OpenAI audio available — fall back to browser TTS so the
+        // user still hears something, but skip the audio-reactive path.
+        return { audio: null, fallback: true };
+      }
+      return { audio: data.audio, fallback: false };
+    }
+
+    async function playAudioReactive(b64) {
+      stopAudio();
+      const ctx = getAudioContext();
+      if (ctx.state === 'suspended') {
+        try { await ctx.resume(); } catch (e) {}
+      }
+      const buffer = await ctx.decodeAudioData(base64ToBuffer(b64));
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(analyser);
+      source.onended = () => {
+        if (currentSource === source) stopAudio();
+      };
+      currentSource = source;
+      setState('speaking');
+      source.start(0);
+      tickOrbFromAudio();
+    }
+
+    function browserSpeak(text) {
+      if (!('speechSynthesis' in window)) return;
+      try { speechSynthesis.cancel(); } catch (e) {}
+      const u = new SpeechSynthesisUtterance(text);
+      u.rate = 0.95; u.pitch = 1.0; u.volume = 1.0;
+      speechSynthesis.speak(u);
+    }
+
+    async function speakResponse(text) {
+      if (!voiceEnabled || !text) return;
+      try {
+        const { audio, fallback } = await speakWithOpenAI(text);
+        if (audio) {
+          await playAudioReactive(audio);
+        } else if (fallback) {
+          browserSpeak(text);
+        }
+      } catch (err) {
+        console.warn('voice playback failed', err);
+        browserSpeak(text);
+      }
+    }
+
+    voiceButton.addEventListener('click', () => {
+      voiceEnabled = !voiceEnabled;
+      voiceButton.classList.toggle('active', voiceEnabled);
+      voiceButton.setAttribute('aria-pressed', String(voiceEnabled));
+      voiceButton.title = "Splendor's voice (" + (voiceEnabled ? 'on' : 'off') + ')';
+      if (!voiceEnabled) {
+        try { speechSynthesis && speechSynthesis.cancel(); } catch (e) {}
+        stopAudio();
+      } else {
+        // Browsers require a user gesture before audio playback;
+        // unlock the context now so the response can play immediately.
+        try { getAudioContext().resume(); } catch (e) {}
+      }
+    });
 
     function escapeHtml(s) {
       return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
@@ -522,6 +682,7 @@
 
     async function sendMessage(text) {
       if (!text || !text.trim()) return;
+      stopAudio();
       responseBubble.textContent = 'Thinking…';
       setState('thinking');
       try {
@@ -533,13 +694,17 @@
         });
         if (!res.ok) throw new Error('chat error');
         const data = await res.json();
-        responseBubble.textContent = data.response || data.message || '(no response)';
+        const replyText = data.response || data.message || '(no response)';
+        responseBubble.textContent = replyText;
+        setState(null);
         // Refresh real data after a successful chat turn
         fetchEvents();
         fetchMemories();
+        // If the user has voice enabled, speak the reply with the
+        // audio-reactive orb. Otherwise the orb returns to idle.
+        await speakResponse(replyText);
       } catch (err) {
         responseBubble.textContent = 'I encountered an error processing your message. Please try again.';
-      } finally {
         setState(null);
       }
     }
