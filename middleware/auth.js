@@ -77,43 +77,28 @@ async function requireAuth(req, res, next) {
 
 /**
  * Create or get user (for development)
+ * DEPRECATED: Use requireAuth instead for production security
  */
 async function getOrCreateUser(req, res, next) {
   try {
     let userId = req.userId || req.body.userId || req.query.userId;
 
     if (!userId) {
-      // Create a default user for development
-      const { data: existingUsers } = await supabase
-        .from('auth.users')
-        .select('id')
-        .limit(1);
-
-      if (existingUsers && existingUsers.length > 0) {
-        userId = existingUsers[0].id;
-      } else {
-        // Create a test user
-        const { data: newUser, error } = await supabase.auth.admin.createUser({
-          email: 'chris@splendor.ai',
-          password: 'temp123',
-          email_confirm: true
-        });
-
-        if (error) {
-          throw error;
-        }
-
-        userId = newUser.user.id;
-      }
+      // No default user creation in hardened mode
+      return res.status(401).json({
+        error: 'Authentication required',
+        message: 'User ID must be provided or use proper authentication'
+      });
     }
 
     req.userId = userId;
     next();
 
   } catch (error) {
-    // For development, continue with a default user ID
-    req.userId = 'default-user-' + Date.now();
-    next();
+    res.status(401).json({
+      error: 'Authentication failed',
+      message: error.message
+    });
   }
 }
 

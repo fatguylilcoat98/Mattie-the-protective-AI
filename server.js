@@ -118,8 +118,15 @@ app.post('/api/test/proactive-email', async (req, res) => {
     const { proactiveCommunication } = require('./lib/proactive-communication');
     const { priority = 2, subject = 'Test Message', content = 'This is a test of the proactive email system.' } = req.body;
 
-    // Test with default user ID or provided one
-    const testUserId = req.body.userId || 'f29d1ae6-3b71-d011-7061-65e9f77295b6';
+    // Test requires user ID to be provided
+    const testUserId = req.body.userId;
+    if (!testUserId) {
+      return res.status(400).json({
+        success: false,
+        error: 'User ID required for test',
+        message: 'Please provide a valid userId in request body'
+      });
+    }
 
     console.log(`🧪 [TEST] Testing proactive email for user: ${testUserId}`);
     console.log(`🧪 [TEST] Subject: "${subject}", Priority: ${priority}`);

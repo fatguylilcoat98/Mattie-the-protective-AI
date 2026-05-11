@@ -5,6 +5,7 @@
 
 const express = require('express');
 const { EnhancedMemorySystem } = require('../lib/enhanced-memory-integration.js');
+const { requireAuth } = require('../middleware/auth.js');
 const router = express.Router();
 
 // Initialize enhanced memory system (with error handling)
@@ -32,14 +33,15 @@ try {
 // ENHANCED CHAT ENDPOINT
 // ═══════════════════════════════════════════════════════════════════════════════
 
-router.post('/chat', async (req, res) => {
+router.post('/chat', requireAuth, async (req, res) => {
   try {
     const {
       message,
-      userId = 'default-user',
       sessionId = generateSessionId(),
       workspaceId
     } = req.body;
+
+    const userId = req.userId;
 
     if (!message) {
       return res.status(400).json({
@@ -95,7 +97,7 @@ router.post('/chat', async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // Get memory context for debugging
-router.get('/memory/context/:userId', async (req, res) => {
+router.get('/memory/context/:userId', requireAuth, async (req, res) => {
   try {
     if (!memorySystem) {
       return res.status(503).json({
@@ -105,6 +107,14 @@ router.get('/memory/context/:userId', async (req, res) => {
 
     const { userId } = req.params;
     const { query = '', workspace_id } = req.query;
+
+    // Ensure users can only access their own memory context
+    if (userId !== req.userId) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'You can only access your own memory context'
+      });
+    }
 
     const context = await memorySystem.memoryServices.retrieval.retrieveMemoryContext({
       userId,
@@ -137,10 +147,9 @@ router.get('/memory/context/:userId', async (req, res) => {
 });
 
 // Manual memory creation
-router.post('/memory/create', async (req, res) => {
+router.post('/memory/create', requireAuth, async (req, res) => {
   try {
     const {
-      userId = 'default-user',
       content,
       category,
       memory_type,
@@ -148,6 +157,8 @@ router.post('/memory/create', async (req, res) => {
       confidence = 0.8,
       importance = 0.5
     } = req.body;
+
+    const userId = req.userId;
 
     const result = await memorySystem.memoryServices.write.writeMemory({
       type: 'write_user_fact',
@@ -176,12 +187,10 @@ router.post('/memory/create', async (req, res) => {
 });
 
 // Manual web search
-router.post('/search/web', async (req, res) => {
+router.post('/search/web', requireAuth, async (req, res) => {
   try {
-    const {
-      query,
-      userId = 'default-user'
-    } = req.body;
+    const { query } = req.body;
+    const userId = req.userId;
 
     if (!query) {
       return res.status(400).json({
@@ -216,13 +225,10 @@ router.post('/search/web', async (req, res) => {
 // WORKSPACE MANAGEMENT
 // ═══════════════════════════════════════════════════════════════════════════════
 
-router.post('/workspace/create', async (req, res) => {
+router.post('/workspace/create', requireAuth, async (req, res) => {
   try {
-    const {
-      userId = 'default-user',
-      title,
-      objective
-    } = req.body;
+    const { title, objective } = req.body;
+    const userId = req.userId;
 
     const workspaceId = await memorySystem.createWorkspace(
       userId,
@@ -268,9 +274,18 @@ router.put('/workspace/:workspaceId', async (req, res) => {
 // DEBUGGING AND STATS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-router.get('/stats/:userId', async (req, res) => {
+router.get('/stats/:userId', requireAuth, async (req, res) => {
   try {
     const { userId } = req.params;
+
+    // Ensure users can only access their own stats
+    if (userId !== req.userId) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'You can only access your own stats'
+      });
+    }
+
     const stats = await memorySystem.getMemoryStats(userId);
 
     res.json({
