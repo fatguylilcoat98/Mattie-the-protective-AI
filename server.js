@@ -8,6 +8,7 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const path = require('path');
 require('dotenv').config();
 
 const chatRoutes = require('./routes/chat');
@@ -226,6 +227,12 @@ app.post('/api/cache/clear', (req, res) => {
       memory_cache: 'Client should clear conversation memory'
     }
   });
+});
+
+// TEMPORARY: React build preview for visual verification
+app.use('/react-preview', express.static(path.join(__dirname, 'build')));
+app.get('/react-preview', (req, res) => {
+  res.sendFile(__dirname + '/build/index.html');
 });
 
 // Oracle Interface is the ONLY interface - serves everything
