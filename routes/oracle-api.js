@@ -19,9 +19,11 @@ const router = express.Router();
 router.get('/memories/recent', async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 20;
-    const userIdRaw = req.query.user_id || 'chris_hughes'; // Default to primary user
-    // memory_items.user_id is a UUID column — hash any string handle into
-    // the deterministic UUID the rest of the system already uses for it.
+    // Default must match the default in /api/enhanced/chat so memories
+    // stored from a chat turn are visible in the Provenance Stream.
+    // memory_items.user_id is a UUID column — hash any string handle
+    // through stringToUUID() like the rest of the system does.
+    const userIdRaw = req.query.user_id || 'default-user';
     const userId = stringToUUID(userIdRaw);
 
     console.log('[ORACLE-API] Fetching recent memories, limit:', limit, 'userId:', userIdRaw);
@@ -78,7 +80,7 @@ router.get('/memories/recent', async (req, res) => {
 // Get memory statistics for dashboard
 router.get('/memories/stats', async (req, res) => {
   try {
-    const userIdRaw = req.query.user_id || 'chris_hughes';
+    const userIdRaw = req.query.user_id || 'default-user';
     const userId = stringToUUID(userIdRaw);
 
     // Get memory counts by provenance
@@ -106,8 +108,10 @@ router.get('/memories/stats', async (req, res) => {
 
     if (confidenceError) throw confidenceError;
 
-    const avgConfidence = confidenceStats.reduce((sum, item) =>
-      sum + (item.confidence || 0.8), 0) / confidenceStats.length;
+    // Guard against divide-by-zero when the user has no memories yet.
+    const avgConfidence = confidenceStats.length
+      ? confidenceStats.reduce((sum, item) => sum + (item.confidence || 0.8), 0) / confidenceStats.length
+      : 0;
 
     res.json({
       success: true,
@@ -145,13 +149,11 @@ router.get('/events/recent', async (req, res) => {
       .limit(limit);
 
     if (error) {
-      console.warn('[ORACLE-API] Event fetch error:', error);
-      // Return simulated events for demo
-      return res.json({
-        success: true,
-        count: 0,
-        events: generateSimulatedEvents()
-      });
+      // No fake events. Return an empty stream and let the UI render
+      // its "No live events." empty state. This preserves the no-fake-
+      // visuals rule even when the raw_events table is missing.
+      console.warn('[ORACLE-API] Event fetch error (returning empty):', error.message);
+      return res.json({ success: true, count: 0, events: [] });
     }
 
     // Format events for Oracle interface
@@ -173,11 +175,7 @@ router.get('/events/recent', async (req, res) => {
 
   } catch (error) {
     console.error('[ORACLE-API] Error fetching events:', error);
-    res.json({
-      success: true,
-      count: 0,
-      events: generateSimulatedEvents()
-    });
+    res.json({ success: true, count: 0, events: [] });
   }
 });
 
