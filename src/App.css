@@ -1,0 +1,147 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #ffffff;
+  overflow: hidden;
+  height: 100vh;
+  background: #000000;
+}
+
+.oracle-app {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* REAL BACKGROUND ENVIRONMENT */
+.environment-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  background:
+    radial-gradient(circle at 20% 50%, rgba(0, 229, 255, 0.12) 0%, transparent 50%),
+    radial-gradient(circle at 80% 30%, rgba(191, 90, 242, 0.08) 0%, transparent 40%),
+    radial-gradient(circle at 40% 80%, rgba(0, 245, 212, 0.06) 0%, transparent 35%),
+    linear-gradient(135deg, #0a0e1a 0%, #1a1f2e 30%, #0f1419 70%, #1a1f2e 100%);
+}
+
+.sci-fi-overlay::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image:
+    radial-gradient(circle at 25% 25%, rgba(0, 229, 255, 0.15) 2px, transparent 2px),
+    radial-gradient(circle at 75% 75%, rgba(191, 90, 242, 0.1) 1px, transparent 1px);
+  background-size: 120px 120px, 80px 80px;
+  opacity: 0.4;
+  filter: blur(0.5px);
+  animation: environmentDrift 60s linear infinite;
+}
+
+.scanning-lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.01) 1px, transparent 1px);
+  background-size: 100% 4px;
+  animation: scanLines 2s linear infinite;
+  pointer-events: none;
+}
+
+.floating-particles {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(0, 229, 255, 0.3) 1px, transparent 1px),
+    radial-gradient(circle at 70% 60%, rgba(191, 90, 242, 0.2) 1px, transparent 1px),
+    radial-gradient(circle at 40% 80%, rgba(0, 245, 212, 0.25) 1px, transparent 1px);
+  background-size: 300px 400px, 250px 350px, 400px 300px;
+  animation: particleDrift 45s linear infinite;
+  pointer-events: none;
+}
+
+/* CLASPION HEADER */
+.claspion-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 70px;
+  background: linear-gradient(180deg,
+    rgba(26, 31, 46, 0.95) 0%,
+    rgba(26, 31, 46, 0.8) 100%);
+  border-bottom: 1px solid rgba(0, 229, 255, 0.3);
+  backdrop-filter: blur(20px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.governance-info {
+  text-align: center;
+}
+
+.governance-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #00e5ff;
+  letter-spacing: 3px;
+  margin-bottom: 6px;
+  text-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
+}
+
+.binding-decisions {
+  font-size: 12px;
+  color: #b0c4de;
+  letter-spacing: 1px;
+}
+
+.rule-active {
+  color: #39ff14;
+  font-weight: 600;
+  text-shadow: 0 0 8px rgba(57, 255, 20, 0.6);
+}
+
+/* NEURAL CANVAS */
+.neural-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+/* ANIMATIONS */
+@keyframes environmentDrift {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(20px, 40px); }
+}
+
+@keyframes scanLines {
+  0% { transform: translateY(0); opacity: 0.8; }
+  100% { transform: translateY(4px); opacity: 0.2; }
+}
+
+@keyframes particleDrift {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  100% { transform: translate(-50px, -100px) rotate(360deg); }
+}

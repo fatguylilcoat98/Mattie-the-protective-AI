@@ -20,7 +20,7 @@
     "consciousness:inquire": "node workers/autonomous-inquiry-worker.js",
     "consciousness:communicate": "node workers/autonomous-communication-worker.js",
     "consciousness:cycle": "node lib/persistent-consciousness.js",
-    "setup:consciousness": "psql $DATABASE_URL -f persistent-consciousness-schema.sql", 
+    "setup:consciousness": "psql $DATABASE_URL -f persistent-consciousness-schema.sql",
     "continuity:shadow": "node lib/master-continuity-engine.js",
     "continuity:worker": "node workers/continuity-worker.js",
     "continuity:engine": "node workers/continuity-worker.js",
@@ -30,7 +30,10 @@
     "memory:test": "node tests/memory-system-tests.js",
     "memory:test:unit": "node tests/memory-system-tests.js --unit",
     "memory:migrate": "node scripts/memory-migration.js",
-    "server:enhanced": "node routes/enhanced-chat.js"
+    "server:enhanced": "node routes/enhanced-chat.js",
+    "build:react": "webpack --mode production",
+    "dev:react": "webpack serve --mode development",
+    "oracle:build": "npm run build:react && cp build/index.html public/ && cp -r build/* public/"
   },
   "keywords": [
     "ai",
@@ -43,18 +46,35 @@
   "license": "ISC",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.24.3",
+    "@babel/core": "^7.29.0",
+    "@babel/preset-env": "^7.29.5",
+    "@babel/preset-react": "^7.28.5",
     "@pinecone-database/pinecone": "^3.0.0",
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.6.1",
+    "@react-three/postprocessing": "^3.0.4",
     "@supabase/supabase-js": "^2.38.0",
+    "@types/three": "^0.184.1",
+    "babel-loader": "^10.1.1",
     "bcrypt": "^5.1.1",
+    "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
+    "css-loader": "^7.1.4",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "groq-sdk": "^0.5.0",
     "helmet": "^7.1.0",
+    "html-webpack-plugin": "^5.6.7",
     "nodemailer": "^8.0.7",
     "openai": "^4.28.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "style-loader": "^4.0.0",
     "tavily": "^1.0.0",
-    "bcryptjs": "^2.4.3"
+    "three": "^0.184.0",
+    "webpack": "^5.106.2",
+    "webpack-cli": "^7.0.2",
+    "webpack-dev-server": "^5.2.3"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
