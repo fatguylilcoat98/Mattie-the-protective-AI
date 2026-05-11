@@ -12,6 +12,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Splendor Oracle Interface</title>
+  <!-- Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -74,6 +77,15 @@
     }
     .governance-status { font-size: 10px; color: #b0c4de; letter-spacing: 0.8px; }
     .active-rule { color: #39ff14; font-weight: 600; text-shadow: 0 0 6px rgba(57, 255, 20, 0.6); }
+    .sign-out-link {
+      position: absolute; top: 12px; right: 16px;
+      font-size: 10px; color: rgba(255, 255, 255, 0.4);
+      text-decoration: none; letter-spacing: 1px;
+      text-transform: uppercase; font-weight: 500;
+      transition: color 0.2s; cursor: pointer;
+      z-index: 1001;
+    }
+    .sign-out-link:hover { color: rgba(255, 255, 255, 0.8); }
 
     /* Side panels */
     .provenance-panel { grid-area: provenance; }
@@ -149,6 +161,81 @@
       color: #708090; font-size: 11px;
       font-style: italic; padding: 14px 8px;
       text-align: center;
+    }
+
+    /* Login overlay */
+    .login-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 3000; padding: 20px;
+    }
+    .login-overlay.hidden { display: none; }
+    .login-card {
+      background: rgba(10, 18, 32, 0.98);
+      border: 1px solid rgba(0, 229, 255, 0.3);
+      border-radius: 14px; padding: 28px 24px;
+      width: 100%; max-width: 360px;
+      box-shadow: 0 0 40px rgba(0, 229, 255, 0.2);
+    }
+    .login-wordmark {
+      font-size: 11px; font-weight: 700;
+      color: #00e5ff; letter-spacing: 2.5px;
+      text-transform: uppercase; text-align: center;
+      margin-bottom: 8px;
+      text-shadow: 0 0 8px rgba(0, 229, 255, 0.5);
+    }
+    .login-label {
+      font-size: 10px; color: rgba(255, 255, 255, 0.6);
+      letter-spacing: 1.2px; text-transform: uppercase;
+      text-align: center; margin-bottom: 24px;
+    }
+    .login-input {
+      width: 100%; background: rgba(15, 25, 40, 0.9);
+      border: 1px solid rgba(0, 229, 255, 0.25);
+      border-radius: 8px; padding: 12px 14px;
+      color: #ffffff; font-size: 14px;
+      font-family: inherit; margin-bottom: 12px;
+      transition: border-color 0.2s;
+    }
+    .login-input:focus {
+      outline: none; border-color: #00e5ff;
+      box-shadow: 0 0 12px rgba(0, 229, 255, 0.3);
+    }
+    .login-input::placeholder { color: rgba(176, 196, 222, 0.5); }
+    .login-btn {
+      width: 100%; background: linear-gradient(135deg, #00e5ff, #00f5d4);
+      color: #042026; border: none; border-radius: 8px;
+      padding: 14px; font-size: 11px; font-weight: 700;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      cursor: pointer; margin-bottom: 16px;
+      transition: background 0.2s, box-shadow 0.2s;
+      font-family: inherit;
+    }
+    .login-btn:hover:not(:disabled) {
+      box-shadow: 0 0 20px rgba(0, 229, 255, 0.6);
+    }
+    .login-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .login-forgot {
+      text-align: center; font-size: 11px;
+      color: rgba(0, 229, 255, 0.7); text-decoration: none;
+      letter-spacing: 0.5px; transition: color 0.2s;
+    }
+    .login-forgot:hover { color: #00e5ff; }
+    .login-error {
+      background: rgba(255, 73, 87, 0.15);
+      border: 1px solid rgba(255, 73, 87, 0.3);
+      border-radius: 6px; padding: 8px 12px;
+      color: #ff6b80; font-size: 11px;
+      margin-top: 12px; line-height: 1.4;
+    }
+    .login-success {
+      background: rgba(57, 255, 20, 0.15);
+      border: 1px solid rgba(57, 255, 20, 0.3);
+      border-radius: 6px; padding: 8px 12px;
+      color: #39ff14; font-size: 11px;
+      margin-top: 12px; line-height: 1.4;
     }
 
     .pulse-item {
@@ -357,6 +444,7 @@
           CURRENT BINDING DECISIONS: 1. TRUTH OVER COMFORT [RULE 001] <span class="active-rule">[ACTIVE]</span>
         </div>
       </div>
+      <a class="sign-out-link" id="signOutLink" style="display: none;">SIGN OUT</a>
     </header>
 
     <aside class="provenance-panel">
@@ -407,7 +495,226 @@
     </div>
   </div>
 
+  <!-- Login overlay -->
+  <div class="login-overlay hidden" id="loginOverlay">
+    <div class="login-card">
+      <div class="login-wordmark">SPLENDOR · THE REMARKABLE AI</div>
+      <div class="login-label">SIGN IN</div>
+      <form id="loginForm">
+        <input type="email" class="login-input" id="emailInput" placeholder="Email address" required autocomplete="email">
+        <input type="password" class="login-input" id="passwordInput" placeholder="Password" required autocomplete="current-password">
+        <button type="submit" class="login-btn" id="loginButton">SIGN IN</button>
+      </form>
+      <a href="#" class="login-forgot" id="forgotLink">Forgot password?</a>
+      <div id="loginMessage"></div>
+    </div>
+  </div>
+
+  <!-- Supabase Client Initialization -->
   <script>
+    // Initialize Supabase client with server-injected config
+    const { createClient } = supabase;
+    const splendorSupabase = createClient('__SUPABASE_URL__', '__SUPABASE_ANON_KEY__', {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true
+      }
+    });
+  </script>
+
+  <script>
+    // Authentication and fetch wrapper
+    let currentUser = null;
+
+    // splendorFetch wrapper - handles JWT auth and refresh
+    async function splendorFetch(url, options = {}) {
+      // Get current session
+      const { data: { session }, error } = await splendorSupabase.auth.getSession();
+
+      if (!session) {
+        showLoginOverlay();
+        throw new Error('Authentication required');
+      }
+
+      // Prepare headers
+      const headers = new Headers(options.headers || {});
+      headers.set('Authorization', `Bearer ${session.access_token}`);
+
+      // Don't override Content-Type for FormData
+      if (!(options.body instanceof FormData) && !headers.has('Content-Type')) {
+        headers.set('Content-Type', 'application/json');
+      }
+
+      const fetchOptions = {
+        ...options,
+        headers,
+        credentials: 'same-origin'
+      };
+
+      let response = await fetch(url, fetchOptions);
+
+      // Handle 401 - try refresh once
+      if (response.status === 401) {
+        const { data: { session: newSession }, error: refreshError } =
+          await splendorSupabase.auth.refreshSession();
+
+        if (newSession) {
+          headers.set('Authorization', `Bearer ${newSession.access_token}`);
+          response = await fetch(url, { ...fetchOptions, headers });
+        }
+
+        // Still 401 after refresh - sign out and reload
+        if (response.status === 401) {
+          await splendorSupabase.auth.signOut();
+          window.location.reload();
+          return;
+        }
+      }
+
+      return response;
+    }
+
+    // Authentication state management
+    function showLoginOverlay() {
+      document.getElementById('loginOverlay').classList.remove('hidden');
+      document.getElementById('signOutLink').style.display = 'none';
+    }
+
+    function hideLoginOverlay() {
+      document.getElementById('loginOverlay').classList.add('hidden');
+      document.getElementById('signOutLink').style.display = 'block';
+    }
+
+    function showLoginMessage(message, isError = false) {
+      const messageEl = document.getElementById('loginMessage');
+      messageEl.innerHTML = `<div class="${isError ? 'login-error' : 'login-success'}">${message}</div>`;
+    }
+
+    function clearLoginMessage() {
+      document.getElementById('loginMessage').innerHTML = '';
+    }
+
+    // Check auth state on load by testing backend access
+    async function checkAuthState() {
+      const { data: { session } } = await splendorSupabase.auth.getSession();
+
+      if (session) {
+        try {
+          // Test owner access by calling a protected endpoint
+          const response = await splendorFetch('/api/oracle/memories/recent?limit=1');
+
+          if (response.status === 200) {
+            // User is authenticated and authorized (owner)
+            currentUser = session.user;
+            hideLoginOverlay();
+            return true;
+          } else if (response.status === 403) {
+            // User is authenticated but not authorized (not owner)
+            await splendorSupabase.auth.signOut();
+            showLoginOverlay();
+            showLoginMessage('Access denied. This system is restricted to the owner only.', true);
+            return false;
+          } else {
+            // Other error - try again
+            showLoginOverlay();
+            return false;
+          }
+        } catch (error) {
+          // Network or other error - show login
+          showLoginOverlay();
+          return false;
+        }
+      } else {
+        showLoginOverlay();
+        return false;
+      }
+    }
+
+    // Login form handler
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearLoginMessage();
+
+      const email = document.getElementById('emailInput').value;
+      const password = document.getElementById('passwordInput').value;
+      const button = document.getElementById('loginButton');
+
+      button.disabled = true;
+      button.textContent = 'SIGNING IN...';
+
+      try {
+        const { data, error } = await splendorSupabase.auth.signInWithPassword({
+          email: email,
+          password: password
+        });
+
+        if (error) throw error;
+
+        // Test backend access to verify owner status
+        try {
+          const testResponse = await splendorFetch('/api/oracle/memories/recent?limit=1');
+
+          if (testResponse.status === 403) {
+            // User authenticated but not authorized
+            await splendorSupabase.auth.signOut();
+            showLoginMessage('Access denied. This system is restricted to the owner only.', true);
+            return;
+          } else if (!testResponse.ok) {
+            // Other backend error
+            throw new Error(`Backend test failed: ${testResponse.status}`);
+          }
+
+          // Success - user is owner
+          currentUser = data.user;
+          hideLoginOverlay();
+          showLoginMessage('Welcome back!');
+          setTimeout(clearLoginMessage, 3000);
+        } catch (testError) {
+          console.error('Owner verification error:', testError);
+          await splendorSupabase.auth.signOut();
+          showLoginMessage('Access verification failed. Please try again.', true);
+          return;
+        }
+
+      } catch (error) {
+        console.error('Login error:', error);
+        showLoginMessage(error.message || 'Login failed. Please try again.', true);
+      } finally {
+        button.disabled = false;
+        button.textContent = 'SIGN IN';
+      }
+    });
+
+    // Forgot password handler
+    document.getElementById('forgotLink').addEventListener('click', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('emailInput').value;
+
+      if (!email) {
+        showLoginMessage('Please enter your email address first.', true);
+        return;
+      }
+
+      try {
+        const { error } = await splendorSupabase.auth.resetPasswordForEmail(email);
+        if (error) throw error;
+        showLoginMessage('Password reset email sent. Check your inbox.');
+      } catch (error) {
+        showLoginMessage(error.message || 'Password reset failed.', true);
+      }
+    });
+
+    // Sign out handler
+    document.getElementById('signOutLink').addEventListener('click', async (e) => {
+      e.preventDefault();
+      await splendorSupabase.auth.signOut();
+      window.location.reload();
+    });
+
+    // Initialize auth state check
+    checkAuthState();
+
     const memoryList = document.getElementById('memoryList');
     const pulseList = document.getElementById('pulseList');
     const responseBubble = document.getElementById('responseBubble');
@@ -499,10 +806,8 @@
     }
 
     async function speakWithOpenAI(text) {
-      const res = await fetch('/api/voice/speak', {
+      const res = await splendorFetch('/api/voice/speak', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
         body: JSON.stringify({ text })
       });
       if (!res.ok) throw new Error('speak ' + res.status);
@@ -626,7 +931,7 @@
 
     async function fetchMemories() {
       try {
-        const res = await fetch('/api/oracle/memories/recent?limit=12', { credentials: 'same-origin' });
+        const res = await splendorFetch('/api/oracle/memories/recent?limit=12');
         if (!res.ok) throw new Error('not ok');
         const data = await res.json();
         if (data && data.success && Array.isArray(data.memories)) {
@@ -642,7 +947,7 @@
     let lastEventCount = 0;
     async function fetchEvents() {
       try {
-        const res = await fetch('/api/oracle/events/recent?limit=40', { credentials: 'same-origin' });
+        const res = await splendorFetch('/api/oracle/events/recent?limit=40');
         if (!res.ok) throw new Error('not ok');
         const data = await res.json();
         const events = data && Array.isArray(data.events) ? data.events : [];
@@ -658,10 +963,8 @@
     }
 
     async function postChat(url, body) {
-      const res = await fetch(url, {
+      const res = await splendorFetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
         body: JSON.stringify(body)
       });
       return res;

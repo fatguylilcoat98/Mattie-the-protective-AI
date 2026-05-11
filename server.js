@@ -9,7 +9,26 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const path = require('path');
+const fs = require('fs');
 require('dotenv').config();
+
+// Cached oracle interface HTML with Supabase config injected at startup
+let cachedOracleHtml = null;
+
+function loadOracleHtml() {
+  const raw = fs.readFileSync(
+    path.join(__dirname, 'public/oracle-interface.html'),
+    'utf8'
+  );
+  cachedOracleHtml = raw
+    .replace(/__SUPABASE_URL__/g, process.env.SUPABASE_URL || '')
+    .replace(/__SUPABASE_ANON_KEY__/g, process.env.SUPABASE_ANON_KEY || '');
+
+  // Warn at startup if env vars are missing — fail loudly
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
+    console.error('[SPLENDOR] CRITICAL: Supabase env vars missing. Auth will not work.');
+  }
+}
 
 const chatRoutes = require('./routes/chat');
 const memoryRoutes = require('./routes/memory');
@@ -25,6 +44,9 @@ const oracleApiRoutes = require('./routes/oracle-api');
 const { governance: claspionGovernance } = require('./lib/claspion-governance');
 const { enhancedGovernance } = require('./lib/claspion-enhanced-integration');
 const { claspionMiddleware, claspionResponseMiddleware } = require('./middleware/claspion-middleware');
+
+// Load templated oracle interface HTML once at startup
+loadOracleHtml();
 
 // Continuous consciousness routes
 let consciousnessRoutes;
@@ -44,6 +66,9 @@ try {
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Single-user owner email configuration
+const OWNER_EMAIL = process.env.SPLENDOR_OWNER_EMAIL;
 
 // Middleware — CSP relaxed for camera frames (blob:) and TTS audio (data:/blob:)
 app.use(helmet({
@@ -229,15 +254,10 @@ app.post('/api/cache/clear', (req, res) => {
   });
 });
 
-// TEMPORARY: React build preview for visual verification
-app.use('/react-preview', express.static(path.join(__dirname, 'build')));
-app.get('/react-preview', (req, res) => {
-  res.sendFile(__dirname + '/build/index.html');
-});
-
 // Oracle Interface is the ONLY interface - serves everything
 app.get('*', (req, res) => {
-  res.sendFile(__dirname + '/public/oracle-interface.html');
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(cachedOracleHtml);
 });
 
 // Error handling

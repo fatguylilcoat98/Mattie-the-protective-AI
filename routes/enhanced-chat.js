@@ -5,7 +5,7 @@
 
 const express = require('express');
 const { EnhancedMemorySystem } = require('../lib/enhanced-memory-integration.js');
-const { requireAuth } = require('../middleware/auth.js');
+const { requireAuth, requireOwner } = require('../middleware/auth.js');
 const router = express.Router();
 
 // Initialize enhanced memory system (with error handling)
@@ -33,7 +33,7 @@ try {
 // ENHANCED CHAT ENDPOINT
 // ═══════════════════════════════════════════════════════════════════════════════
 
-router.post('/chat', requireAuth, async (req, res) => {
+router.post('/chat', requireAuth, requireOwner, async (req, res) => {
   try {
     const {
       message,

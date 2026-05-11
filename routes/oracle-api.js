@@ -9,6 +9,7 @@
 const express = require('express');
 const { supabase, getMemoriesForUser, stringToUUID } = require('../lib/supabase');
 const { continuityEngine } = require('../lib/continuity-engine');
+const { requireAuth, requireOwner } = require('../middleware/auth');
 const router = express.Router();
 
 // ============================================================================
@@ -16,17 +17,13 @@ const router = express.Router();
 // ============================================================================
 
 // Get recent memories for Provenance Stream
-router.get('/memories/recent', async (req, res) => {
+router.get('/memories/recent', requireAuth, requireOwner, async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 20;
-    // Default must match the default in /api/enhanced/chat so memories
-    // stored from a chat turn are visible in the Provenance Stream.
-    // memory_items.user_id is a UUID column — hash any string handle
-    // through stringToUUID() like the rest of the system does.
-    const userIdRaw = req.query.user_id || 'default-user';
-    const userId = stringToUUID(userIdRaw);
+    // Get user ID from authenticated user
+    const userId = req.userId;
 
-    console.log('[ORACLE-API] Fetching recent memories, limit:', limit, 'userId:', userIdRaw);
+    console.log('[ORACLE-API] Fetching recent memories, limit:', limit, 'userId:', userId);
 
     // Fetch recent memories with full metadata
     const { data: memories, error } = await supabase
@@ -137,7 +134,7 @@ router.get('/memories/stats', async (req, res) => {
 // ============================================================================
 
 // Get recent system events for Cognitive Pulse
-router.get('/events/recent', async (req, res) => {
+router.get('/events/recent', requireAuth, requireOwner, async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 50;
 

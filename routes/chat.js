@@ -10,6 +10,7 @@ const router = express.Router();
 const { generateSplendorResponse } = require('../lib/anthropic');
 const { getMemoriesForUser, storeMemory } = require('../lib/supabase');
 const { governance } = require('../lib/claspion-governance');
+const { requireAuth, requireOwner } = require('../middleware/auth');
 
 // CLASPION middleware sits *between* Splendor's thought and her action.
 // Splendor reasons normally; we ask CLASPION whether the action she has
@@ -24,9 +25,10 @@ async function gateAction(thought, intent) {
 }
 
 // Simple chat endpoint - just the essentials
-router.post('/', async (req, res) => {
+router.post('/', requireAuth, requireOwner, async (req, res) => {
   try {
-    const { message, userId = 'default-user' } = req.body;
+    const { message } = req.body;
+    const userId = req.userId;
 
     console.log(`[CHAT] Processing message from ${userId}: ${message}`);
 
@@ -110,8 +112,9 @@ router.post('/', async (req, res) => {
 });
 
 // Simple streaming endpoint
-router.post('/stream', async (req, res) => {
-  const { message, userId = 'default-user' } = req.body;
+router.post('/stream', requireAuth, requireOwner, async (req, res) => {
+  const { message } = req.body;
+  const userId = req.userId;
 
   try {
     // Set SSE headers

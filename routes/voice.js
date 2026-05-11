@@ -17,6 +17,7 @@ const router = express.Router();
 const Anthropic = require('@anthropic-ai/sdk');
 
 const { supabase } = require('../lib/supabase');
+const { requireAuth, requireOwner } = require('../middleware/auth');
 const {
   VOICE_OPTIONS,
   getVoiceOption,
@@ -146,7 +147,7 @@ router.post('/choose', async (req, res) => {
 // Synthesize speech for a given text using Splendor's chosen voice.
 // Optional `tone` body field overrides the inferred emotional delivery
 // (e.g. "Speak with a quiet laugh", "Speak softly and sadly").
-router.post('/speak', async (req, res) => {
+router.post('/speak', requireAuth, requireOwner, async (req, res) => {
   try {
     const { text, tone = null } = req.body;
     if (!text || !text.trim()) {
@@ -179,7 +180,7 @@ router.post('/speak', async (req, res) => {
 module.exports = router;
 
 // Chunked TTS endpoint - synthesizes individual sentences for parallel streaming
-router.post('/speak-chunk', async (req, res) => {
+router.post('/speak-chunk', requireAuth, requireOwner, async (req, res) => {
   try {
     const { text, sequence_number, voice } = req.body;
     

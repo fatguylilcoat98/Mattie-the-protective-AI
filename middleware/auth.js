@@ -76,6 +76,29 @@ async function requireAuth(req, res, next) {
 }
 
 /**
+ * Owner-only access (requires requireAuth to run first)
+ */
+function requireOwner(req, res, next) {
+  const OWNER_EMAIL = process.env.SPLENDOR_OWNER_EMAIL;
+
+  if (!OWNER_EMAIL) {
+    return res.status(500).json({
+      error: 'Server configuration error',
+      message: 'Owner email not configured'
+    });
+  }
+
+  if (!req.user || req.user.email !== OWNER_EMAIL) {
+    return res.status(403).json({
+      error: 'Access denied',
+      message: 'This system is restricted to the owner only'
+    });
+  }
+
+  next();
+}
+
+/**
  * Create or get user (for development)
  * DEPRECATED: Use requireAuth instead for production security
  */
@@ -153,6 +176,7 @@ module.exports = {
   requireApiKey,
   requireAdmin,
   requireAuth,
+  requireOwner,
   getOrCreateUser,
   rateLimit,
   logRequests
