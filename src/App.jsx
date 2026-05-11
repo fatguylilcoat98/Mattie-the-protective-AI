@@ -1,8 +1,10 @@
-import React, { useRef, useState } from 'react'
+import React, { useRef, useState, useEffect } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Sphere, MeshDistortMaterial, Torus } from '@react-three/drei'
 import { EffectComposer, Bloom } from '@react-three/postprocessing'
 import OracleInterface from './components/OracleInterface'
+import LoginCard from './components/LoginCard'
+import { supabase } from './lib/supabaseClient'
 import './App.css'
 
 const NeuralCore = ({ systemState = 'idle' }) => {
@@ -326,6 +328,35 @@ const NeuralCore = ({ systemState = 'idle' }) => {
 
 function App() {
   const [systemState, setSystemState] = useState('idle')
+  const [session, setSession] = useState(null)
+  const [authLoading, setAuthLoading] = useState(true)
+
+  useEffect(() => {
+    // Get initial session
+    const getInitialSession = async () => {
+      try {
+        const { data: { session: initialSession } } = await supabase.auth.getSession()
+        setSession(initialSession)
+      } catch (error) {
+        console.error('Error getting initial session:', error)
+      } finally {
+        setAuthLoading(false)
+      }
+    }
+
+    getInitialSession()
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+      console.log('Auth state change:', event, newSession?.user?.email)
+      setSession(newSession)
+      setAuthLoading(false)
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [])
 
   return (
     <div className="oracle-app">
@@ -363,7 +394,13 @@ function App() {
       </div>
 
       {/* Floating UI Overlay */}
-      <OracleInterface onSystemStateChange={setSystemState} />
+      {!authLoading && (
+        session ? (
+          <OracleInterface onSystemStateChange={setSystemState} />
+        ) : (
+          <LoginCard onAuthStateChange={setSession} />
+        )
+      )}
     </div>
   )
 }

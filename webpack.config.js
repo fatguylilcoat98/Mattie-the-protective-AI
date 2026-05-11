@@ -1,4 +1,5 @@
 const path = require('path')
+const webpack = require('webpack')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 
 module.exports = {
@@ -30,6 +31,10 @@ module.exports = {
     new HtmlWebpackPlugin({
       template: './public/react-index.html',
       filename: 'index.html'
+    }),
+    new webpack.DefinePlugin({
+      'process.env.SPLENDOR_PUBLIC_SUPABASE_URL': JSON.stringify(process.env.SUPABASE_URL),
+      'process.env.SPLENDOR_PUBLIC_SUPABASE_ANON_KEY': JSON.stringify(process.env.SUPABASE_ANON_KEY)
     })
   ],
   resolve: {

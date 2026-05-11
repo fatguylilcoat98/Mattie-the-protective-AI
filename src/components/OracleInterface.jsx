@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import MemoryCard from './MemoryCard'
 import CognitivePulse from './CognitivePulse'
+import { authFetch, AuthenticationError, AuthorizationError } from '../lib/authFetch'
 import './OracleInterface.css'
 
 const OracleInterface = ({ onSystemStateChange }) => {
@@ -116,15 +117,14 @@ const OracleInterface = ({ onSystemStateChange }) => {
     onSystemStateChange?.('thinking')
 
     try {
-      const response = await fetch('/api/enhanced/chat', {
+      const response = await authFetch('/api/enhanced/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: currentMessage,
           include_memory: true,
           include_consciousness: true
-        }),
-        credentials: 'same-origin'
+        })
       })
 
       if (response.ok) {
@@ -138,13 +138,23 @@ const OracleInterface = ({ onSystemStateChange }) => {
         }
       } else {
         throw new Error('Chat API error')
-        onSystemStateChange?.('conflict')
       }
     } catch (error) {
       console.error('Chat error:', error)
-      setResponse('I apologize, but I encountered an error processing your message. Please try again.')
-      addPulseEvent('chat_error_occurred')
-      onSystemStateChange?.('uncertain')
+
+      if (error instanceof AuthenticationError) {
+        setResponse('Authentication required. Please sign in to continue using Splendor.')
+        addPulseEvent('authentication_required')
+        onSystemStateChange?.('conflict')
+      } else if (error instanceof AuthorizationError) {
+        setResponse('Access denied. You do not have permission to access this feature.')
+        addPulseEvent('access_denied')
+        onSystemStateChange?.('conflict')
+      } else {
+        setResponse('I apologize, but I encountered an error processing your message. Please try again.')
+        addPulseEvent('chat_error_occurred')
+        onSystemStateChange?.('uncertain')
+      }
 
       setTimeout(() => onSystemStateChange?.('idle'), 3000)
     }
@@ -204,10 +214,9 @@ const OracleInterface = ({ onSystemStateChange }) => {
     formData.append('message', `[Image uploaded via file upload]`)
 
     try {
-      const response = await fetch('/api/enhanced/chat', {
+      const response = await authFetch('/api/enhanced/chat', {
         method: 'POST',
-        body: formData,
-        credentials: 'same-origin'
+        body: formData
       })
 
       if (response.ok) {
@@ -219,7 +228,17 @@ const OracleInterface = ({ onSystemStateChange }) => {
       }
     } catch (error) {
       console.error('Upload error:', error)
-      addPulseEvent('image_upload_failed')
+
+      if (error instanceof AuthenticationError) {
+        setResponse('Authentication required. Please sign in to upload images.')
+        addPulseEvent('authentication_required')
+      } else if (error instanceof AuthorizationError) {
+        setResponse('Access denied. You do not have permission to upload images.')
+        addPulseEvent('access_denied')
+      } else {
+        addPulseEvent('image_upload_failed')
+        setResponse('Image upload failed. Please try again.')
+      }
     }
   }
 
