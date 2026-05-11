@@ -10,6 +10,49 @@
   z-index: 50;
   overflow: hidden;
   animation: panelFloat 6s ease-in-out infinite;
+  position: relative;
+}
+
+/* HUD CORNER BRACKETS */
+.provenance-panel::before,
+.provenance-panel::after,
+.cognitive-panel::before,
+.cognitive-panel::after {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #00e5ff;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.provenance-panel::before,
+.cognitive-panel::before {
+  top: 15px;
+  left: 15px;
+  border-right: none;
+  border-bottom: none;
+  box-shadow: -2px -2px 8px rgba(0, 229, 255, 0.3);
+}
+
+.provenance-panel::after,
+.cognitive-panel::after {
+  bottom: 15px;
+  right: 15px;
+  border-left: none;
+  border-top: none;
+  box-shadow: 2px 2px 8px rgba(0, 229, 255, 0.3);
+}
+
+.cognitive-panel::before,
+.cognitive-panel::after {
+  border-color: #bf5af2;
+  box-shadow: -2px -2px 8px rgba(191, 90, 242, 0.3);
+}
+
+.cognitive-panel::after {
+  box-shadow: 2px 2px 8px rgba(191, 90, 242, 0.3);
 }
 
 .provenance-panel {
@@ -88,6 +131,35 @@
     0 20px 60px rgba(0, 0, 0, 0.5),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
   animation: consoleFloat 10s ease-in-out infinite;
+  position: relative;
+}
+
+/* CONSOLE HUD CORNERS */
+.conversation-console::before,
+.conversation-console::after {
+  content: '';
+  position: absolute;
+  width: 25px;
+  height: 25px;
+  border: 2px solid rgba(0, 229, 255, 0.6);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.conversation-console::before {
+  top: 20px;
+  left: 30px;
+  border-right: none;
+  border-bottom: none;
+  box-shadow: -3px -3px 12px rgba(0, 229, 255, 0.4);
+}
+
+.conversation-console::after {
+  bottom: 20px;
+  right: 30px;
+  border-left: none;
+  border-top: none;
+  box-shadow: 3px 3px 12px rgba(0, 229, 255, 0.4);
 }
 
 .response-display {

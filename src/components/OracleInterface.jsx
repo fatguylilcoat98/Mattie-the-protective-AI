@@ -3,7 +3,7 @@ import MemoryCard from './MemoryCard'
 import CognitivePulse from './CognitivePulse'
 import './OracleInterface.css'
 
-const OracleInterface = () => {
+const OracleInterface = ({ onSystemStateChange }) => {
   const [message, setMessage] = useState('')
   const [response, setResponse] = useState("Christopher, I remember the details of our memory rebuild plan because you told me on May 9, 2026, during our conversation about data integrity. Is the new architecture meeting your expectations for transparency and structured context?")
   const [isRecording, setIsRecording] = useState(false)
@@ -70,6 +70,7 @@ const OracleInterface = () => {
     const currentMessage = message
     setMessage('')
     addPulseEvent('message_processing')
+    onSystemStateChange?.('thinking')
 
     try {
       const response = await fetch('/api/enhanced/chat', {
@@ -87,17 +88,22 @@ const OracleInterface = () => {
         const data = await response.json()
         setResponse(data.response)
         addPulseEvent('response_generated')
+        onSystemStateChange?.('idle')
 
         if (voiceEnabled && data.response) {
           speak(data.response)
         }
       } else {
         throw new Error('Chat API error')
+        onSystemStateChange?.('conflict')
       }
     } catch (error) {
       console.error('Chat error:', error)
       setResponse('I apologize, but I encountered an error processing your message. Please try again.')
       addPulseEvent('chat_error_occurred')
+      onSystemStateChange?.('uncertain')
+
+      setTimeout(() => onSystemStateChange?.('idle'), 3000)
     }
   }
 
@@ -117,9 +123,11 @@ const OracleInterface = () => {
     if (isRecording) {
       recognitionRef.current.stop()
       setIsRecording(false)
+      onSystemStateChange?.('idle')
     } else {
       recognitionRef.current.start()
       setIsRecording(true)
+      onSystemStateChange?.('listening')
       addPulseEvent('voice_recognition_active')
     }
   }
@@ -269,7 +277,12 @@ const OracleInterface = () => {
               onClick={toggleVoiceRecognition}
               title="Voice input"
             >
-              🎤
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="m12 1 0 6"/>
+                <path d="m12 17 0 6"/>
+                <path d="m12 1 a4 4 0 0 1 4 4 l0 6 a4 4 0 0 1 -8 0 l0 -6 a4 4 0 0 1 4 -4"/>
+                <path d="m8 11 a4 4 0 0 0 8 0"/>
+              </svg>
             </button>
 
             <button
@@ -277,7 +290,11 @@ const OracleInterface = () => {
               onClick={() => fileInputRef.current?.click()}
               title="Upload file"
             >
-              📎
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="m14.5 2.5 a3 3 0 0 1 0 4.24l-8.5 8.5a1.5 1.5 0 0 1-2.12-2.12l8.5-8.5"/>
+                <path d="m14 7 3 3"/>
+                <path d="m5 22 7.5-7.5"/>
+              </svg>
             </button>
 
             <button
@@ -285,7 +302,11 @@ const OracleInterface = () => {
               onClick={toggleCamera}
               title="Camera"
             >
-              📷
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="2" y="6" width="20" height="12" rx="2"/>
+                <circle cx="12" cy="12" r="3"/>
+                <path d="m7 2 5 4 5-4"/>
+              </svg>
             </button>
 
             <button
@@ -293,7 +314,11 @@ const OracleInterface = () => {
               onClick={toggleVoiceOutput}
               title="Text to speech"
             >
-              🔊
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polygon points="11 5,6 9,2 9,2 15,6 15,11 19"/>
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+              </svg>
             </button>
           </div>
         </div>
@@ -320,10 +345,17 @@ const OracleInterface = () => {
           />
           <div className="camera-controls">
             <button className="capture-btn" onClick={capturePhoto}>
-              📸
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="2" y="6" width="20" height="12" rx="2"/>
+                <circle cx="12" cy="12" r="3"/>
+                <path d="m7 2 5 4 5-4"/>
+              </svg>
             </button>
             <button className="close-camera-btn" onClick={toggleCamera}>
-              ✕
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
             </button>
           </div>
         </div>
