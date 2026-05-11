@@ -1,13 +1,13 @@
-<!--
-  EXACT MOCKUP IMPLEMENTATION
-  Built to match user's precise design specification
--->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Splendor Oracle Interface</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
   <style>
     * {
       margin: 0;
@@ -17,13 +17,16 @@
 
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: linear-gradient(135deg, #040407 0%, #0a0e1a 50%, #0f1419 100%);
+      background:
+        radial-gradient(ellipse at center, rgba(30, 35, 45, 0.4) 0%, transparent 70%),
+        linear-gradient(135deg, #0a0e1a 0%, #1a1f2e 50%, #0f1419 100%);
       color: #ffffff;
       overflow: hidden;
       height: 100vh;
+      position: relative;
     }
 
-    /* Background grid */
+    /* Animated background grid */
     body::before {
       content: '';
       position: fixed;
@@ -32,313 +35,513 @@
       width: 100%;
       height: 100%;
       background-image:
-        linear-gradient(rgba(0, 229, 255, 0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0, 229, 255, 0.03) 1px, transparent 1px);
-      background-size: 50px 50px;
+        linear-gradient(rgba(0, 229, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 229, 255, 0.02) 1px, transparent 1px);
+      background-size: 60px 60px;
+      animation: gridMove 20s linear infinite;
       pointer-events: none;
-      z-index: -1;
+      z-index: 0;
     }
 
-    /* CLASPION Governance Bar */
-    .claspion-governance {
+    @keyframes gridMove {
+      0% { transform: translate(0, 0); }
+      100% { transform: translate(60px, 60px); }
+    }
+
+    /* CLASPION Governance Header */
+    .claspion-header {
       position: fixed;
       top: 0;
       left: 0;
       right: 0;
-      height: 60px;
-      background: linear-gradient(180deg, rgba(26, 31, 46, 0.9) 0%, rgba(26, 31, 46, 0.7) 100%);
+      height: 70px;
+      background: linear-gradient(180deg,
+        rgba(26, 31, 46, 0.95) 0%,
+        rgba(26, 31, 46, 0.8) 100%);
       border-bottom: 1px solid rgba(0, 229, 255, 0.3);
       backdrop-filter: blur(20px);
+      z-index: 1000;
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 1000;
     }
 
-    .governance-content {
+    .governance-info {
       text-align: center;
     }
 
     .governance-title {
-      font-size: 16px;
+      font-size: 18px;
       font-weight: 700;
       color: #00e5ff;
-      letter-spacing: 2px;
-      margin-bottom: 4px;
+      letter-spacing: 3px;
+      margin-bottom: 6px;
+      text-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
     }
 
-    .governance-status {
-      font-size: 11px;
+    .binding-decisions {
+      font-size: 12px;
       color: #b0c4de;
       letter-spacing: 1px;
     }
 
-    .active-rule {
+    .rule-active {
       color: #39ff14;
       font-weight: 600;
+      text-shadow: 0 0 8px rgba(57, 255, 20, 0.6);
     }
 
-    /* Main Interface */
-    .oracle-main {
+    /* Main Grid Layout */
+    .oracle-grid {
       display: grid;
-      grid-template-columns: 320px 1fr 320px;
-      grid-template-rows: 60px 1fr 140px;
+      grid-template-columns: 380px 1fr 380px;
+      grid-template-rows: 70px 1fr 160px;
       height: 100vh;
-      gap: 0;
+      position: relative;
+      z-index: 1;
     }
 
-    /* Memory Cards - Left */
-    .provenance-panel {
+    /* Left Panel - Provenance Stream */
+    .provenance-stream {
       grid-column: 1;
       grid-row: 2;
-      background: rgba(26, 31, 46, 0.7);
+      background: rgba(20, 25, 35, 0.8);
       border-right: 1px solid rgba(0, 229, 255, 0.2);
       backdrop-filter: blur(15px);
       overflow-y: auto;
-      padding: 20px 15px;
+      padding: 25px 20px;
     }
 
-    .panel-title {
-      font-size: 12px;
+    .stream-header {
+      margin-bottom: 20px;
+    }
+
+    .stream-title {
+      font-size: 14px;
       color: #00e5ff;
       font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+
+    .stream-subtitle {
+      font-size: 10px;
+      color: #708090;
       letter-spacing: 1px;
       text-transform: uppercase;
-      margin-bottom: 15px;
     }
 
     .memory-card {
-      background: rgba(15, 20, 25, 0.8);
-      border: 1px solid rgba(0, 229, 255, 0.2);
-      border-radius: 8px;
-      padding: 12px;
-      margin-bottom: 12px;
-      font-size: 11px;
-      line-height: 1.3;
+      background: linear-gradient(135deg, rgba(15, 20, 30, 0.9), rgba(25, 30, 40, 0.8));
+      border: 1px solid rgba(0, 229, 255, 0.25);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
     }
 
-    .memory-header {
+    .memory-card:hover {
+      border-color: rgba(0, 229, 255, 0.5);
+      transform: translateX(5px);
+      box-shadow: 0 6px 20px rgba(0, 229, 255, 0.2);
+    }
+
+    .card-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 8px;
-      font-size: 10px;
+      margin-bottom: 10px;
+      font-size: 11px;
       color: #00e5ff;
+      font-weight: 500;
     }
 
-    .memory-content {
+    .card-content {
       color: #b0c4de;
+      font-size: 12px;
+      line-height: 1.4;
+      margin-bottom: 12px;
+    }
+
+    .card-metadata {
+      font-size: 10px;
+      color: #708090;
+      line-height: 1.3;
       margin-bottom: 8px;
     }
 
-    .memory-meta {
-      font-size: 9px;
-      color: #708090;
-    }
-
-    .warning {
-      background: rgba(255, 152, 0, 0.1);
+    .warning-flag {
+      background: rgba(255, 152, 0, 0.15);
       border-left: 3px solid #ff9800;
-      padding: 6px;
-      margin-top: 6px;
-      font-size: 9px;
+      padding: 8px;
+      font-size: 10px;
       color: #ffa726;
+      border-radius: 0 4px 4px 0;
+      line-height: 1.3;
     }
 
-    /* Neural Orb - Center */
+    /* Center - Neural Orb */
     .neural-center {
       grid-column: 2;
       grid-row: 2;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: radial-gradient(circle, rgba(0, 229, 255, 0.05), transparent 70%);
+      background: radial-gradient(circle at center,
+        rgba(0, 229, 255, 0.08) 0%,
+        rgba(191, 90, 242, 0.05) 40%,
+        transparent 70%);
+      position: relative;
     }
 
-    .orb-container {
+    .orb-system {
       position: relative;
-      width: 300px;
-      height: 300px;
+      width: 350px;
+      height: 350px;
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
     .neural-orb {
-      width: 120px;
-      height: 120px;
+      width: 140px;
+      height: 140px;
       border-radius: 50%;
-      background: radial-gradient(circle at 30% 30%,
+      background: radial-gradient(circle at 35% 35%,
         rgba(0, 229, 255, 1) 0%,
-        rgba(191, 90, 242, 0.8) 50%,
-        rgba(0, 245, 212, 0.6) 100%);
+        rgba(0, 245, 212, 0.9) 25%,
+        rgba(191, 90, 242, 0.8) 60%,
+        rgba(0, 191, 255, 0.6) 100%);
       box-shadow:
-        0 0 40px rgba(0, 229, 255, 0.8),
-        0 0 80px rgba(191, 90, 242, 0.4),
-        0 0 120px rgba(0, 245, 212, 0.2);
-      animation: orbPulse 3s ease-in-out infinite;
-      z-index: 10;
+        0 0 50px rgba(0, 229, 255, 0.9),
+        0 0 100px rgba(0, 245, 212, 0.6),
+        0 0 150px rgba(191, 90, 242, 0.4),
+        inset 0 0 40px rgba(255, 255, 255, 0.2);
+      animation: orbPulse 4s ease-in-out infinite;
       position: relative;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .orb-core {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: radial-gradient(circle,
+        rgba(255, 255, 255, 0.9) 0%,
+        rgba(0, 229, 255, 0.7) 50%,
+        transparent 100%);
+      animation: coreShimmer 2s ease-in-out infinite alternate;
     }
 
     .orbit-ring {
       position: absolute;
-      border: 1px solid rgba(0, 229, 255, 0.4);
       border-radius: 50%;
-      animation: orbRotate 15s linear infinite;
+      border: 1px solid;
+      opacity: 0.7;
     }
 
     .orbit-ring:nth-child(1) {
-      width: 180px;
-      height: 180px;
-      animation-duration: 8s;
+      width: 200px;
+      height: 200px;
+      border-color: rgba(0, 229, 255, 0.6);
+      animation: orbitSpin1 10s linear infinite;
     }
 
     .orbit-ring:nth-child(2) {
-      width: 220px;
-      height: 220px;
-      border-color: rgba(191, 90, 242, 0.4);
-      animation-duration: 12s;
-      animation-direction: reverse;
+      width: 260px;
+      height: 260px;
+      border-color: rgba(191, 90, 242, 0.5);
+      animation: orbitSpin2 15s linear infinite reverse;
     }
 
     .orbit-ring:nth-child(3) {
-      width: 260px;
-      height: 260px;
-      border-color: rgba(0, 245, 212, 0.3);
-      animation-duration: 16s;
+      width: 320px;
+      height: 320px;
+      border-color: rgba(0, 245, 212, 0.4);
+      animation: orbitSpin3 20s linear infinite;
     }
 
-    /* Cognitive Pulse - Right */
-    .pulse-panel {
+    /* Right Panel - Cognitive Pulse */
+    .cognitive-pulse {
       grid-column: 3;
       grid-row: 2;
-      background: rgba(26, 31, 46, 0.7);
+      background: rgba(20, 25, 35, 0.8);
       border-left: 1px solid rgba(0, 229, 255, 0.2);
       backdrop-filter: blur(15px);
       overflow-y: auto;
-      padding: 20px 15px;
+      padding: 25px 20px;
     }
 
-    .pulse-item {
-      background: rgba(15, 20, 25, 0.6);
+    .pulse-header {
+      margin-bottom: 20px;
+    }
+
+    .pulse-title {
+      font-size: 14px;
+      color: #bf5af2;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+
+    .pulse-event {
+      background: rgba(15, 20, 25, 0.8);
       border-left: 2px solid #00e5ff;
-      padding: 8px;
-      margin-bottom: 6px;
-      font-size: 10px;
-      font-family: monospace;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
       color: #b0c4de;
+      border-radius: 0 6px 6px 0;
+      transition: all 0.3s ease;
     }
 
-    .pulse-item.active {
+    .pulse-event.active {
       border-left-color: #39ff14;
-      background: rgba(57, 255, 20, 0.05);
+      background: rgba(57, 255, 20, 0.08);
+      animation: eventGlow 2s ease-in-out infinite;
     }
 
-    /* Conversation - Bottom */
+    .pulse-event.processing {
+      border-left-color: #ff9800;
+      background: rgba(255, 152, 0, 0.08);
+    }
+
+    /* Bottom Panel - Conversation */
     .conversation-panel {
       grid-column: 1 / 4;
       grid-row: 3;
-      background: linear-gradient(180deg, transparent, rgba(26, 31, 46, 0.8) 60%);
-      border-top: 1px solid rgba(0, 229, 255, 0.2);
-      backdrop-filter: blur(15px);
-      padding: 20px 40px;
+      background: linear-gradient(180deg,
+        transparent 0%,
+        rgba(26, 31, 46, 0.9) 40%);
+      border-top: 1px solid rgba(0, 229, 255, 0.3);
+      backdrop-filter: blur(20px);
+      padding: 25px 50px;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 16px;
     }
 
-    .response-bubble {
-      background: rgba(15, 20, 25, 0.9);
-      border: 1px solid rgba(0, 229, 255, 0.3);
-      border-radius: 16px 16px 16px 4px;
-      padding: 14px 18px;
+    .splendor-response {
+      background: linear-gradient(135deg,
+        rgba(30, 35, 50, 0.95),
+        rgba(20, 25, 40, 0.9));
+      border: 1px solid rgba(0, 229, 255, 0.4);
+      border-radius: 20px 20px 20px 6px;
+      padding: 18px 24px;
       color: #ffffff;
-      font-size: 13px;
-      line-height: 1.4;
-      max-width: 80%;
+      font-size: 14px;
+      line-height: 1.5;
+      max-width: 85%;
       align-self: center;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+      box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.4),
+        0 0 20px rgba(0, 229, 255, 0.2);
+      backdrop-filter: blur(10px);
+      position: relative;
     }
 
-    .input-bar {
+    .input-system {
       display: flex;
       align-items: center;
-      background: rgba(15, 20, 25, 0.8);
-      border: 1px solid rgba(0, 229, 255, 0.3);
-      border-radius: 20px;
-      padding: 8px 8px 8px 16px;
-      gap: 10px;
+      background: linear-gradient(135deg,
+        rgba(25, 30, 45, 0.9),
+        rgba(15, 20, 35, 0.8));
+      border: 1px solid rgba(0, 229, 255, 0.4);
+      border-radius: 28px;
+      padding: 10px 12px 10px 24px;
+      gap: 12px;
+      box-shadow: 0 6px 25px rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(15px);
     }
 
-    .message-input {
+    .chat-input {
       flex: 1;
       background: transparent;
       border: none;
       outline: none;
       color: #ffffff;
-      font-size: 13px;
-      padding: 8px 0;
+      font-size: 15px;
+      padding: 12px 0;
+      font-family: inherit;
     }
 
-    .input-controls {
+    .chat-input::placeholder {
+      color: rgba(176, 196, 222, 0.5);
+    }
+
+    .control-buttons {
       display: flex;
-      gap: 6px;
+      gap: 8px;
+      align-items: center;
     }
 
     .control-btn {
-      width: 32px;
-      height: 32px;
+      width: 40px;
+      height: 40px;
       border-radius: 50%;
-      border: 1px solid rgba(0, 229, 255, 0.4);
-      background: rgba(20, 25, 35, 0.8);
+      border: 1px solid rgba(0, 229, 255, 0.5);
+      background: linear-gradient(135deg,
+        rgba(35, 40, 55, 0.9),
+        rgba(25, 30, 45, 0.8));
       color: #b0c4de;
-      font-size: 14px;
+      font-size: 16px;
       cursor: pointer;
       transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     }
 
     .control-btn:hover {
       border-color: #00e5ff;
       color: #00e5ff;
-      box-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
+      box-shadow: 0 0 20px rgba(0, 229, 255, 0.4);
+      transform: translateY(-2px);
     }
 
     .control-btn.active {
       background: linear-gradient(135deg, #00e5ff, #bf5af2);
       color: #ffffff;
-      box-shadow: 0 0 15px rgba(0, 229, 255, 0.5);
+      border-color: #00e5ff;
+      box-shadow: 0 0 25px rgba(0, 229, 255, 0.6);
+      animation: buttonPulse 1.5s ease-in-out infinite;
+    }
+
+    .mic-btn {
+      background: linear-gradient(135deg, #00e5ff, #00f5d4) !important;
+      color: #ffffff !important;
+      border-color: #00e5ff !important;
+      box-shadow: 0 0 20px rgba(0, 229, 255, 0.8) !important;
+    }
+
+    /* Hidden Elements */
+    .file-input {
+      display: none;
+    }
+
+    .camera-preview {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 400px;
+      height: 300px;
+      background: rgba(0, 0, 0, 0.9);
+      border: 2px solid #00e5ff;
+      border-radius: 16px;
+      z-index: 2000;
+      overflow: hidden;
+    }
+
+    .camera-video {
+      width: 100%;
+      height: calc(100% - 60px);
+      object-fit: cover;
+    }
+
+    .camera-controls {
+      height: 60px;
+      background: rgba(20, 25, 35, 0.95);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .camera-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      transition: all 0.3s ease;
+    }
+
+    .capture-btn {
+      background: linear-gradient(135deg, #39ff14, #00e5ff);
+      color: #ffffff;
+    }
+
+    .close-camera-btn {
+      background: linear-gradient(135deg, #ff073a, #ff6b35);
+      color: #ffffff;
     }
 
     /* Animations */
     @keyframes orbPulse {
       0%, 100% {
-        box-shadow: 0 0 40px rgba(0, 229, 255, 0.8),
-                    0 0 80px rgba(191, 90, 242, 0.4),
-                    0 0 120px rgba(0, 245, 212, 0.2);
+        box-shadow: 0 0 50px rgba(0, 229, 255, 0.9),
+                    0 0 100px rgba(0, 245, 212, 0.6),
+                    0 0 150px rgba(191, 90, 242, 0.4);
+        transform: scale(1);
       }
       50% {
-        box-shadow: 0 0 60px rgba(0, 229, 255, 1),
-                    0 0 120px rgba(191, 90, 242, 0.6),
-                    0 0 180px rgba(0, 245, 212, 0.3);
+        box-shadow: 0 0 70px rgba(0, 229, 255, 1),
+                    0 0 140px rgba(0, 245, 212, 0.8),
+                    0 0 210px rgba(191, 90, 242, 0.6);
+        transform: scale(1.05);
       }
     }
 
-    @keyframes orbRotate {
+    @keyframes coreShimmer {
+      0% { opacity: 0.6; transform: scale(0.9); }
+      100% { opacity: 1; transform: scale(1.1); }
+    }
+
+    @keyframes orbitSpin1 {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
 
-    /* Mobile responsive */
+    @keyframes orbitSpin2 {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @keyframes orbitSpin3 {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @keyframes eventGlow {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+
+    @keyframes buttonPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+
+    /* Responsive */
+    @media (max-width: 1200px) {
+      .oracle-grid {
+        grid-template-columns: 320px 1fr 320px;
+      }
+    }
+
     @media (max-width: 768px) {
-      .oracle-main {
+      .oracle-grid {
         grid-template-columns: 1fr;
-        grid-template-rows: 60px auto 200px 120px;
+        grid-template-rows: 70px auto 200px 140px;
       }
 
-      .provenance-panel {
+      .provenance-stream {
         grid-column: 1;
         grid-row: 3;
+        border-right: none;
+        border-top: 1px solid rgba(0, 229, 255, 0.2);
       }
 
       .neural-center {
@@ -346,127 +549,443 @@
         grid-row: 2;
       }
 
-      .pulse-panel {
+      .cognitive-pulse {
         display: none;
+      }
+
+      .conversation-panel {
+        grid-row: 4;
       }
     }
   </style>
 </head>
 <body>
-  <!-- CLASPION Governance Bar -->
-  <div class="claspion-governance">
-    <div class="governance-content">
+  <!-- CLASPION Header -->
+  <div class="claspion-header">
+    <div class="governance-info">
       <div class="governance-title">CLASPION GOVERNANCE</div>
-      <div class="governance-status">
-        CURRENT BINDING DECISIONS: 1. TRUTH OVER COMFORT [RULE 001] <span class="active-rule">[ACTIVE]</span>
+      <div class="binding-decisions">
+        CURRENT BINDING DECISIONS: 1. TRUTH OVER COMFORT [RULE 001] <span class="rule-active">[ACTIVE]</span>
       </div>
     </div>
   </div>
 
-  <!-- Main Oracle Interface -->
-  <div class="oracle-main">
-    <!-- Provenance Stream -->
-    <div class="provenance-panel">
-      <div class="panel-title">PROVENANCE STREAM</div>
-
-      <div class="memory-card">
-        <div class="memory-header">
-          <span>Memory Cards</span>
-          <span>#image_8.png</span>
-        </div>
-        <div class="memory-content">Provenance 2026-05-09</div>
-        <div class="memory-meta">
-          Source: Conversation 2026-05-09<br>
-          Type: USER_STATED<br>
-          Type: VERIFIED_FACT
-        </div>
-        <div class="warning">⚠ Warning: Caution on inferred glow for an inferred memory is common</div>
+  <!-- Main Interface Grid -->
+  <div class="oracle-grid">
+    <!-- Provenance Stream (Left) -->
+    <div class="provenance-stream">
+      <div class="stream-header">
+        <div class="stream-title">PROVENANCE STREAM</div>
+        <div class="stream-subtitle">Memory Verification & Source Tracking</div>
       </div>
 
       <div class="memory-card">
-        <div class="memory-header">
+        <div class="card-header">
           <span>Memory Cards</span>
-          <span>#image_9.png</span>
+          <span>image_8.png</span>
         </div>
-        <div class="memory-content">Provenance 2026-05-09</div>
-        <div class="memory-meta">
+        <div class="card-content">Provenance 2026-05-09</div>
+        <div class="card-metadata">
           Source: Conversation 2026-05-09<br>
           Type: USER_STATED<br>
           Type: VERIFIED_FACT
         </div>
-        <div class="warning">⚠ Warning: Caution glow for caution warnify an inferred memory context</div>
+        <div class="warning-flag">
+          ⚠ Warning: Caution on inferred glow for an inferred memory is common
+        </div>
+      </div>
+
+      <div class="memory-card">
+        <div class="card-header">
+          <span>Memory Cards</span>
+          <span>image_9.png</span>
+        </div>
+        <div class="card-content">Provenance 2026-05-09</div>
+        <div class="card-metadata">
+          Source: Conversation 2026-05-09<br>
+          Type: USER_STATED<br>
+          Type: VERIFIED_FACT
+        </div>
+        <div class="warning-flag">
+          ⚠ Warning: Caution glow for caution warnify an inferred memory context
+        </div>
       </div>
     </div>
 
-    <!-- Neural Orb Center -->
+    <!-- Neural Orb (Center) -->
     <div class="neural-center">
-      <div class="orb-container">
+      <div class="orb-system">
         <div class="orbit-ring"></div>
         <div class="orbit-ring"></div>
         <div class="orbit-ring"></div>
-        <div class="neural-orb"></div>
+        <div class="neural-orb">
+          <div class="orb-core"></div>
+        </div>
       </div>
     </div>
 
-    <!-- Cognitive Pulse -->
-    <div class="pulse-panel">
-      <div class="panel-title">COGNITIVE PULSE</div>
+    <!-- Cognitive Pulse (Right) -->
+    <div class="cognitive-pulse">
+      <div class="pulse-header">
+        <div class="pulse-title">COGNITIVE PULSE</div>
+        <div class="stream-subtitle">Live System Events</div>
+      </div>
 
-      <div class="pulse-item active">micro_reflection in progress...</div>
-      <div class="pulse-item active">pinecone_index_sync active...</div>
-      <div class="pulse-item">conflict_check passed...</div>
-      <div class="pulse-item">resolution scope: broad</div>
-      <div class="pulse-item">thought_cycle_tree:</div>
-      <div class="pulse-item">→ cycle_id 3</div>
-      <div class="pulse-item">→ parent_id 2</div>
-      <div class="pulse-item">→ parent_id 3</div>
-      <div class="pulse-item">→ parent_id 2...</div>
-      <div class="pulse-item">→ parent_id 2...</div>
-      <div class="pulse-item">→ parent_id 3...</div>
-      <div class="pulse-item">→ parent_id 2...</div>
-      <div class="pulse-item">→ parent_id 2...</div>
-      <div class="pulse-item">→ parent_id 2...</div>
-      <div class="pulse-item">→ parent_id 2...</div>
-      <div class="pulse-item">→ parent_id 2...</div>
-      <div class="pulse-item">→ parent_id 2...</div>
-      <div class="pulse-item">micro_reflection in progress...</div>
-      <div class="pulse-item active">pinecone_index_sync active...</div>
-      <div class="pulse-item">conflict_check passed...</div>
-      <div class="pulse-item">resolution:</div>
-      <div class="pulse-item">thought_cycle_tree:</div>
-      <div class="pulse-item">→ cycle_id 3</div>
-      <div class="pulse-item">→ parent_id 2...</div>
+      <div id="pulse-events">
+        <div class="pulse-event active">micro_reflection in progress...</div>
+        <div class="pulse-event active">pinecone_index_sync active...</div>
+        <div class="pulse-event">conflict_check passed...</div>
+        <div class="pulse-event">resolution scope: broad</div>
+        <div class="pulse-event">thought_cycle_tree:</div>
+        <div class="pulse-event">→ cycle_id 3</div>
+        <div class="pulse-event">→ parent_id 2</div>
+        <div class="pulse-event">→ parent_id 3</div>
+        <div class="pulse-event">→ parent_id 2...</div>
+        <div class="pulse-event">→ parent_id 2...</div>
+        <div class="pulse-event">→ parent_id 3...</div>
+        <div class="pulse-event">→ parent_id 2...</div>
+        <div class="pulse-event active">micro_reflection in progress...</div>
+        <div class="pulse-event active">pinecone_index_sync active...</div>
+        <div class="pulse-event">conflict_check passed...</div>
+        <div class="pulse-event">resolution:</div>
+        <div class="pulse-event">thought_cycle_tree:</div>
+        <div class="pulse-event">→ cycle_id 3</div>
+        <div class="pulse-event">→ parent_id 2...</div>
+      </div>
     </div>
 
-    <!-- Conversation Interface -->
+    <!-- Conversation Panel (Bottom) -->
     <div class="conversation-panel">
-      <div class="response-bubble">
+      <div class="splendor-response" id="responseArea">
         Christopher, I remember the details of our memory rebuild plan because you told me on May 9, 2026, during our conversation about data integrity. Is the new architecture meeting your expectations for transparency and structured context?
       </div>
 
-      <div class="input-bar">
-        <input type="text" class="message-input" placeholder="" id="messageInput">
-        <div class="input-controls">
-          <button class="control-btn active" id="micButton">🎤</button>
-          <button class="control-btn" id="attachButton">📎</button>
-          <button class="control-btn" id="cameraButton">📷</button>
-          <button class="control-btn" id="voiceButton">🔊</button>
+      <div class="input-system">
+        <input type="text" class="chat-input" id="chatInput" placeholder="">
+
+        <div class="control-buttons">
+          <button class="control-btn mic-btn" id="micBtn" title="Voice input">🎤</button>
+          <button class="control-btn" id="attachBtn" title="Upload file">📎</button>
+          <button class="control-btn" id="cameraBtn" title="Camera">📷</button>
+          <button class="control-btn" id="voiceBtn" title="Text to speech">🔊</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Hidden Elements -->
+  <input type="file" class="file-input" id="fileInput" accept="image/*">
+
+  <div class="camera-preview" id="cameraPreview">
+    <video class="camera-video" id="cameraVideo" autoplay playsinline muted></video>
+    <div class="camera-controls">
+      <button class="camera-btn capture-btn" id="captureBtn">📸</button>
+      <button class="camera-btn close-camera-btn" id="closeCameraBtn">✕</button>
     </div>
   </div>
 
   <script>
-    // Basic functionality for the interface
-    document.getElementById('messageInput').addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') {
-        console.log('Message sent:', this.value);
-        this.value = '';
-      }
-    });
+    // ============================================================================
+    // FULL FUNCTIONALITY IMPLEMENTATION
+    // ============================================================================
 
-    document.getElementById('micButton').addEventListener('click', function() {
-      this.classList.toggle('active');
+    class OracleInterface {
+      constructor() {
+        this.chatInput = document.getElementById('chatInput');
+        this.responseArea = document.getElementById('responseArea');
+        this.micBtn = document.getElementById('micBtn');
+        this.attachBtn = document.getElementById('attachBtn');
+        this.cameraBtn = document.getElementById('cameraBtn');
+        this.voiceBtn = document.getElementById('voiceBtn');
+        this.fileInput = document.getElementById('fileInput');
+        this.cameraPreview = document.getElementById('cameraPreview');
+        this.cameraVideo = document.getElementById('cameraVideo');
+        this.captureBtn = document.getElementById('captureBtn');
+        this.closeCameraBtn = document.getElementById('closeCameraBtn');
+
+        this.isRecording = false;
+        this.voiceEnabled = false;
+        this.mediaStream = null;
+        this.recognition = null;
+
+        this.init();
+      }
+
+      init() {
+        this.setupEventListeners();
+        this.initializeVoiceRecognition();
+        this.startCognitivePulse();
+      }
+
+      setupEventListeners() {
+        // Chat input
+        this.chatInput.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            this.sendMessage();
+          }
+        });
+
+        // Voice input
+        this.micBtn.addEventListener('click', () => {
+          this.toggleVoiceRecognition();
+        });
+
+        // File attachment
+        this.attachBtn.addEventListener('click', () => {
+          this.fileInput.click();
+        });
+
+        this.fileInput.addEventListener('change', (e) => {
+          if (e.target.files[0]) {
+            this.handleFileUpload(e.target.files[0]);
+          }
+        });
+
+        // Camera
+        this.cameraBtn.addEventListener('click', () => {
+          this.toggleCamera();
+        });
+
+        this.captureBtn.addEventListener('click', () => {
+          this.capturePhoto();
+        });
+
+        this.closeCameraBtn.addEventListener('click', () => {
+          this.closeCamera();
+        });
+
+        // Voice output
+        this.voiceBtn.addEventListener('click', () => {
+          this.toggleVoiceOutput();
+        });
+      }
+
+      initializeVoiceRecognition() {
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+          const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+          this.recognition = new SpeechRecognition();
+          this.recognition.continuous = false;
+          this.recognition.interimResults = false;
+          this.recognition.lang = 'en-US';
+
+          this.recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            this.chatInput.value = transcript;
+            this.addPulseEvent('voice_input_processed');
+            this.isRecording = false;
+            this.micBtn.classList.remove('active');
+          };
+
+          this.recognition.onerror = () => {
+            this.isRecording = false;
+            this.micBtn.classList.remove('active');
+          };
+
+          this.recognition.onend = () => {
+            this.isRecording = false;
+            this.micBtn.classList.remove('active');
+          };
+        }
+      }
+
+      toggleVoiceRecognition() {
+        if (!this.recognition) {
+          alert('Voice recognition not supported in this browser');
+          return;
+        }
+
+        if (this.isRecording) {
+          this.recognition.stop();
+          this.isRecording = false;
+          this.micBtn.classList.remove('active');
+        } else {
+          this.recognition.start();
+          this.isRecording = true;
+          this.micBtn.classList.add('active');
+          this.addPulseEvent('voice_recognition_active');
+        }
+      }
+
+      toggleVoiceOutput() {
+        this.voiceEnabled = !this.voiceEnabled;
+        if (this.voiceEnabled) {
+          this.voiceBtn.classList.add('active');
+          this.addPulseEvent('text_to_speech_enabled');
+        } else {
+          this.voiceBtn.classList.remove('active');
+          this.addPulseEvent('text_to_speech_disabled');
+        }
+      }
+
+      async toggleCamera() {
+        if (this.mediaStream) {
+          this.closeCamera();
+        } else {
+          try {
+            this.mediaStream = await navigator.mediaDevices.getUserMedia({
+              video: { facingMode: 'user' }
+            });
+            this.cameraVideo.srcObject = this.mediaStream;
+            this.cameraPreview.style.display = 'block';
+            this.cameraBtn.classList.add('active');
+            this.addPulseEvent('camera_stream_active');
+          } catch (error) {
+            console.error('Camera error:', error);
+            alert('Camera access denied or unavailable');
+          }
+        }
+      }
+
+      closeCamera() {
+        if (this.mediaStream) {
+          this.mediaStream.getTracks().forEach(track => track.stop());
+          this.mediaStream = null;
+        }
+        this.cameraPreview.style.display = 'none';
+        this.cameraBtn.classList.remove('active');
+        this.addPulseEvent('camera_stream_closed');
+      }
+
+      capturePhoto() {
+        const canvas = document.createElement('canvas');
+        canvas.width = this.cameraVideo.videoWidth;
+        canvas.height = this.cameraVideo.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(this.cameraVideo, 0, 0);
+
+        canvas.toBlob(blob => {
+          this.uploadImage(blob, 'camera_capture');
+        }, 'image/jpeg', 0.8);
+
+        this.closeCamera();
+      }
+
+      handleFileUpload(file) {
+        if (file.type.startsWith('image/')) {
+          this.uploadImage(file, 'file_upload');
+        } else {
+          alert('Please select an image file');
+        }
+      }
+
+      async uploadImage(imageData, source) {
+        this.addPulseEvent(`image_${source}_processing`);
+
+        const formData = new FormData();
+        formData.append('image', imageData);
+        formData.append('message', `[Image uploaded via ${source}]`);
+
+        try {
+          const response = await fetch('/api/enhanced/chat', {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin'
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            this.displayResponse(data.response);
+            this.addPulseEvent('image_analysis_complete');
+          } else {
+            throw new Error('Upload failed');
+          }
+        } catch (error) {
+          console.error('Upload error:', error);
+          this.addPulseEvent('image_upload_failed');
+        }
+      }
+
+      async sendMessage() {
+        const message = this.chatInput.value.trim();
+        if (!message) return;
+
+        this.chatInput.value = '';
+        this.addPulseEvent('message_processing');
+
+        try {
+          const response = await fetch('/api/enhanced/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              message,
+              include_memory: true,
+              include_consciousness: true
+            }),
+            credentials: 'same-origin'
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            this.displayResponse(data.response);
+            this.addPulseEvent('response_generated');
+
+            if (this.voiceEnabled && data.response) {
+              this.speak(data.response);
+            }
+          } else {
+            throw new Error('Chat API error');
+          }
+        } catch (error) {
+          console.error('Chat error:', error);
+          this.displayResponse('I apologize, but I encountered an error processing your message. Please try again.');
+          this.addPulseEvent('chat_error_occurred');
+        }
+      }
+
+      displayResponse(text) {
+        this.responseArea.textContent = text;
+      }
+
+      speak(text) {
+        if ('speechSynthesis' in window) {
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.rate = 0.9;
+          utterance.pitch = 1.0;
+          utterance.volume = 0.8;
+          speechSynthesis.speak(utterance);
+          this.addPulseEvent('speech_synthesis_active');
+        }
+      }
+
+      addPulseEvent(eventType) {
+        const eventsContainer = document.getElementById('pulse-events');
+        const eventElement = document.createElement('div');
+        eventElement.className = 'pulse-event active';
+        eventElement.textContent = `${eventType.replace(/_/g, ' ')}...`;
+
+        eventsContainer.insertBefore(eventElement, eventsContainer.firstChild);
+
+        // Keep only last 20 events
+        while (eventsContainer.children.length > 20) {
+          eventsContainer.removeChild(eventsContainer.lastChild);
+        }
+
+        // Remove active class after 3 seconds
+        setTimeout(() => {
+          eventElement.classList.remove('active');
+        }, 3000);
+      }
+
+      startCognitivePulse() {
+        // Add periodic system events
+        setInterval(() => {
+          const events = [
+            'memory_consolidation',
+            'pattern_recognition',
+            'context_analysis',
+            'decision_tree_update',
+            'neural_pathway_optimize'
+          ];
+          const randomEvent = events[Math.floor(Math.random() * events.length)];
+          this.addPulseEvent(randomEvent);
+        }, 8000 + Math.random() * 12000);
+      }
+    }
+
+    // Initialize the Oracle Interface
+    document.addEventListener('DOMContentLoaded', () => {
+      window.oracleInterface = new OracleInterface();
     });
   </script>
 </body>
