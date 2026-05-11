@@ -5,7 +5,7 @@
   Truth · Safety · We Got Your Back
 */
 
-const CACHE_NAME = 'splendor-v15'; // increment this number on every deploy
+const CACHE_NAME = 'splendor-v16'; // increment this number on every deploy
 const urlsToCache = [
   '/manifest.json',
   '/icons/splendor-icon.svg'
