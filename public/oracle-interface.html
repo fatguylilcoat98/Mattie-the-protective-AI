@@ -758,37 +758,20 @@
     }
 
     async function captureFrame() {
-      if (!cameraVideo.videoWidth) return;
+      if (!cameraVideo.videoWidth) {
+        closeCamera();
+        return;
+      }
       const canvas = document.createElement('canvas');
       canvas.width = cameraVideo.videoWidth;
       canvas.height = cameraVideo.videoHeight;
       canvas.getContext('2d').drawImage(cameraVideo, 0, 0);
-      const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.85));
       closeCamera();
-      if (!blob) return;
-      responseBubble.textContent = 'Analyzing image…';
-      setState('thinking');
-      try {
-        const fd = new FormData();
-        fd.append('image', blob, 'capture.jpg');
-        fd.append('message', '[Camera capture]');
-        const res = await fetch('/api/enhanced/chat', {
-          method: 'POST',
-          credentials: 'same-origin',
-          body: fd
-        });
-        if (!res.ok) throw new Error('chat ' + res.status);
-        const data = await res.json();
-        const replyText = data.response || data.message || '(no response)';
-        responseBubble.textContent = replyText;
-        setState(null);
-        fetchEvents();
-        fetchMemories();
-        await speakResponse(replyText);
-      } catch (err) {
-        responseBubble.textContent = 'I could not analyze that image. Please try again.';
-        setState(null);
-      }
+      // The enhanced-chat endpoint is text-only, so send a JSON
+      // message that tells Splendor a frame was captured. (When
+      // vision input is wired server-side we can pass the data URL
+      // along here.)
+      sendMessage('[Camera frame captured — ' + canvas.width + 'x' + canvas.height + ']');
     }
 
     cameraButton.addEventListener('click', openCamera);

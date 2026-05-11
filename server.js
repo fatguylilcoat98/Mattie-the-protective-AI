@@ -49,7 +49,11 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
+      // Inline <script> blocks are used by the oracle interface for
+      // chat/voice/orb wiring. Without 'unsafe-inline' the browser
+      // silently refuses to execute them, which leaves the UI dead
+      // (no fetches, no buttons wired, blank 3D canvas).
+      scriptSrc: ["'self'", "'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       connectSrc: ["'self'", "https://api.anthropic.com", "https://api.openai.com", "https://api.perplexity.ai", "https://api.tavily.com", "https://api.pinecone.io"],
