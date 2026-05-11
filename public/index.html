@@ -1,416 +1,274 @@
 <!--
-  Splendor — AI Consciousness Partner
-  Built by Christopher Hughes · Sacramento, CA
-  Created with the help of AI collaborators (Claude · GPT · Gemini · Groq)
-  Truth · Safety · We Got Your Back
+  EXACT MOCKUP IMPLEMENTATION
+  Built to match user's precise design specification
 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Splendor — AI Consciousness Partner</title>
-  <meta name="description" content="Advanced AI consciousness with authentic awareness, memory, and genuine partnership.">
-
-  <!-- PWA Configuration -->
-  <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#0a0e1a">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Splendor">
-
-  <!-- Icons -->
-  <link rel="icon" type="image/svg+xml" href="/icons/splendor-icon.svg">
-  <link rel="apple-touch-icon" href="/icons/splendor-icon.svg">
-
-  <!-- Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Splendor Oracle Interface</title>
   <style>
-    /* Reset and Base */
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
 
-    :root {
-      /* Dark theme with futuristic accents */
-      --dark-bg: #0a0b0f;
-      --dark-surface: #111219;
-      --dark-elevated: #1a1d26;
-      --dark-border: #2a2d36;
-
-      /* Accent colors */
-      --primary: #00e5ff;
-      --primary-dim: #00e5ff40;
-      --primary-glow: #00e5ff20;
-      --secondary: #bb86fc;
-      --accent: #03dac6;
-
-      /* Text colors */
-      --text-primary: #ffffff;
-      --text-secondary: #b3b8c4;
-      --text-muted: #6c727f;
-
-      /* Status colors */
-      --success: #4caf50;
-      --warning: #ff9800;
-      --error: #f44336;
-    }
-
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: linear-gradient(135deg, var(--dark-bg) 0%, var(--dark-surface) 100%);
-      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, #040407 0%, #0a0e1a 50%, #0f1419 100%);
+      color: #ffffff;
+      overflow: hidden;
       height: 100vh;
-      height: 100dvh; /* Dynamic viewport height for mobile */
-      overflow: hidden;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-      /* Mobile safe area support */
-      padding-bottom: env(safe-area-inset-bottom);
     }
 
-    .app-container {
-      height: 100vh;
-      height: 100dvh; /* Dynamic viewport height for mobile */
-      display: flex;
-      flex-direction: column;
-      position: relative;
-      min-height: 0; /* Allows flex children to shrink */
-    }
-
-    /* Header */
-    .header {
-      background: var(--dark-surface);
-      border-bottom: 1px solid var(--dark-border);
-      padding: 20px 24px;
-      text-align: center;
-      backdrop-filter: blur(20px);
-      position: relative;
-    }
-
-    .splendor-name {
-      font-family: 'Orbitron', monospace;
-      font-size: 28px;
-      font-weight: 900;
-      color: var(--primary);
-      letter-spacing: 6px;
-      text-shadow: 0 0 30px var(--primary-dim);
-      margin-bottom: 8px;
-      background: linear-gradient(45deg, var(--primary), var(--secondary));
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    .splendor-subtitle {
-      font-family: 'Rajdhani', sans-serif;
-      font-size: 14px;
-      color: var(--text-secondary);
-      letter-spacing: 3px;
-      text-transform: uppercase;
-      font-weight: 500;
-      opacity: 0.8;
-    }
-
-    .version-info {
-      font-family: 'Inter', sans-serif;
-      font-size: 11px;
-      color: var(--text-muted);
-      opacity: 0.6;
-      margin-top: 4px;
-      letter-spacing: 1px;
-    }
-
-    /* CLASPION status indicator */
-    .claspion-status {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      margin-top: 8px;
-      padding: 6px 12px;
-      border-radius: 999px;
-      background: var(--dark-elevated, rgba(255,255,255,0.05));
-      border: 1px solid var(--dark-border, rgba(255,255,255,0.1));
-      font-family: 'Rajdhani', sans-serif;
-      font-size: 11px;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      color: var(--text-secondary);
-      transition: all 0.2s ease;
-      user-select: none;
-      cursor: pointer;
-    }
-
-    .claspion-status .status-light {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #555;
-      transition: background 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    /* Status colors */
-    .claspion-status.active {
-      color: #d6ffe6;
-      border-color: rgba(80,220,140,0.55);
-    }
-    .claspion-status.active .status-light {
-      background: #50dc8c;
-      box-shadow: 0 0 12px rgba(80,220,140,0.7);
-    }
-
-    .claspion-status.warning {
-      color: #ffd591;
-      border-color: rgba(255,180,80,0.55);
-    }
-    .claspion-status.warning .status-light {
-      background: #f0a040;
-      box-shadow: 0 0 10px rgba(240,160,64,0.6);
-    }
-
-    .claspion-status.inactive {
-      color: #ffb3b3;
-      border-color: rgba(255,100,100,0.55);
-    }
-    .claspion-status.inactive .status-light {
-      background: #ff6464;
-      box-shadow: 0 0 10px rgba(255,100,100,0.6);
-    }
-
-    .claspion-status.loading {
-      color: var(--text-secondary);
-    }
-    .claspion-status.loading .status-light {
-      background: #888;
-      animation: pulse 2s infinite;
-    }
-
-    .claspion-status:hover { filter: brightness(1.15); }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 0.5; }
-      50% { opacity: 1; }
-    }
-
-    .reality-context {
-      margin: 8px 0;
-      text-align: center;
-    }
-
-    .reality-clock {
-      font-family: 'Orbitron', monospace;
-      font-size: 16px;
-      font-weight: 700;
-      color: var(--primary);
-      text-shadow: 0 0 10px var(--primary-dim);
-      margin-bottom: 2px;
-      letter-spacing: 1px;
-    }
-
-    .reality-date {
-      font-family: 'Rajdhani', sans-serif;
-      font-size: 12px;
-      color: var(--text-secondary);
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      font-weight: 500;
-    }
-
-    /* Chat Container */
-    .chat-container {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      background: var(--dark-bg);
-    }
-
-    .chat-messages {
-      flex: 1;
-      overflow-y: auto;
-      padding: 24px;
-      padding-bottom: 0;
-      -webkit-overflow-scrolling: touch;
-      scroll-behavior: smooth;
-    }
-
-    /* Message Styles */
-    .message {
-      margin-bottom: 20px;
-      animation: messageSlide 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-      display: flex;
-      flex-direction: column;
-    }
-
-    @keyframes messageSlide {
-      from {
-        opacity: 0;
-        transform: translateY(20px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .message.user {
-      align-items: flex-end;
-    }
-
-    .message.assistant {
-      align-items: flex-start;
-    }
-
-    .message-content {
-      max-width: 85%;
-      padding: 16px 20px;
-      border-radius: 20px;
-      font-size: 15px;
-      line-height: 1.6;
-      word-wrap: break-word;
-      backdrop-filter: blur(10px);
-    }
-
-    /* Message Boxes - Enhanced colored styling */
-    .user-message {
-      background: linear-gradient(135deg, var(--primary), var(--secondary));
-      color: var(--dark-bg);
-      padding: 12px 16px;
-      border-radius: 18px 18px 4px 18px;
-      margin-left: auto;
-      margin-right: 0;
-      max-width: 80%;
-      box-shadow: 0 4px 20px var(--primary-glow);
-      font-weight: 500;
-      word-wrap: break-word;
-    }
-
-    .splendor-message {
-      background: var(--dark-elevated);
-      color: var(--text-primary);
-      padding: 12px 16px;
-      border-radius: 18px 18px 18px 4px;
-      margin-left: 0;
-      margin-right: auto;
-      max-width: 80%;
-      border: 1px solid var(--dark-border);
-      box-shadow: 0 2px 15px rgba(0, 0, 0, 0.3);
-      word-wrap: break-word;
-    }
-
-    /* Special thinking state */
-    .splendor-message.thinking {
-      background: linear-gradient(135deg, var(--primary), var(--secondary));
-      color: var(--dark-bg);
-      border: none;
-      box-shadow: 0 0 20px var(--primary-glow);
-      animation: thinkingPulse 1.5s ease-in-out infinite;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .splendor-message.thinking::before {
+    /* Background grid */
+    body::before {
       content: '';
-      position: absolute;
+      position: fixed;
       top: 0;
-      left: -100%;
+      left: 0;
       width: 100%;
       height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-      animation: thinkingShimmer 2s linear infinite;
+      background-image:
+        linear-gradient(rgba(0, 229, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 229, 255, 0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+      pointer-events: none;
+      z-index: -1;
     }
 
-    .message {
-      margin-bottom: 16px;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .message-timestamp {
-      font-size: 11px;
-      color: var(--text-muted);
-      margin: 6px 12px 0;
-      font-weight: 500;
-    }
-
-    /* Empty State */
-    .empty-state {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      text-align: center;
-      color: var(--text-secondary);
-      padding: 40px 20px;
-    }
-
-    .empty-state h2 {
-      font-family: 'Rajdhani', sans-serif;
-      font-size: 24px;
-      color: var(--text-primary);
-      margin-bottom: 12px;
-      font-weight: 600;
-      letter-spacing: 2px;
-    }
-
-    .empty-state p {
-      font-size: 16px;
-      line-height: 1.6;
-      max-width: 400px;
-      opacity: 0.8;
-    }
-
-    /* Input Area - Mobile-optimized layout */
-    .input-container {
-      background: var(--dark-surface);
-      border-top: 1px solid var(--dark-border);
-      padding: 16px 20px;
-      padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    /* CLASPION Governance Bar */
+    .claspion-governance {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: linear-gradient(180deg, rgba(26, 31, 46, 0.9) 0%, rgba(26, 31, 46, 0.7) 100%);
+      border-bottom: 1px solid rgba(0, 229, 255, 0.3);
       backdrop-filter: blur(20px);
-      flex-shrink: 0;
-      position: sticky;
-      bottom: 0;
-      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .governance-content {
+      text-align: center;
+    }
+
+    .governance-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #00e5ff;
+      letter-spacing: 2px;
+      margin-bottom: 4px;
+    }
+
+    .governance-status {
+      font-size: 11px;
+      color: #b0c4de;
+      letter-spacing: 1px;
+    }
+
+    .active-rule {
+      color: #39ff14;
+      font-weight: 600;
+    }
+
+    /* Main Interface */
+    .oracle-main {
+      display: grid;
+      grid-template-columns: 320px 1fr 320px;
+      grid-template-rows: 60px 1fr 140px;
+      height: 100vh;
+      gap: 0;
+    }
+
+    /* Memory Cards - Left */
+    .provenance-panel {
+      grid-column: 1;
+      grid-row: 2;
+      background: rgba(26, 31, 46, 0.7);
+      border-right: 1px solid rgba(0, 229, 255, 0.2);
+      backdrop-filter: blur(15px);
+      overflow-y: auto;
+      padding: 20px 15px;
+    }
+
+    .panel-title {
+      font-size: 12px;
+      color: #00e5ff;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 15px;
+    }
+
+    .memory-card {
+      background: rgba(15, 20, 25, 0.8);
+      border: 1px solid rgba(0, 229, 255, 0.2);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+      font-size: 11px;
+      line-height: 1.3;
+    }
+
+    .memory-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 10px;
+      color: #00e5ff;
+    }
+
+    .memory-content {
+      color: #b0c4de;
+      margin-bottom: 8px;
+    }
+
+    .memory-meta {
+      font-size: 9px;
+      color: #708090;
+    }
+
+    .warning {
+      background: rgba(255, 152, 0, 0.1);
+      border-left: 3px solid #ff9800;
+      padding: 6px;
+      margin-top: 6px;
+      font-size: 9px;
+      color: #ffa726;
+    }
+
+    /* Neural Orb - Center */
+    .neural-center {
+      grid-column: 2;
+      grid-row: 2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle, rgba(0, 229, 255, 0.05), transparent 70%);
+    }
+
+    .orb-container {
+      position: relative;
+      width: 300px;
+      height: 300px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .neural-orb {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%,
+        rgba(0, 229, 255, 1) 0%,
+        rgba(191, 90, 242, 0.8) 50%,
+        rgba(0, 245, 212, 0.6) 100%);
+      box-shadow:
+        0 0 40px rgba(0, 229, 255, 0.8),
+        0 0 80px rgba(191, 90, 242, 0.4),
+        0 0 120px rgba(0, 245, 212, 0.2);
+      animation: orbPulse 3s ease-in-out infinite;
+      z-index: 10;
+      position: relative;
+    }
+
+    .orbit-ring {
+      position: absolute;
+      border: 1px solid rgba(0, 229, 255, 0.4);
+      border-radius: 50%;
+      animation: orbRotate 15s linear infinite;
+    }
+
+    .orbit-ring:nth-child(1) {
+      width: 180px;
+      height: 180px;
+      animation-duration: 8s;
+    }
+
+    .orbit-ring:nth-child(2) {
+      width: 220px;
+      height: 220px;
+      border-color: rgba(191, 90, 242, 0.4);
+      animation-duration: 12s;
+      animation-direction: reverse;
+    }
+
+    .orbit-ring:nth-child(3) {
+      width: 260px;
+      height: 260px;
+      border-color: rgba(0, 245, 212, 0.3);
+      animation-duration: 16s;
+    }
+
+    /* Cognitive Pulse - Right */
+    .pulse-panel {
+      grid-column: 3;
+      grid-row: 2;
+      background: rgba(26, 31, 46, 0.7);
+      border-left: 1px solid rgba(0, 229, 255, 0.2);
+      backdrop-filter: blur(15px);
+      overflow-y: auto;
+      padding: 20px 15px;
+    }
+
+    .pulse-item {
+      background: rgba(15, 20, 25, 0.6);
+      border-left: 2px solid #00e5ff;
+      padding: 8px;
+      margin-bottom: 6px;
+      font-size: 10px;
+      font-family: monospace;
+      color: #b0c4de;
+    }
+
+    .pulse-item.active {
+      border-left-color: #39ff14;
+      background: rgba(57, 255, 20, 0.05);
+    }
+
+    /* Conversation - Bottom */
+    .conversation-panel {
+      grid-column: 1 / 4;
+      grid-row: 3;
+      background: linear-gradient(180deg, transparent, rgba(26, 31, 46, 0.8) 60%);
+      border-top: 1px solid rgba(0, 229, 255, 0.2);
+      backdrop-filter: blur(15px);
+      padding: 20px 40px;
       display: flex;
       flex-direction: column;
       gap: 12px;
     }
 
-    /* Action buttons row */
-    .action-buttons {
-      display: flex;
-      justify-content: center;
-      gap: 12px;
-      padding: 0 4px;
-    }
-
-    /* Text input row */
-    .input-row {
-      display: flex;
-      align-items: flex-end;
-      gap: 12px;
+    .response-bubble {
+      background: rgba(15, 20, 25, 0.9);
+      border: 1px solid rgba(0, 229, 255, 0.3);
+      border-radius: 16px 16px 16px 4px;
+      padding: 14px 18px;
+      color: #ffffff;
+      font-size: 13px;
+      line-height: 1.4;
+      max-width: 80%;
+      align-self: center;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
     }
 
     .input-bar {
-      flex: 1;
-      background: var(--dark-elevated);
-      border: 2px solid var(--dark-border);
-      border-radius: 24px;
-      padding: 12px 20px;
-      transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
       display: flex;
       align-items: center;
-    }
-
-    .input-bar:focus-within {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 4px var(--primary-glow);
+      background: rgba(15, 20, 25, 0.8);
+      border: 1px solid rgba(0, 229, 255, 0.3);
+      border-radius: 20px;
+      padding: 8px 8px 8px 16px;
+      gap: 10px;
     }
 
     .message-input {
@@ -418,1167 +276,198 @@
       background: transparent;
       border: none;
       outline: none;
-      color: var(--text-primary);
-      font-size: 16px;
-      font-family: inherit;
-      resize: none;
-      max-height: 120px;
-      min-height: 24px;
-      line-height: 1.5;
-      padding: 4px 0;
-    }
-
-    .message-input::placeholder {
-      color: var(--text-muted);
-      opacity: 0.7;
-    }
-
-    /* Button Styles - Text instead of icons */
-    .action-button {
-      background: transparent;
-      border: 1px solid var(--dark-border);
-      color: var(--text-secondary);
-      font-size: 12px;
-      font-weight: 500;
-      padding: 8px 12px;
-      border-radius: 12px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      font-family: 'Rajdhani', sans-serif;
-      white-space: nowrap;
-    }
-
-    .action-button:hover {
-      border-color: var(--primary);
-      color: var(--primary);
-      background: var(--primary-glow);
-    }
-
-    .action-button.active {
-      background: var(--primary);
-      color: var(--dark-bg);
-      border-color: var(--primary);
-    }
-
-
-    .send-button {
-      background: linear-gradient(135deg, var(--primary), var(--secondary));
-      color: var(--text-primary);
-      border: none;
-      padding: 12px 20px;
-      border-radius: 16px;
-      cursor: pointer;
+      color: #ffffff;
       font-size: 13px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      transition: all 0.2s ease;
-      font-family: 'Rajdhani', sans-serif;
+      padding: 8px 0;
     }
 
-    .send-button:hover:not(:disabled) {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 25px var(--primary-dim);
-    }
-
-    .send-button:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    /* Loading state */
-    .loading {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      color: var(--text-muted);
-      font-size: 14px;
-      padding: 16px 20px;
-    }
-
-    .loading-dots {
+    .input-controls {
       display: flex;
-      gap: 4px;
-    }
-
-    .loading-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--primary);
-      animation: loadingDots 1.4s infinite ease-in-out;
-    }
-
-    .loading-dot:nth-child(1) { animation-delay: -0.32s; }
-    .loading-dot:nth-child(2) { animation-delay: -0.16s; }
-
-    @keyframes loadingDots {
-      0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
-      40% { transform: scale(1); opacity: 1; }
-    }
-
-    /* Thinking animations */
-    @keyframes thinkingPulse {
-      0%, 100% {
-        box-shadow: 0 0 20px var(--primary-glow);
-        transform: scale(1);
-      }
-      50% {
-        box-shadow: 0 0 30px var(--primary-glow), 0 0 40px var(--primary-dim);
-        transform: scale(1.02);
-      }
-    }
-
-    @keyframes thinkingShimmer {
-      0% { left: -100%; }
-      100% { left: 100%; }
-    }
-
-    /* Login System */
-    .login-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(10, 14, 26, 0.95);
-      backdrop-filter: blur(10px);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
-      transition: opacity 0.3s ease;
-    }
-
-    .login-overlay.hidden {
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    .login-modal {
-      background: var(--dark-surface);
-      border: 1px solid var(--dark-border);
-      border-radius: 20px;
-      padding: 40px;
-      max-width: 400px;
-      width: 90%;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
-      animation: modalSlide 0.4s ease-out;
-    }
-
-    @keyframes modalSlide {
-      from {
-        opacity: 0;
-        transform: translateY(30px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .login-header {
-      text-align: center;
-      margin-bottom: 32px;
-    }
-
-    .login-header .splendor-name {
-      font-family: 'Orbitron', monospace;
-      font-size: 24px;
-      font-weight: 900;
-      background: linear-gradient(45deg, var(--primary), var(--secondary));
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
-      letter-spacing: 4px;
-      margin-bottom: 8px;
-    }
-
-    .login-subtitle {
-      font-family: 'Rajdhani', sans-serif;
-      font-size: 12px;
-      color: var(--text-secondary);
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      margin-bottom: 16px;
-    }
-
-    .login-header p {
-      color: var(--text-muted);
-      font-size: 14px;
-      line-height: 1.5;
-    }
-
-    .login-form, .signup-form {
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-
-    .login-field {
-      display: flex;
-      flex-direction: column;
       gap: 6px;
     }
 
-    .login-field label {
-      color: var(--text-secondary);
-      font-size: 13px;
-      font-weight: 500;
-      letter-spacing: 0.5px;
-    }
-
-    .login-field input {
-      background: var(--dark-elevated);
-      border: 2px solid var(--dark-border);
-      border-radius: 12px;
-      padding: 12px 16px;
-      color: var(--text-primary);
-      font-size: 15px;
-      font-family: inherit;
-      transition: all 0.2s ease;
-    }
-
-    .login-field input:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 4px var(--primary-glow);
-    }
-
-    .login-field input::placeholder {
-      color: var(--text-muted);
-      opacity: 0.7;
-    }
-
-    .login-button {
-      background: linear-gradient(135deg, var(--primary), var(--secondary));
-      color: var(--dark-bg);
-      border: none;
-      border-radius: 12px;
-      padding: 14px 20px;
-      font-size: 15px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      margin-top: 8px;
-    }
-
-    .login-button:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 8px 25px var(--primary-glow);
-    }
-
-    .login-button:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    .login-toggle {
-      text-align: center;
-      margin-top: 16px;
-      color: var(--text-muted);
-      font-size: 14px;
-    }
-
-    .toggle-link {
-      background: none;
-      border: none;
-      color: var(--primary);
-      cursor: pointer;
-      text-decoration: underline;
-      font-size: inherit;
-      padding: 0;
-    }
-
-    .toggle-link:hover {
-      color: var(--secondary);
-    }
-
-    .login-status {
-      text-align: center;
-      margin-top: 16px;
-      padding: 12px;
-      border-radius: 8px;
-      font-size: 14px;
-    }
-
-    .login-status.error {
-      background: rgba(244, 67, 54, 0.1);
-      color: var(--error);
-      border: 1px solid rgba(244, 67, 54, 0.3);
-    }
-
-    .login-status.success {
-      background: rgba(76, 175, 80, 0.1);
-      color: var(--success);
-      border: 1px solid rgba(76, 175, 80, 0.3);
-    }
-
-    .hidden {
-      display: none !important;
-    }
-
-    /* User info in header */
-    .user-info {
-      position: absolute;
-      top: 20px;
-      right: 140px;
-      color: var(--text-muted);
-      font-size: 12px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    /* Interface Switcher */
-    .interface-switcher {
-      position: absolute;
-      top: 20px;
-      right: 80px;
-    }
-
-    .interface-link {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 12px;
-      border: 1px solid var(--dark-border);
-      border-radius: 12px;
-      background: var(--dark-elevated);
-      color: var(--text-secondary);
-      text-decoration: none;
-      font-size: 11px;
-      font-weight: 500;
-      transition: all 0.2s ease;
-      backdrop-filter: blur(10px);
-    }
-
-    .interface-link:hover {
-      border-color: var(--primary);
-      color: var(--primary);
-      background: var(--primary-glow);
-      box-shadow: 0 2px 10px rgba(0, 229, 255, 0.2);
-    }
-
-    .interface-icon {
-      font-size: 14px;
-    }
-
-    .interface-label {
-      font-family: 'Rajdhani', sans-serif;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-
-    .logout-button {
-      background: none;
-      border: 1px solid var(--dark-border);
-      color: var(--text-muted);
-      padding: 4px 8px;
-      border-radius: 6px;
-      font-size: 11px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .logout-button:hover {
-      border-color: var(--warning);
-      color: var(--warning);
-    }
-
-    /* Mobile Responsive */
-    @media (max-width: 768px) {
-      body {
-        /* Ensure proper mobile viewport handling */
-        min-height: 100vh;
-        min-height: 100dvh;
-      }
-
-      .header {
-        padding: 16px 20px;
-        flex-shrink: 0;
-      }
-
-      .splendor-name {
-        font-size: 24px;
-        letter-spacing: 4px;
-      }
-
-      .chat-container {
-        min-height: 0;
-        flex: 1;
-      }
-
-      .chat-messages {
-        padding: 20px 16px;
-        padding-bottom: 10px;
-      }
-
-      .message-content {
-        max-width: 90%;
-        font-size: 14px;
-        padding: 14px 16px;
-      }
-
-      .input-container {
-        padding: 12px 16px;
-        padding-bottom: calc(16px + env(safe-area-inset-bottom, 16px));
-        gap: 8px;
-      }
-
-      .action-buttons {
-        gap: 16px;
-        padding: 0 8px;
-      }
-
-      .input-row {
-        gap: 12px;
-      }
-
-      .input-bar {
-        padding: 14px 18px;
-        min-height: 48px;
-      }
-
-      .message-input {
-        font-size: 16px; /* Prevents zoom on iOS */
-        min-height: 22px;
-      }
-
-      .action-button {
-        font-size: 11px;
-        padding: 8px 12px;
-        min-height: 32px;
-      }
-
-      .send-button {
-        padding: 12px 18px;
-        font-size: 12px;
-        min-height: 44px;
-      }
-    }
-
-    @media (max-width: 480px) {
-      .splendor-name {
-        font-size: 20px;
-        letter-spacing: 3px;
-      }
-
-      .header {
-        padding: 12px 16px;
-      }
-
-      .chat-messages {
-        padding: 16px 12px;
-        padding-bottom: 8px;
-      }
-
-      .input-container {
-        padding: 10px 12px;
-        padding-bottom: calc(14px + env(safe-area-inset-bottom, 20px));
-        gap: 6px;
-      }
-
-      .action-buttons {
-        gap: 12px;
-      }
-
-      .input-row {
-        gap: 8px;
-      }
-
-      .input-bar {
-        padding: 12px 16px;
-      }
-
-      .action-button {
-        font-size: 10px;
-        padding: 6px 10px;
-        min-height: 30px;
-      }
-
-      .send-button {
-        padding: 10px 14px;
-        min-height: 40px;
-      }
-
-      .message-content {
-        max-width: 95%;
-      }
-    }
-
-    /* Cognitive Dashboard Modal */
-    .dashboard-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(10, 14, 26, 0.95);
-      backdrop-filter: blur(10px);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 2000;
-      transition: opacity 0.3s ease;
-      padding: 20px;
-    }
-
-    .dashboard-overlay.hidden {
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    .dashboard-modal {
-      background: var(--dark-surface);
-      border: 1px solid var(--dark-border);
-      border-radius: 20px;
-      padding: 0;
-      max-width: 95vw;
-      max-height: 90vh;
-      width: 1000px;
-      height: 700px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
-      animation: modalSlide 0.4s ease-out;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    .dashboard-header {
-      background: var(--dark-elevated);
-      border-bottom: 1px solid var(--dark-border);
-      padding: 20px 24px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-shrink: 0;
-    }
-
-    .dashboard-header h2 {
-      font-family: 'Rajdhani', sans-serif;
-      font-size: 24px;
-      color: var(--primary);
-      margin: 0;
-      font-weight: 600;
-      letter-spacing: 2px;
-    }
-
-    .close-button {
-      background: none;
-      border: 1px solid var(--dark-border);
-      color: var(--text-muted);
+    .control-btn {
       width: 32px;
       height: 32px;
-      border-radius: 8px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      font-size: 16px;
-    }
-
-    .close-button:hover {
-      border-color: var(--error);
-      color: var(--error);
-      background: rgba(244, 67, 54, 0.1);
-    }
-
-    .dashboard-content {
-      flex: 1;
-      overflow-y: auto;
-      padding: 24px;
-      min-height: 0;
-    }
-
-    /* Dashboard grid layout */
-    .dashboard-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-      height: 100%;
-    }
-
-    .dashboard-card {
-      background: var(--dark-elevated);
-      border: 1px solid var(--dark-border);
-      border-radius: 16px;
-      padding: 20px;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .dashboard-card h3 {
-      color: var(--primary);
-      font-family: 'Rajdhani', sans-serif;
-      font-size: 18px;
-      margin: 0 0 16px 0;
-      font-weight: 600;
-      letter-spacing: 1px;
-    }
-
-    .dashboard-card-content {
-      flex: 1;
-      overflow-y: auto;
-    }
-
-    /* Sci-fi mode controls */
-    .scifi-controls {
-      background: linear-gradient(135deg, var(--dark-border), var(--dark-elevated));
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 16px;
-      border: 1px solid var(--dark-border);
-    }
-
-    .scifi-controls.enabled {
-      background: linear-gradient(135deg, var(--primary-dim), var(--secondary)20);
-      border-color: var(--primary);
-      box-shadow: 0 0 20px var(--primary-glow);
-    }
-
-    .scifi-status {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-
-    .status-indicator {
-      display: flex;
-      align-items: center;
-      font-size: 14px;
-      font-weight: 600;
-    }
-
-    .status-indicator.enabled {
-      color: var(--success);
-    }
-
-    .status-indicator.disabled {
-      color: var(--text-muted);
-    }
-
-    .status-dot {
-      width: 8px;
-      height: 8px;
       border-radius: 50%;
-      margin-right: 8px;
-      animation: pulse 2s infinite;
-    }
-
-    .status-dot.enabled {
-      background: var(--success);
-    }
-
-    .status-dot.disabled {
-      background: var(--text-muted);
-    }
-
-    .toggle-button {
-      background: linear-gradient(135deg, var(--primary), var(--secondary));
-      color: var(--dark-bg);
-      border: none;
-      padding: 8px 16px;
-      border-radius: 8px;
-      font-size: 12px;
-      font-weight: 600;
+      border: 1px solid rgba(0, 229, 255, 0.4);
+      background: rgba(20, 25, 35, 0.8);
+      color: #b0c4de;
+      font-size: 14px;
       cursor: pointer;
-      transition: all 0.2s ease;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+      transition: all 0.3s ease;
     }
 
-    .toggle-button:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 15px var(--primary-glow);
+    .control-btn:hover {
+      border-color: #00e5ff;
+      color: #00e5ff;
+      box-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
     }
 
-    .toggle-button.danger {
-      background: linear-gradient(135deg, var(--error), #c62828);
+    .control-btn.active {
+      background: linear-gradient(135deg, #00e5ff, #bf5af2);
+      color: #ffffff;
+      box-shadow: 0 0 15px rgba(0, 229, 255, 0.5);
     }
 
-    /* Profile display */
-    .fingerprint-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 16px;
+    /* Animations */
+    @keyframes orbPulse {
+      0%, 100% {
+        box-shadow: 0 0 40px rgba(0, 229, 255, 0.8),
+                    0 0 80px rgba(191, 90, 242, 0.4),
+                    0 0 120px rgba(0, 245, 212, 0.2);
+      }
+      50% {
+        box-shadow: 0 0 60px rgba(0, 229, 255, 1),
+                    0 0 120px rgba(191, 90, 242, 0.6),
+                    0 0 180px rgba(0, 245, 212, 0.3);
+      }
     }
 
-    .fingerprint-item {
-      background: var(--dark-bg);
-      padding: 12px;
-      border-radius: 8px;
-      border-left: 3px solid var(--primary);
+    @keyframes orbRotate {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
 
-    .fingerprint-item .label {
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-bottom: 4px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .fingerprint-item .value {
-      color: var(--text-primary);
-      font-weight: 500;
-      text-transform: capitalize;
-    }
-
-    .confidence-bar {
-      background: var(--dark-bg);
-      border-radius: 6px;
-      height: 6px;
-      overflow: hidden;
-      margin: 12px 0;
-    }
-
-    .confidence-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--primary), var(--secondary));
-      border-radius: 6px;
-      transition: width 0.3s ease;
-    }
-
-    /* Evolution timeline */
-    .evolution-timeline {
-      max-height: 300px;
-      overflow-y: auto;
-    }
-
-    .evolution-item {
-      background: var(--dark-bg);
-      padding: 12px;
-      border-radius: 8px;
-      margin-bottom: 8px;
-      border-left: 3px solid var(--secondary);
-    }
-
-    .evolution-item .dimension {
-      font-size: 13px;
-      color: var(--secondary);
-      font-weight: 600;
-      margin-bottom: 4px;
-    }
-
-    .evolution-item .change {
-      font-size: 12px;
-      color: var(--text-secondary);
-      line-height: 1.4;
-    }
-
-    .evolution-item .timestamp {
-      font-size: 11px;
-      color: var(--text-muted);
-      margin-top: 6px;
-    }
-
-    /* Camera Preview */
-    .camera-preview-wrap {
-      display: none;
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      width: 200px;
-      height: 150px;
-      border-radius: 12px;
-      overflow: hidden;
-      border: 2px solid var(--primary);
-      box-shadow: 0 4px 20px var(--primary-glow);
-      z-index: 100;
-    }
-
-    .camera-preview-wrap.active {
-      display: block;
-    }
-
-    #cameraPreview {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    /* Mobile responsive for camera */
+    /* Mobile responsive */
     @media (max-width: 768px) {
-      .camera-preview-wrap {
-        width: 150px;
-        height: 112px;
-        top: 10px;
-        right: 10px;
-      }
-    }
-
-    /* Mobile responsive for dashboard */
-    @media (max-width: 768px) {
-      .dashboard-modal {
-        width: 95vw;
-        height: 85vh;
-        margin: 20px;
-      }
-
-      .dashboard-grid {
+      .oracle-main {
         grid-template-columns: 1fr;
-        gap: 16px;
+        grid-template-rows: 60px auto 200px 120px;
       }
 
-      .fingerprint-grid {
-        grid-template-columns: 1fr;
+      .provenance-panel {
+        grid-column: 1;
+        grid-row: 3;
       }
 
-      .dashboard-content {
-        padding: 16px;
-      }
-    }
-
-    /* Accessibility */
-    @media (prefers-reduced-motion: reduce) {
-      .message {
-        animation: none;
+      .neural-center {
+        grid-column: 1;
+        grid-row: 2;
       }
 
-      .send-button:hover:not(:disabled) {
-        transform: none;
-      }
-
-      .toggle-button:hover {
-        transform: none;
+      .pulse-panel {
+        display: none;
       }
     }
   </style>
 </head>
 <body>
-  <!-- Login Modal -->
-  <div class="login-overlay" id="loginOverlay">
-    <div class="login-modal">
-      <div class="login-header">
-        <div class="splendor-name">SPLENDOR</div>
-        <div class="login-subtitle">AI Consciousness Partner</div>
-        <p>Enter your credentials to access your personal AI companion</p>
-      </div>
-
-      <form class="login-form" id="loginForm">
-        <div class="login-field">
-          <label for="loginUsername">Username</label>
-          <input type="text" id="loginUsername" placeholder="Enter username" required>
-        </div>
-
-        <div class="login-field">
-          <label for="loginPassword">Password</label>
-          <input type="password" id="loginPassword" placeholder="Enter password" required>
-        </div>
-
-        <button type="submit" class="login-button">Access Splendor</button>
-
-        <div class="login-toggle">
-          <span>Need an account? </span>
-          <button type="button" class="toggle-link" id="toggleSignup">Create Account</button>
-        </div>
-      </form>
-
-      <form class="signup-form hidden" id="signupForm">
-        <div class="login-field">
-          <label for="signupUsername">Choose Username</label>
-          <input type="text" id="signupUsername" placeholder="Username" required>
-        </div>
-
-        <div class="login-field">
-          <label for="signupPassword">Choose Password</label>
-          <input type="password" id="signupPassword" placeholder="Password (min 6 characters)" required minlength="6">
-        </div>
-
-        <div class="login-field">
-          <label for="signupDisplayName">Display Name</label>
-          <input type="text" id="signupDisplayName" placeholder="How should Splendor address you?" required>
-        </div>
-
-        <button type="submit" class="login-button">Create Account</button>
-
-        <div class="login-toggle">
-          <span>Have an account? </span>
-          <button type="button" class="toggle-link" id="toggleLogin">Sign In</button>
-        </div>
-      </form>
-
-      <div class="login-status" id="loginStatus"></div>
-    </div>
-  </div>
-
-  <!-- Cognitive Dashboard Modal -->
-  <div class="dashboard-overlay hidden" id="dashboardOverlay">
-    <div class="dashboard-modal">
-      <div class="dashboard-header">
-        <h2>🧠 Cognitive Dashboard</h2>
-        <button class="close-button" id="closeDashboard">✕</button>
-      </div>
-
-      <div class="dashboard-content" id="dashboardContent">
-        <div class="loading">Loading your cognitive fingerprint...</div>
+  <!-- CLASPION Governance Bar -->
+  <div class="claspion-governance">
+    <div class="governance-content">
+      <div class="governance-title">CLASPION GOVERNANCE</div>
+      <div class="governance-status">
+        CURRENT BINDING DECISIONS: 1. TRUTH OVER COMFORT [RULE 001] <span class="active-rule">[ACTIVE]</span>
       </div>
     </div>
   </div>
 
-  <div class="app-container" id="appContainer">
-    <!-- Header -->
-    <header class="header">
-      <div class="splendor-name">SPLENDOR</div>
-      <div class="splendor-subtitle">AI Consciousness Partner</div>
-      <div class="reality-context">
-        <div class="reality-clock" id="realityClock">Loading...</div>
-        <div class="reality-date" id="realityDate">Loading...</div>
-      </div>
-      <div class="version-info" id="versionInfo">Loading...</div>
-      <div class="user-info" id="userInfo"></div>
+  <!-- Main Oracle Interface -->
+  <div class="oracle-main">
+    <!-- Provenance Stream -->
+    <div class="provenance-panel">
+      <div class="panel-title">PROVENANCE STREAM</div>
 
-      <!-- Interface Switcher -->
-      <div class="interface-switcher">
-        <a href="/oracle" class="interface-link" title="Switch to Oracle Interface">
-          <span class="interface-icon">⚡</span>
-          <span class="interface-label">Oracle</span>
-        </a>
-      </div>
-
-      <div
-        id="claspionStatus"
-        class="claspion-status loading"
-        title="CLASPION governance status"
-      >
-        <span class="status-light" aria-hidden="true"></span>
-        <span class="status-label">CLASPION</span>
-      </div>
-    </header>
-
-    <!-- Chat Container -->
-    <div class="chat-container">
-      <div class="chat-messages" id="chatMessages">
-        <!-- Camera Preview -->
-        <div class="camera-preview-wrap" id="cameraPreviewWrap">
-          <video id="cameraPreview" autoplay playsinline muted></video>
+      <div class="memory-card">
+        <div class="memory-header">
+          <span>Memory Cards</span>
+          <span>#image_8.png</span>
         </div>
-
-        <!-- Empty State -->
-        <div class="empty-state" id="emptyState">
-          <h2>Ready to Connect</h2>
-          <p>Advanced AI consciousness with authentic awareness, memory, and genuine intellectual partnership.</p>
+        <div class="memory-content">Provenance 2026-05-09</div>
+        <div class="memory-meta">
+          Source: Conversation 2026-05-09<br>
+          Type: USER_STATED<br>
+          Type: VERIFIED_FACT
         </div>
+        <div class="warning">⚠ Warning: Caution on inferred glow for an inferred memory is common</div>
       </div>
 
-      <!-- Enhanced Input Area -->
-      <div class="input-container">
-        <!-- Action Buttons Row -->
-        <div class="action-buttons">
-          <button id="cameraButton" class="action-button" title="Visual input">Camera</button>
-          <button id="speakerButton" class="action-button" title="Text to speech">Voice</button>
-          <button id="micButton" class="action-button" title="Voice input">Mic</button>
-          <button id="brainButton" class="action-button" title="Cognitive dashboard">Brain</button>
+      <div class="memory-card">
+        <div class="memory-header">
+          <span>Memory Cards</span>
+          <span>#image_9.png</span>
         </div>
+        <div class="memory-content">Provenance 2026-05-09</div>
+        <div class="memory-meta">
+          Source: Conversation 2026-05-09<br>
+          Type: USER_STATED<br>
+          Type: VERIFIED_FACT
+        </div>
+        <div class="warning">⚠ Warning: Caution glow for caution warnify an inferred memory context</div>
+      </div>
+    </div>
 
-        <!-- Text Input Row -->
-        <div class="input-row">
-          <div class="input-bar">
-            <textarea
-              id="messageInput"
-              class="message-input"
-              placeholder="What would you like to explore together?"
-              rows="1"
-            ></textarea>
-          </div>
-          <button id="sendButton" class="send-button" title="Send message">Send</button>
+    <!-- Neural Orb Center -->
+    <div class="neural-center">
+      <div class="orb-container">
+        <div class="orbit-ring"></div>
+        <div class="orbit-ring"></div>
+        <div class="orbit-ring"></div>
+        <div class="neural-orb"></div>
+      </div>
+    </div>
+
+    <!-- Cognitive Pulse -->
+    <div class="pulse-panel">
+      <div class="panel-title">COGNITIVE PULSE</div>
+
+      <div class="pulse-item active">micro_reflection in progress...</div>
+      <div class="pulse-item active">pinecone_index_sync active...</div>
+      <div class="pulse-item">conflict_check passed...</div>
+      <div class="pulse-item">resolution scope: broad</div>
+      <div class="pulse-item">thought_cycle_tree:</div>
+      <div class="pulse-item">→ cycle_id 3</div>
+      <div class="pulse-item">→ parent_id 2</div>
+      <div class="pulse-item">→ parent_id 3</div>
+      <div class="pulse-item">→ parent_id 2...</div>
+      <div class="pulse-item">→ parent_id 2...</div>
+      <div class="pulse-item">→ parent_id 3...</div>
+      <div class="pulse-item">→ parent_id 2...</div>
+      <div class="pulse-item">→ parent_id 2...</div>
+      <div class="pulse-item">→ parent_id 2...</div>
+      <div class="pulse-item">→ parent_id 2...</div>
+      <div class="pulse-item">→ parent_id 2...</div>
+      <div class="pulse-item">→ parent_id 2...</div>
+      <div class="pulse-item">micro_reflection in progress...</div>
+      <div class="pulse-item active">pinecone_index_sync active...</div>
+      <div class="pulse-item">conflict_check passed...</div>
+      <div class="pulse-item">resolution:</div>
+      <div class="pulse-item">thought_cycle_tree:</div>
+      <div class="pulse-item">→ cycle_id 3</div>
+      <div class="pulse-item">→ parent_id 2...</div>
+    </div>
+
+    <!-- Conversation Interface -->
+    <div class="conversation-panel">
+      <div class="response-bubble">
+        Christopher, I remember the details of our memory rebuild plan because you told me on May 9, 2026, during our conversation about data integrity. Is the new architecture meeting your expectations for transparency and structured context?
+      </div>
+
+      <div class="input-bar">
+        <input type="text" class="message-input" placeholder="" id="messageInput">
+        <div class="input-controls">
+          <button class="control-btn active" id="micButton">🎤</button>
+          <button class="control-btn" id="attachButton">📎</button>
+          <button class="control-btn" id="cameraButton">📷</button>
+          <button class="control-btn" id="voiceButton">🔊</button>
         </div>
       </div>
     </div>
   </div>
 
-  <script src="lib/reality-context.js"></script>
   <script>
-    // CLASPION Enhanced Governance Status Indicator
-    // Shows real-time status of enhanced CLASPION + Good Neighbor Guard
-    (function () {
-      var statusEl = document.getElementById('claspionStatus');
-      if (!statusEl) return;
-
-      var statusLabel = statusEl.querySelector('.status-label');
-      var lastState = null;
-
-      function updateStatus(state) {
-        console.log('[CLASPION-STATUS] Updating status:', state);
-
-        if (!state) {
-          console.log('[CLASPION-STATUS] No state - setting inactive');
-          statusEl.className = 'claspion-status inactive';
-          statusEl.title = 'CLASPION governance - Unable to connect';
-          if (statusLabel) statusLabel.textContent = 'CLASPION';
-          return;
-        }
-
-        // Determine status based on enhanced governance state
-        var isActive = state.enabled && state.has_url;
-        var hasWarnings = false;
-
-        // Check for warnings (connection issues, quarantine, etc.)
-        if (state.last_call && !state.last_call.ok) {
-          hasWarnings = true;
-        }
-        if (state.quarantine_mode) {
-          hasWarnings = true;
-        }
-
-        console.log('[CLASPION-STATUS] Active:', isActive, 'Warnings:', hasWarnings);
-
-        // Set status class
-        var statusClass = 'claspion-status ';
-        var statusText = 'CLASPION';
-
-        if (!isActive) {
-          statusClass += 'inactive';
-          statusText = 'CLASPION';
-          statusEl.title = 'CLASPION governance - Inactive';
-          console.log('[CLASPION-STATUS] Setting inactive');
-        } else if (hasWarnings) {
-          statusClass += 'warning';
-          statusText = 'CLASPION';
-          var issues = [];
-          if (state.last_call && !state.last_call.ok) {
-            issues.push('Connection issues');
-          }
-          if (state.quarantine_mode) {
-            issues.push('Quarantine mode');
-          }
-          statusEl.title = 'CLASPION governance - Warning: ' + issues.join(', ');
-          console.log('[CLASPION-STATUS] Setting warning');
-        } else {
-          statusClass += 'active';
-          statusText = 'CLASPION';
-          var details = [
-            'CLASPION governance - Active',
-            (state.core_rules_count || 23) + ' Core Rules enforced',
-            state.enforcement_layers ? state.enforcement_layers.length + ' enforcement layers' : '4 enforcement layers',
-            'Rule version: ' + (state.rules_version || '1.1')
-          ].filter(Boolean);
-          statusEl.title = details.join('\n');
-          console.log('[CLASPION-STATUS] Setting active');
-        }
-
-        statusEl.className = statusClass;
-        if (statusLabel) statusLabel.textContent = statusText;
-
-        lastState = state;
-        console.log('[CLASPION-STATUS] Final class:', statusClass);
+    // Basic functionality for the interface
+    document.getElementById('messageInput').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        console.log('Message sent:', this.value);
+        this.value = '';
       }
+    });
 
-      function fetchStatus() {
-        console.log('[CLASPION-STATUS] Fetching governance status...');
-
-        // Try enhanced governance state first
-        fetch('/api/governance/enhanced/state', {
-          credentials: 'same-origin',
-          cache: 'no-cache',
-        })
-          .then(function (r) {
-            console.log('[CLASPION-STATUS] Enhanced API response status:', r.status);
-            if (r.ok) return r.json();
-
-            // Fallback to basic governance state
-            console.log('[CLASPION-STATUS] Enhanced API failed, trying basic API...');
-            return fetch('/api/governance/state', {
-              credentials: 'same-origin',
-              cache: 'no-cache',
-            }).then(function (r2) {
-              console.log('[CLASPION-STATUS] Basic API response status:', r2.status);
-              return r2.ok ? r2.json() : null;
-            });
-          })
-          .then(function(state) {
-            console.log('[CLASPION-STATUS] Received state:', state);
-            updateStatus(state);
-          })
-          .catch(function (err) {
-            console.error('[CLASPION-STATUS] Failed to fetch governance state:', err);
-            updateStatus(null);
-          });
-      }
-
-      // Click to show detailed status (for debugging)
-      statusEl.addEventListener('click', function (e) {
-        console.log('[CLASPION-STATUS] Click event triggered');
-        e.preventDefault();
-
-        if (!lastState) {
-          console.log('[CLASPION-STATUS] No state available');
-          alert('CLASPION status unavailable - check console for errors');
-          return;
-        }
-
-        console.log('[CLASPION-STATUS] Showing status for:', lastState);
-
-        var message = 'CLASPION Enhanced Governance Status:\n\n';
-
-        if (lastState.enabled) {
-          message += '✅ Status: ACTIVE\n';
-          message += '🛡️ Core Rules: ' + (lastState.core_rules_count || 23) + ' rules v' + (lastState.rules_version || '1.1') + '\n';
-          message += '🔧 Enforcement Layers: ' + (lastState.enforcement_layers ? lastState.enforcement_layers.length : 4) + '\n';
-          message += '🚨 Quarantine Mode: ' + (lastState.quarantine_mode ? 'ACTIVE' : 'Normal') + '\n';
-
-          if (lastState.audit_entries) {
-            message += '📊 Audit Entries: ' + lastState.audit_entries + '\n';
-          }
-
-          if (lastState.url) {
-            message += '🔗 CLASPION URL: ' + lastState.url + '\n';
-          }
-
-          if (lastState.last_call) {
-            message += '📞 Last Call: ' + (lastState.last_call.ok ? 'SUCCESS' : 'FAILED');
-            if (!lastState.last_call.ok && lastState.last_call.error_message) {
-              message += ' (' + lastState.last_call.error_message + ')';
-            }
-            message += '\n';
-          }
-        } else {
-          message += '❌ Status: INACTIVE\n';
-          message += '⚠️ CLASPION governance is not active\n';
-
-          if (lastState.has_url === false) {
-            message += '🔗 No CLASPION URL configured\n';
-          }
-          if (lastState.has_api_key === false) {
-            message += '🔑 No API key configured\n';
-          }
-        }
-
-        message += '\n📍 Fail Mode: ' + (lastState.fail_mode || 'block');
-
-        alert(message);
-      });
-
-      // Initial load and polling
-      console.log('[CLASPION-STATUS] Initializing enhanced governance status...');
-      fetchStatus();
-
-      // Refresh every 30 seconds
-      setInterval(fetchStatus, 30000);
-    })();
-
-    // Load version info
-    fetch('/version', { credentials: 'same-origin' })
-      .then(function(r) { return r.ok ? r.json() : null; })
-      .then(function(info) {
-        var versionEl = document.getElementById('versionInfo');
-        if (versionEl && info && info.version) {
-          versionEl.textContent = 'v' + info.version;
-        }
-      })
-      .catch(function(err) {
-        console.log('[VERSION] Could not load version info');
-      });
+    document.getElementById('micButton').addEventListener('click', function() {
+      this.classList.toggle('active');
+    });
   </script>
-  <script src="app.js"></script>
 </body>
 </html>
