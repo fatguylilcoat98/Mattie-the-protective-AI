@@ -648,19 +648,34 @@
       }
     }
 
+    async function postChat(url, body) {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(body)
+      });
+      return res;
+    }
+
     async function sendMessage(text) {
       if (!text || !text.trim()) return;
       stopAudio();
       responseBubble.textContent = 'Thinking…';
       setState('thinking');
       try {
-        const res = await fetch('/api/enhanced/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'same-origin',
-          body: JSON.stringify({ message: text, include_memory: true, include_consciousness: true })
+        // Prefer the enhanced memory-aware endpoint. If it isn't
+        // configured (returns 503), fall back to the basic /api/chat
+        // so Splendor still responds.
+        let res = await postChat('/api/enhanced/chat', {
+          message: text,
+          include_memory: true,
+          include_consciousness: true
         });
-        if (!res.ok) throw new Error('chat error');
+        if (res.status === 503) {
+          res = await postChat('/api/chat', { message: text });
+        }
+        if (!res.ok) throw new Error('chat ' + res.status);
         const data = await res.json();
         const replyText = data.response || data.message || '(no response)';
         responseBubble.textContent = replyText;
@@ -672,6 +687,7 @@
         // audio-reactive orb. Otherwise the orb returns to idle.
         await speakResponse(replyText);
       } catch (err) {
+        console.warn('chat send failed:', err);
         responseBubble.textContent = 'I encountered an error processing your message. Please try again.';
         setState(null);
       }
@@ -923,13 +939,18 @@
     root.add(particleGroup);
 
     function resize() {
-      const w = canvas.clientWidth, h = canvas.clientHeight;
-      if (canvas.width !== w * renderer.getPixelRatio() || canvas.height !== h * renderer.getPixelRatio()) {
+      const w = Math.max(1, canvas.clientWidth);
+      const h = Math.max(1, canvas.clientHeight);
+      const dpr = renderer.getPixelRatio();
+      if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
         renderer.setSize(w, h, false);
         camera.aspect = w / h;
         camera.updateProjectionMatrix();
       }
     }
+    // Redraw on rotation / mobile keyboard open / window resize
+    window.addEventListener('resize', resize);
+    window.addEventListener('orientationchange', resize);
 
     const COLORS = {
       idle:      { primary: 0x00e5ff, secondary: 0x4ff0b7 },

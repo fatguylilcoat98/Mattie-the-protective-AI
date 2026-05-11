@@ -26,7 +26,7 @@ async function gateAction(thought, intent) {
 // Simple chat endpoint - just the essentials
 router.post('/', async (req, res) => {
   try {
-    const { message, userId = 'default' } = req.body;
+    const { message, userId = 'default-user' } = req.body;
 
     console.log(`[CHAT] Processing message from ${userId}: ${message}`);
 
@@ -111,7 +111,7 @@ router.post('/', async (req, res) => {
 
 // Simple streaming endpoint
 router.post('/stream', async (req, res) => {
-  const { message, userId = 'default' } = req.body;
+  const { message, userId = 'default-user' } = req.body;
 
   try {
     // Set SSE headers
