@@ -328,28 +328,6 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
-
-    /* Mobile responsive */
-    @media (max-width: 768px) {
-      .oracle-main {
-        grid-template-columns: 1fr;
-        grid-template-rows: 60px auto 200px 120px;
-      }
-
-      .provenance-panel {
-        grid-column: 1;
-        grid-row: 3;
-      }
-
-      .neural-center {
-        grid-column: 1;
-        grid-row: 2;
-      }
-
-      .pulse-panel {
-        display: none;
-      }
-    }
   </style>
 </head>
 <body>
@@ -445,29 +423,15 @@
       </div>
 
       <div class="input-bar">
-        <input type="text" class="message-input" placeholder="" id="messageInput">
+        <input type="text" class="message-input" placeholder="">
         <div class="input-controls">
-          <button class="control-btn active" id="micButton">🎤</button>
-          <button class="control-btn" id="attachButton">📎</button>
-          <button class="control-btn" id="cameraButton">📷</button>
-          <button class="control-btn" id="voiceButton">🔊</button>
+          <button class="control-btn active">🎤</button>
+          <button class="control-btn">📎</button>
+          <button class="control-btn">📷</button>
+          <button class="control-btn">🔊</button>
         </div>
       </div>
     </div>
   </div>
-
-  <script>
-    // Basic functionality for the interface
-    document.getElementById('messageInput').addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') {
-        console.log('Message sent:', this.value);
-        this.value = '';
-      }
-    });
-
-    document.getElementById('micButton').addEventListener('click', function() {
-      this.classList.toggle('active');
-    });
-  </script>
 </body>
 </html>
