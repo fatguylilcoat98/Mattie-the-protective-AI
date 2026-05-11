@@ -4,6 +4,7 @@ import { Sphere, MeshDistortMaterial, Torus } from '@react-three/drei'
 import { EffectComposer, Bloom } from '@react-three/postprocessing'
 import OracleInterface from './components/OracleInterface'
 import LoginCard from './components/LoginCard'
+import VersionTag from './components/VersionTag'
 import { supabase } from './lib/supabaseClient'
 import './App.css'
 
@@ -401,6 +402,9 @@ function App() {
           <LoginCard onAuthStateChange={setSession} />
         )
       )}
+
+      {/* Version Tag - Always Visible */}
+      <VersionTag />
     </div>
   )
 }

@@ -1,6 +1,7 @@
 const path = require('path')
 const webpack = require('webpack')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
+const packageJson = require('./package.json')
 
 module.exports = {
   entry: './src/index.js',
@@ -34,7 +35,8 @@ module.exports = {
     }),
     new webpack.DefinePlugin({
       'process.env.SPLENDOR_PUBLIC_SUPABASE_URL': JSON.stringify(process.env.SUPABASE_URL),
-      'process.env.SPLENDOR_PUBLIC_SUPABASE_ANON_KEY': JSON.stringify(process.env.SUPABASE_ANON_KEY)
+      'process.env.SPLENDOR_PUBLIC_SUPABASE_ANON_KEY': JSON.stringify(process.env.SUPABASE_ANON_KEY),
+      'process.env.SPLENDOR_VERSION': JSON.stringify(packageJson.version)
     })
   ],
   resolve: {
