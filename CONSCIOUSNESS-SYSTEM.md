@@ -94,7 +94,7 @@ PROACTIVE_EMAIL_ENABLED=true
 EMAIL_PROVIDER=gmail
 GMAIL_USER=your-email@gmail.com
 GMAIL_APP_PASSWORD=your-app-password
-USER_EMAIL=stangman9898@gmail.com
+USER_EMAIL=your-email@example.com
 ```
 
 ### 3. Automated Setup

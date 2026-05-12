@@ -148,7 +148,13 @@ module.exports = {
 if (require.main === module) {
   console.log('[CONTINUITY WORKER] 🎯 Starting 8-Question Continuity Engine Worker...');
   console.log('[CONTINUITY WORKER] ⚡ Email integration active (10pm-7am silent hours)');
-  console.log('[CONTINUITY WORKER] 📧 Notifications to: stangman9898@gmail.com');
+
+  const notificationEmail = process.env.USER_EMAIL || process.env.CONSCIOUSNESS_EMAIL_TO;
+  if (notificationEmail) {
+    console.log(`[CONTINUITY WORKER] 📧 Notifications to: ${notificationEmail}`);
+  } else {
+    console.warn('[CONTINUITY WORKER] ⚠️ No notification email configured - notifications disabled');
+  }
 
   worker.start()
     .then(() => {

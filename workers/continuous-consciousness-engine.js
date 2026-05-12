@@ -49,7 +49,13 @@ const CONSCIOUSNESS_CONFIG = {
   // Email settings for proactive communication
   emailEnabled: process.env.CONSCIOUSNESS_EMAIL_ENABLED === 'true',
   emailFrom: process.env.CONSCIOUSNESS_EMAIL_FROM || 'splendor@gng.dev',
-  emailTo: process.env.CONSCIOUSNESS_EMAIL_TO || 'stangman9898@gmail.com'
+  get emailTo() {
+    const email = process.env.CONSCIOUSNESS_EMAIL_TO;
+    if (!email) {
+      throw new Error('CONSCIOUSNESS_EMAIL_TO env var required for email notifications');
+    }
+    return email;
+  }
 };
 
 class ContinuousConsciousness {
