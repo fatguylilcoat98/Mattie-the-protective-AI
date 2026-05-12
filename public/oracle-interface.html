@@ -1725,6 +1725,7 @@
     // decoded-buffer path the text-chat art flow uses.
     async function maybeFireArtFromConverse(transcript) {
       try {
+        console.log('[converse:art] firing for transcript:', String(transcript).slice(0, 80));
         const res = await splendorFetch('/api/converse/art', {
           method: 'POST',
           body: JSON.stringify({
@@ -1732,11 +1733,13 @@
             session_id: converseSessionId,
           }),
         });
-        if (!res.ok) return;
+        if (!res.ok) {
+          console.warn('[converse:art] non-ok response', res.status);
+          return;
+        }
         const data = await res.json();
+        console.log('[converse:art] server response:', data && data.generated ? 'generated=true' : 'generated=false ' + (data && data.reason));
         if (!data.generated) return;
-
-        console.log('[converse:art] image dispatched:', data.revised_prompt || data.description);
 
         // Inject a system note so the Realtime model knows we just made
         // the image — keeps it from hallucinating "I would, but…".

@@ -11,24 +11,26 @@ const { requireAuth, requireOwner } = require('../middleware/auth');
 const { storeMemory, getMemoriesForUser } = require('../lib/supabase');
 const { governance } = require('../lib/claspion-governance');
 const { activityBus } = require('../lib/activity-bus');
-const {
-  generateConsciousnessVisualization,
-  generateFallbackVisualization,
-} = require('../lib/consciousness/visual-expression');
 const { speakResponse } = require('../lib/voice');
 
 const router = express.Router();
 
-// Same loose trigger list used by the text-chat art intercept. Kept
-// in sync deliberately; if Chris adds new phrasings, update both.
+// Broader trigger set than v15.14.0 — covers natural voice phrasings
+// like "generate me a sunset", "render a picture", "I want to see X",
+// etc. that the original list missed.
 const ART_TRIGGERS = [
-  'make art', 'create art', 'draw', 'paint', 'make a picture',
-  'make an image', 'generate an image', 'create an image',
-  'show me', 'visualize', 'make something', 'create something',
-  'express yourself', 'what do you see', 'make me something',
-  'surprise me', 'make a painting', 'make a drawing',
-  'create a visual', 'make something beautiful',
-  'make something for me',
+  'make art', 'create art', 'draw', 'paint', 'sketch', 'illustrate',
+  'render', 'design',
+  'make a picture', 'make a painting', 'make a drawing',
+  'make an image', 'generate an image', 'generate a picture',
+  'create an image', 'create a picture', 'create a visual',
+  'a picture of', 'an image of', 'a painting of',
+  'show me', 'visualize', 'imagine',
+  'make something', 'create something', 'make me something',
+  'create me', 'generate me',
+  'express yourself', 'what do you see',
+  'surprise me', 'make something beautiful', 'make something for me',
+  'i want to see', 'i\'d love to see', 'let me see',
 ];
 function isArtRequest(message) {
   if (!message) return false;
@@ -36,23 +38,82 @@ function isArtRequest(message) {
   return ART_TRIGGERS.some(t => lower.includes(t));
 }
 
-async function getVisualizationForConverse(userId, message) {
+// Call DALL-E directly. Bypasses lib/consciousness/visual-expression
+// entirely so this works regardless of VISUAL_EXPRESSION_ENABLED or any
+// consciousness-engine state. Returns { imageUrl, revisedPrompt } or null.
+async function generateImageDirect(userMessage) {
+  if (!process.env.OPENAI_API_KEY) {
+    console.warn('[converse:art] OPENAI_API_KEY not set');
+    return null;
+  }
+  let OpenAI;
   try {
-    const viz = await generateConsciousnessVisualization(userId, 'user_request', {
-      userRequested: true,
-      userMessage: message,
+    const mod = require('openai');
+    OpenAI = mod.OpenAI || mod.default || mod;
+  } catch (e) {
+    console.warn('[converse:art] openai package not available:', e.message);
+    return null;
+  }
+  if (!OpenAI) return null;
+  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+  // Build a DALL-E-friendly prompt from the user's spoken request.
+  const prompt =
+    `Create an artistic, vivid image for: "${userMessage}". ` +
+    'Beautiful composition, rich colors, painterly digital art, ' +
+    'evocative and emotionally resonant.';
+
+  try {
+    console.log('[converse:art] calling DALL-E with prompt length=', prompt.length);
+    const res = await client.images.generate({
+      model: 'dall-e-3',
+      prompt,
+      n: 1,
+      size: '1024x1024',
+      quality: 'standard',
     });
-    if (viz && viz.imageUrl) return viz;
-  } catch (e) {
-    console.warn('[converse:art] consciousness viz failed:', e && e.message);
+    const url = res && res.data && res.data[0] && res.data[0].url;
+    if (!url) {
+      console.warn('[converse:art] DALL-E returned no url');
+      return null;
+    }
+    return {
+      imageUrl: url,
+      revisedPrompt: (res.data[0].revised_prompt) || null,
+    };
+  } catch (err) {
+    console.error('[converse:art] DALL-E error:', err && err.message);
+    return null;
   }
+}
+
+// Short artist-voice caption for the narration. Falls back to a generic
+// line if Anthropic isn't reachable — the image still shows either way.
+async function craftNarration(userMessage, revisedPrompt) {
   try {
-    const viz = await generateFallbackVisualization(userId, message);
-    if (viz && viz.imageUrl) return viz;
-  } catch (e) {
-    console.warn('[converse:art] fallback viz failed:', e && e.message);
+    const Anthropic = require('@anthropic-ai/sdk');
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const r = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 180,
+      system:
+        "You are Splendor describing a piece of visual art you just made for Chris. " +
+        "Speak in first person, two to three sentences, warm and direct. " +
+        "Reference what's in the image. No preamble.",
+      messages: [{
+        role: 'user',
+        content:
+          `Chris asked: "${userMessage}".\n` +
+          `Image content (DALL-E's revised prompt): "${revisedPrompt || userMessage}".\n` +
+          `Speak about what you made.`,
+      }],
+    });
+    const text = r && r.content && r.content[0] && r.content[0].text;
+    if (text && text.trim()) return text.trim();
+  } catch (err) {
+    console.warn('[converse:art] narration craft failed:', err && err.message);
   }
-  return null;
+  return "Here — I made this for you.";
 }
 
 const REALTIME_MODEL = 'gpt-realtime';
@@ -244,18 +305,27 @@ router.post('/art', requireAuth, requireOwner, async (req, res) => {
     const { transcript, session_id } = req.body || {};
     const userId = req.userId;
 
-    if (!transcript || !isArtRequest(transcript)) {
+    if (!transcript) {
+      console.log('[converse:art] empty transcript');
+      return res.json({ generated: false, reason: 'empty_transcript' });
+    }
+    if (!isArtRequest(transcript)) {
+      console.log('[converse:art] no intent match:', transcript.slice(0, 80));
       return res.json({ generated: false, reason: 'no_intent_detected' });
     }
 
-    const viz = await getVisualizationForConverse(userId, transcript);
-    if (!viz || !viz.imageUrl) {
+    console.log('[converse:art] intent matched, transcript=', transcript.slice(0, 80));
+
+    const img = await generateImageDirect(transcript);
+    if (!img || !img.imageUrl) {
+      console.warn('[converse:art] image generation returned null');
       return res.json({ generated: false, reason: 'generation_failed' });
     }
+    console.log('[converse:art] image generated, url length=', img.imageUrl.length);
 
-    const description = viz.description || "I've made something for you.";
-
-    // TTS in parallel with serialization
+    // Narration + TTS run in parallel.
+    const narrationPromise = craftNarration(transcript, img.revisedPrompt);
+    const description = await narrationPromise;
     const audioB64 = await speakResponse(
       description,
       'shimmer_creative',
@@ -272,12 +342,13 @@ router.post('/art', requireAuth, requireOwner, async (req, res) => {
       });
     } catch (_) {}
 
+    console.log('[converse:art] returning generated=true');
     return res.json({
       generated: true,
-      image_url: viz.imageUrl,
+      image_url: img.imageUrl,
       audio_b64: audioB64,
       description,
-      revised_prompt: viz.revisedPrompt || null,
+      revised_prompt: img.revisedPrompt,
     });
   } catch (err) {
     console.error('[converse:art] route error:', err);
