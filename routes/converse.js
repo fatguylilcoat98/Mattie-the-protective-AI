@@ -8,7 +8,7 @@
 
 const express = require('express');
 const { requireAuth, requireOwner } = require('../middleware/auth');
-const { storeMemory } = require('../lib/supabase');
+const { storeMemory, getMemoriesForUser } = require('../lib/supabase');
 const { governance } = require('../lib/claspion-governance');
 const { activityBus } = require('../lib/activity-bus');
 
@@ -51,6 +51,31 @@ router.post('/token', requireAuth, requireOwner, async (req, res) => {
       });
     }
 
+    // Pull recent memory so Splendor enters the session with context.
+    // Realtime sessions run inside OpenAI — the only history she sees is
+    // whatever we cram into `instructions` at session-start. Recent
+    // shared_history + user_preference rows match the same filter the
+    // enhanced-chat retrieval uses.
+    let memoryBlock = '';
+    try {
+      const recent = await getMemoriesForUser(req.userId, 30);
+      const lines = (recent || [])
+        .filter(m => m && (m.memory_type === 'shared_history' || m.memory_type === 'user_preference' || m.memory_type === 'user_fact'))
+        .slice(0, 24)
+        .reverse() // oldest-first so the model reads chronologically
+        .map(m => `- ${String(m.content || '').replace(/\s+/g, ' ').slice(0, 240)}`);
+      if (lines.length) {
+        memoryBlock =
+          '\n\nRECENT CONTEXT (you and Chris, most recent last):\n' +
+          lines.join('\n') +
+          '\n\nReference this naturally. If something doesn\'t match what Chris says now, ask — don\'t guess.';
+      }
+    } catch (e) {
+      console.warn('[CONVERSE] memory load failed:', e.message);
+    }
+
+    const finalInstructions = CONVERSE_INSTRUCTIONS + memoryBlock;
+
     const upstream = await fetch('https://api.openai.com/v1/realtime/client_secrets', {
       method: 'POST',
       headers: {
@@ -61,7 +86,7 @@ router.post('/token', requireAuth, requireOwner, async (req, res) => {
         session: {
           type: 'realtime',
           model: REALTIME_MODEL,
-          instructions: CONVERSE_INSTRUCTIONS,
+          instructions: finalInstructions,
           audio: { output: { voice: REALTIME_VOICE } },
         },
       }),
@@ -102,6 +127,8 @@ router.post('/token', requireAuth, requireOwner, async (req, res) => {
       token,
       model: REALTIME_MODEL,
       voice: REALTIME_VOICE,
+      instructions: finalInstructions,
+      memory_lines: memoryBlock ? memoryBlock.split('\n').filter(l => l.startsWith('- ')).length : 0,
       claspion: {
         decision: verdict.decision,
         basis: verdict.basis_state,
