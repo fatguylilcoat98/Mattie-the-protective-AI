@@ -1437,8 +1437,7 @@
     let conversePc = null;
     let converseDc = null;
     let converseMicStream = null;
-    let pendingUserText = '';
-    let pendingAssistantText = '';
+    let assistantTranscriptBuffer = '';  // accumulates delta chunks for the current assistant turn
     let converseSessionId = null;
     let converseSavedHeader = null;
 
@@ -1458,33 +1457,38 @@
       }, 5000);
     }
 
-    async function flushConverseTurn(force) {
-      const userText = pendingUserText.trim();
-      const assistantText = pendingAssistantText.trim();
-      if (!userText && !assistantText) return;
-      // Normally we wait for the user side to land before persisting so
-      // turns store as paired exchanges. But the assistant transcript can
-      // arrive before user transcription completes — so on the assistant
-      // 'done' tick we still write whatever we have. Memory rows for
-      // assistant-only turns are still valuable as conversational record.
-      pendingUserText = '';
-      pendingAssistantText = '';
+    // Persist a single side of a turn (user OR assistant). Each side writes
+    // independently the moment it's transcribed — no pair-pending, no race
+    // between user transcription and assistant completion.
+    async function writeConverseSide({ user_text, assistant_text }) {
+      const text = (user_text || assistant_text || '').trim();
+      if (!text) return;
       try {
-        await splendorFetch('/api/converse/turn', {
+        const r = await splendorFetch('/api/converse/turn', {
           method: 'POST',
           body: JSON.stringify({
-            user_text: userText,
-            assistant_text: assistantText,
+            user_text: user_text || '',
+            assistant_text: assistant_text || '',
             session_id: converseSessionId,
           }),
         });
+        if (!r.ok) {
+          console.warn('[converse] turn write non-ok', r.status);
+        } else {
+          console.log('[converse] saved turn side', user_text ? 'USER' : 'SPLENDOR', text.slice(0, 80));
+        }
       } catch (e) {
-        console.warn('[converse] turn flush failed', e);
+        console.warn('[converse] turn write failed', e);
       }
     }
 
     function handleConverseEvent(evt) {
       if (!evt || !evt.type) return;
+      // Lightweight diagnostic — visible in DevTools so we can see exactly
+      // what the data channel emits when things misbehave.
+      if (window.__CONVERSE_DEBUG !== false) {
+        console.log('[converse:event]', evt.type, evt);
+      }
       switch (evt.type) {
         case 'session.created':
         case 'session.updated':
@@ -1497,26 +1501,29 @@
           setState(null);
           break;
         case 'conversation.item.input_audio_transcription.completed': {
-          const transcript = evt.transcript || '';
+          const transcript = (evt.transcript || '').trim();
           if (transcript) {
-            pendingUserText = transcript;
             renderConverseLine(converseUserLine, transcript);
+            writeConverseSide({ user_text: transcript });
           }
           break;
         }
         case 'response.audio_transcript.delta': {
           if (evt.delta) {
-            pendingAssistantText += evt.delta;
-            renderConverseLine(converseSplendorLine, pendingAssistantText);
+            assistantTranscriptBuffer += evt.delta;
+            renderConverseLine(converseSplendorLine, assistantTranscriptBuffer);
             bumpRing('inner', 0.25);
             setState('speaking');
           }
           break;
         }
         case 'response.audio_transcript.done': {
-          if (evt.transcript) pendingAssistantText = evt.transcript;
-          renderConverseLine(converseSplendorLine, pendingAssistantText);
-          flushConverseTurn(false);
+          const finalText = (evt.transcript || assistantTranscriptBuffer || '').trim();
+          if (finalText) {
+            renderConverseLine(converseSplendorLine, finalText);
+            writeConverseSide({ assistant_text: finalText });
+          }
+          assistantTranscriptBuffer = '';
           break;
         }
         case 'response.done':
@@ -1618,7 +1625,10 @@
                   // Without transcription enabled, OpenAI never emits
                   // input_audio_transcription.completed and we never see
                   // what Chris said — so memory writes can't pair.
-                  transcription: { model: 'whisper-1' },
+                  // gpt-4o-mini-transcribe is the Realtime-native
+                  // transcription model; whisper-1 can be silently
+                  // dropped on gpt-realtime.
+                  transcription: { model: 'gpt-4o-mini-transcribe' },
                   turn_detection: { type: 'semantic_vad' },
                 },
                 output: { voice: tokenData.voice || 'shimmer' },
@@ -1675,8 +1685,13 @@
         return;
       }
       converseActive = false;
-      // Flush any partial turn (user said something but no assistant reply yet).
-      await flushConverseTurn(true).catch(() => {});
+      // Flush any in-progress assistant transcript that didn't fire .done
+      // (e.g. user ended the session mid-reply).
+      const tail = assistantTranscriptBuffer.trim();
+      if (tail) {
+        await writeConverseSide({ assistant_text: tail }).catch(() => {});
+      }
+      assistantTranscriptBuffer = '';
 
       try { if (converseDc) converseDc.close(); } catch (_) {}
       converseDc = null;
@@ -1688,8 +1703,6 @@
       converseMicStream = null;
       try { converseAudio.srcObject = null; } catch (_) {}
 
-      pendingUserText = '';
-      pendingAssistantText = '';
       converseSessionId = null;
       converseStrip.hidden = true;
       renderConverseLine(converseUserLine, '');
