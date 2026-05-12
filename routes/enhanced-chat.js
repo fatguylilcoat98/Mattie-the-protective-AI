@@ -6,7 +6,52 @@
 const express = require('express');
 const { EnhancedMemorySystem } = require('../lib/enhanced-memory-integration.js');
 const { requireAuth, requireOwner } = require('../middleware/auth.js');
+const emailModule = require('./email');
+const { getMemoriesForUser } = require('../lib/supabase');
 const router = express.Router();
+
+// Email-intent intercept used by both /chat and /chat/stream. If the
+// user's message reads like "email me X", we fire the email through the
+// shared sendEmailForIntent helper and short-circuit the LLM with a
+// canned acknowledgment. Returns null if no intent or fallthrough wanted.
+async function handleEmailIntentForChat(userId, message) {
+  if (!emailModule.detectEmailIntent || !emailModule.sendEmailForIntent) return null;
+  const intent = emailModule.detectEmailIntent(message);
+  if (!intent.matched) return null;
+
+  // If no explicit topic, summarize recent shared_history for context.
+  let conversationContext = '';
+  if (!intent.topic) {
+    try {
+      const recent = await getMemoriesForUser(userId, 8);
+      conversationContext = (recent || [])
+        .slice()
+        .reverse()
+        .map(m => (m && m.content) || '')
+        .filter(Boolean)
+        .join('\n');
+    } catch (_) {}
+  }
+
+  const result = await emailModule.sendEmailForIntent(userId, intent, {
+    source: 'chat',
+    conversation_context: conversationContext,
+  });
+
+  if (result.rate_limited) {
+    return { reply: "I just sent one — give it a moment." };
+  }
+  if (!result.sent) {
+    // Failure to send — fall through to normal chat so the user still
+    // gets a reply, and so they can ask again.
+    console.warn('[email-intent] chat send failed, falling through:', result.error);
+    return null;
+  }
+  const reply = intent.topic
+    ? `Sent. Email about "${intent.topic}" is in your inbox.`
+    : `Sent. A recap of our conversation is in your inbox.`;
+  return { reply };
+}
 
 // Initialize enhanced memory system (with error handling)
 let memorySystem = null;
@@ -55,6 +100,21 @@ router.post('/chat', requireAuth, requireOwner, async (req, res) => {
         error: 'Enhanced memory system not available',
         message: 'Missing required environment variables (SUPABASE_URL, SUPABASE_SERVICE_KEY)',
         fallback: 'Use /api/chat for basic Splendor functionality'
+      });
+    }
+
+    // Email-intent intercept — short-circuits the LLM with an acknowledgment
+    // when the user explicitly asks Splendor to email them.
+    const emailIntent = await handleEmailIntentForChat(userId, message);
+    if (emailIntent) {
+      return res.json({
+        success: true,
+        response: emailIntent.reply,
+        memory_stats: { factsUsed: 0, interpretationsUsed: 0, bindingRulesActive: 0, webSearchPerformed: false, webResultsCount: 0 },
+        session_id: sessionId,
+        workspace_id: workspaceId,
+        context_summary: { facts_used: 0, interpretations_used: 0, binding_rules_active: 0, web_search_performed: false, uncertainty_warnings: 0 },
+        email_handled: true,
       });
     }
 
@@ -140,6 +200,30 @@ router.post('/chat/stream', requireAuth, requireOwner, async (req, res) => {
 
   let aborted = false;
   req.on('close', () => { aborted = true; clearInterval(heartbeat); });
+
+  // Email-intent intercept — same as the non-stream path but emits as
+  // a single-token SSE flush so the client renders the canned reply
+  // and stops in lockstep with regular streaming UX.
+  try {
+    const emailIntent = await handleEmailIntentForChat(userId, message);
+    if (emailIntent) {
+      if (!aborted) {
+        send('token', { text: emailIntent.reply });
+        send('done', {
+          full: emailIntent.reply,
+          memory_stats: { factsUsed: 0, interpretationsUsed: 0, bindingRulesActive: 0, webSearchPerformed: false, webResultsCount: 0 },
+          session_id: sessionId,
+          workspace_id: workspaceId,
+          email_handled: true,
+        });
+      }
+      clearInterval(heartbeat);
+      try { res.end(); } catch (_) {}
+      return;
+    }
+  } catch (e) {
+    console.warn('[email-intent] stream intercept failed, falling through:', e && e.message);
+  }
 
   try {
     const result = await memorySystem.streamConversation(
