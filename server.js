@@ -123,6 +123,7 @@ app.use('/api/oracle', oracleApiRoutes);
 app.use('/api/continuity', require('./routes/master-continuity'));
 app.use('/api/governance', require('./routes/governance'));
 app.use('/api/activity', require('./routes/activity'));
+app.use('/api/converse', require('./routes/converse'));
 
 // Consciousness routes (if available)
 if (consciousnessRoutes) {
