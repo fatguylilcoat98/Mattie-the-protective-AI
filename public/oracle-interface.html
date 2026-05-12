@@ -1043,35 +1043,73 @@
     input.addEventListener('keypress', e => { if (e.key === 'Enter') submit(); });
     sendButton.addEventListener('click', submit);
 
-    // Mic — Web Speech API where available
+    // Mic — Web Speech API where available.
+    // Stays on until the user clicks the mic off. Interim results stream
+    // into the input so the user can see what is being heard; each finalized
+    // phrase is submitted, after which the mic keeps listening.
     let recognition = null;
+    let micWantsOn = false;
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SR) {
       recognition = new SR();
-      recognition.continuous = false;
-      recognition.interimResults = false;
+      recognition.continuous = true;
+      recognition.interimResults = true;
       recognition.lang = 'en-US';
       recognition.onresult = e => {
-        const transcript = e.results[0][0].transcript;
-        input.value = transcript;
-        updateSendDisabled();
-        submit();
+        let interim = '';
+        let finalChunk = '';
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          const r = e.results[i];
+          if (r.isFinal) finalChunk += r[0].transcript;
+          else interim += r[0].transcript;
+        }
+        if (finalChunk.trim()) {
+          input.value = finalChunk.trim();
+          updateSendDisabled();
+          submit();
+        } else {
+          input.value = interim;
+          updateSendDisabled();
+        }
       };
-      recognition.onend = () => { micButton.classList.remove('active'); setState(null); };
-      recognition.onerror = () => { micButton.classList.remove('active'); setState(null); };
+      recognition.onend = () => {
+        // Browsers can end the session on silence/timeout even with
+        // continuous=true. If the user hasn't toggled the mic off, restart.
+        if (micWantsOn) {
+          try { recognition.start(); } catch (err) { /* already starting */ }
+        } else {
+          micButton.classList.remove('active');
+          micButton.setAttribute('aria-pressed', 'false');
+          setState(null);
+        }
+      };
+      recognition.onerror = e => {
+        if (e && (e.error === 'no-speech' || e.error === 'audio-capture')) {
+          // benign — let onend restart the session
+          return;
+        }
+        micWantsOn = false;
+        micButton.classList.remove('active');
+        micButton.setAttribute('aria-pressed', 'false');
+        setState(null);
+      };
     }
     micButton.addEventListener('click', () => {
       if (!recognition) {
         alert('Voice recognition not supported in this browser');
         return;
       }
-      if (micButton.classList.contains('active')) {
-        recognition.stop();
+      if (micWantsOn) {
+        micWantsOn = false;
+        try { recognition.stop(); } catch (err) { /* already stopped */ }
         micButton.classList.remove('active');
+        micButton.setAttribute('aria-pressed', 'false');
         setState(null);
       } else {
-        recognition.start();
+        micWantsOn = true;
+        try { recognition.start(); } catch (err) { /* already started */ }
         micButton.classList.add('active');
+        micButton.setAttribute('aria-pressed', 'true');
         setState('listening');
       }
     });
