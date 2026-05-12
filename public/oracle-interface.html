@@ -433,8 +433,6 @@
     }
     @media (max-width: 720px) {
       .oracle-main { grid-template-columns: 22% 1fr 22%; grid-template-rows: 54px 1fr auto; }
-      /* Orb only — shrink visual size without affecting layout */
-      #orbCanvas { transform: scale(0.72); transform-origin: center; }
       .governance-title { font-size: 11px; letter-spacing: 1.2px; }
       .governance-status { font-size: 8.5px; letter-spacing: 0.3px; }
       .panel-header { padding: 10px 8px 7px 8px; }
@@ -457,7 +455,6 @@
     }
     @media (max-width: 380px) {
       .oracle-main { grid-template-columns: 20% 1fr 20%; }
-      #orbCanvas { transform: scale(0.65); }
       .control-btn { height: 28px; min-width: 44px; font-size: 9.5px; padding: 0 7px; }
     }
   </style>
@@ -1447,6 +1444,17 @@
         composer.setSize(w, h);
         bloomPass.setSize(w, h);
         camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+      }
+      // Shrink the orb on small screens by pulling the camera back instead
+      // of a CSS scale on the canvas. Same visual size as the old
+      // scale(0.72) / scale(0.65), but the canvas paints edge-to-edge so
+      // there is no transparent ring around the orb.
+      const isXs = window.matchMedia('(max-width: 380px)').matches;
+      const isSm = window.matchMedia('(max-width: 720px)').matches;
+      const targetZ = isXs ? 12.3 : isSm ? 11.1 : 8;
+      if (camera.position.z !== targetZ) {
+        camera.position.z = targetZ;
         camera.updateProjectionMatrix();
       }
     }
