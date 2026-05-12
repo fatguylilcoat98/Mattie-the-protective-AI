@@ -1745,7 +1745,9 @@
           // request normally.
           if (data && data.reason && data.reason !== 'no_intent_detected' && data.reason !== 'empty_transcript') {
             if (converseDc && converseDc.readyState === 'open') {
-              const detailStr = (data.detail || data.reason).replace(/[\[\]]/g, '');
+              const detailStr = String(data.detail || data.reason)
+                .replace(/[\[\]"]/g, '')
+                .slice(0, 220);
               try {
                 converseDc.send(JSON.stringify({
                   type: 'conversation.item.create',
@@ -1754,7 +1756,10 @@
                     role: 'system',
                     content: [{
                       type: 'input_text',
-                      text: '[NOTE: Image generation FAILED. Tell Chris in one short sentence that the art system isn\'t working right now. Reason for the log: ' + detailStr.slice(0, 200) + ']',
+                      text:
+                        '[NOTE: Image generation just failed. Read the literal error message to Chris so he can fix it. ' +
+                        'Say something like: "Image generation failed. The error was: ' + detailStr + '". ' +
+                        'Read the error verbatim. Do not paraphrase. Do not say only that the system isn\'t working — quote the error.]',
                     }],
                   },
                 }));
