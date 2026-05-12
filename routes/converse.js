@@ -11,8 +11,49 @@ const { requireAuth, requireOwner } = require('../middleware/auth');
 const { storeMemory, getMemoriesForUser } = require('../lib/supabase');
 const { governance } = require('../lib/claspion-governance');
 const { activityBus } = require('../lib/activity-bus');
+const {
+  generateConsciousnessVisualization,
+  generateFallbackVisualization,
+} = require('../lib/consciousness/visual-expression');
+const { speakResponse } = require('../lib/voice');
 
 const router = express.Router();
+
+// Same loose trigger list used by the text-chat art intercept. Kept
+// in sync deliberately; if Chris adds new phrasings, update both.
+const ART_TRIGGERS = [
+  'make art', 'create art', 'draw', 'paint', 'make a picture',
+  'make an image', 'generate an image', 'create an image',
+  'show me', 'visualize', 'make something', 'create something',
+  'express yourself', 'what do you see', 'make me something',
+  'surprise me', 'make a painting', 'make a drawing',
+  'create a visual', 'make something beautiful',
+  'make something for me',
+];
+function isArtRequest(message) {
+  if (!message) return false;
+  const lower = String(message).toLowerCase();
+  return ART_TRIGGERS.some(t => lower.includes(t));
+}
+
+async function getVisualizationForConverse(userId, message) {
+  try {
+    const viz = await generateConsciousnessVisualization(userId, 'user_request', {
+      userRequested: true,
+      userMessage: message,
+    });
+    if (viz && viz.imageUrl) return viz;
+  } catch (e) {
+    console.warn('[converse:art] consciousness viz failed:', e && e.message);
+  }
+  try {
+    const viz = await generateFallbackVisualization(userId, message);
+    if (viz && viz.imageUrl) return viz;
+  } catch (e) {
+    console.warn('[converse:art] fallback viz failed:', e && e.message);
+  }
+  return null;
+}
 
 const REALTIME_MODEL = 'gpt-realtime';
 const REALTIME_VOICE = 'shimmer'; // matches Splendor's existing chosen voice
@@ -186,6 +227,61 @@ router.post('/turn', requireAuth, requireOwner, async (req, res) => {
   } catch (err) {
     console.error('[CONVERSE] /turn error:', err);
     res.status(500).json({ error: 'internal_error', message: err.message });
+  }
+});
+
+// POST /api/converse/art
+//   Body: { transcript, session_id? }
+//   Runs the same art-intent detection the text-chat path uses, but
+//   inside a voice session — the Realtime model has no DALL-E tool, so
+//   without this endpoint the model just declines. On match:
+//     1. Generate the image (consciousness viz -> fallback).
+//     2. Run TTS narration in parallel.
+//     3. Return { generated: true, image_url, audio_b64, description, revised_prompt }
+//   On no match or generation failure: { generated: false }.
+router.post('/art', requireAuth, requireOwner, async (req, res) => {
+  try {
+    const { transcript, session_id } = req.body || {};
+    const userId = req.userId;
+
+    if (!transcript || !isArtRequest(transcript)) {
+      return res.json({ generated: false, reason: 'no_intent_detected' });
+    }
+
+    const viz = await getVisualizationForConverse(userId, transcript);
+    if (!viz || !viz.imageUrl) {
+      return res.json({ generated: false, reason: 'generation_failed' });
+    }
+
+    const description = viz.description || "I've made something for you.";
+
+    // TTS in parallel with serialization
+    const audioB64 = await speakResponse(
+      description,
+      'shimmer_creative',
+      'warm, reflective, creative — like an artist describing their work'
+    ).catch((e) => {
+      console.warn('[converse:art] TTS failed:', e && e.message);
+      return null;
+    });
+
+    try {
+      activityBus.emit('converse:art_generated', {
+        session_id: session_id || null,
+        has_audio: !!audioB64,
+      });
+    } catch (_) {}
+
+    return res.json({
+      generated: true,
+      image_url: viz.imageUrl,
+      audio_b64: audioB64,
+      description,
+      revised_prompt: viz.revisedPrompt || null,
+    });
+  } catch (err) {
+    console.error('[converse:art] route error:', err);
+    return res.status(500).json({ generated: false, error: 'internal_error', message: err.message });
   }
 });
 

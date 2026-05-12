@@ -1717,6 +1717,58 @@
 
     // Fire the email intent route for the user's voice transcript. The
     // server runs the regex set and decides whether anything goes out.
+    // Mid-Converse art generation. POST the transcript to a dedicated
+    // endpoint; server detects intent, calls DALL-E + TTS, and returns the
+    // image URL + narration audio. The Realtime model has no DALL-E tool
+    // and would otherwise just say it can't. Once the payload lands, we
+    // run the orb-emergence animation and play narration through the same
+    // decoded-buffer path the text-chat art flow uses.
+    async function maybeFireArtFromConverse(transcript) {
+      try {
+        const res = await splendorFetch('/api/converse/art', {
+          method: 'POST',
+          body: JSON.stringify({
+            transcript,
+            session_id: converseSessionId,
+          }),
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data.generated) return;
+
+        console.log('[converse:art] image dispatched:', data.revised_prompt || data.description);
+
+        // Inject a system note so the Realtime model knows we just made
+        // the image — keeps it from hallucinating "I would, but…".
+        if (converseDc && converseDc.readyState === 'open') {
+          try {
+            converseDc.send(JSON.stringify({
+              type: 'conversation.item.create',
+              item: {
+                type: 'message',
+                role: 'system',
+                content: [{
+                  type: 'input_text',
+                  text: '[NOTE: You just generated an image for Chris. Brief verbal acknowledgment only; do not describe the image — the audio narration plays automatically.]',
+                }],
+              },
+            }));
+          } catch (e) { console.warn('[converse:art] system note inject failed', e); }
+        }
+
+        triggerOrbEmergence(data.image_url, async () => {
+          if (data.audio_b64) {
+            try {
+              const buffer = await decodeAudioFromBase64(data.audio_b64);
+              playDecodedBuffer(buffer);
+            } catch (e) { console.warn('[converse:art] audio playback failed', e); }
+          }
+        });
+      } catch (e) {
+        console.warn('[converse:art] request failed', e);
+      }
+    }
+
     // If an email was actually dispatched, nudge the Realtime model via
     // a system note so it doesn't hallucinate "I would email you, but…"
     async function maybeFireEmailFromConverse(transcript) {
@@ -1791,6 +1843,7 @@
             renderConverseLine(converseUserLine, transcript);
             writeConverseSide({ user_text: transcript });
             maybeFireEmailFromConverse(transcript);
+            maybeFireArtFromConverse(transcript);
           }
           break;
         }
