@@ -289,6 +289,27 @@
       --voice-level: 0;
       min-width: 0; min-height: 0;
     }
+    /* Art overlay — image blooms out of the orb's center on `event: art`. */
+    .art-overlay {
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 92%;
+      height: 92%;
+      transform: translate(-50%, -50%) scale(0.04);
+      opacity: 0;
+      background-size: contain;
+      background-position: center;
+      background-repeat: no-repeat;
+      filter: drop-shadow(0 0 24px rgba(0, 229, 255, 0.45));
+      transition: transform 1800ms cubic-bezier(0.22, 1, 0.36, 1),
+                  opacity 1000ms ease;
+      z-index: 5;
+      pointer-events: none;
+    }
+    .art-overlay.bloomed {
+      transform: translate(-50%, -50%) scale(1);
+      opacity: 1;
+    }
     #orbCanvas {
       position: absolute; inset: 0;
       width: 100%;
@@ -520,6 +541,7 @@
 
     <main class="neural-center" id="neuralCenter">
       <canvas id="orbCanvas"></canvas>
+      <div class="art-overlay" id="artOverlay"></div>
     </main>
 
     <aside class="pulse-panel">
@@ -990,6 +1012,25 @@
       return { audio: data.audio, fallback: false };
     }
 
+    // Bloom a DALL-E image out of the orb center. Called when the
+    // stream emits `event: art`. The .art-overlay CSS does the easing.
+    function showArtImage(url) {
+      const overlay = document.getElementById('artOverlay');
+      if (!overlay || !url) return;
+      overlay.style.backgroundImage = 'url("' + url.replace(/"/g, '\\"') + '")';
+      // Force reflow so the transition fires from the initial state.
+      void overlay.offsetWidth;
+      overlay.classList.add('bloomed');
+    }
+    function dismissArtImage() {
+      const overlay = document.getElementById('artOverlay');
+      if (!overlay) return;
+      overlay.classList.remove('bloomed');
+      // Let the transition complete before clearing the bg-image so the
+      // image fades out instead of snapping away.
+      setTimeout(() => { overlay.style.backgroundImage = ''; }, 1100);
+    }
+
     async function decodeAudioFromBase64(b64) {
       const ctx = getAudioContext();
       if (ctx.state === 'suspended') {
@@ -1244,14 +1285,30 @@
         let firstToken = true;
         let assembled = '';
         let streamErr = null;
+        let artPayload = null;
+        // Any prior art is dismissed when a new turn starts.
+        dismissArtImage();
         await readSse(streamRes, (event, data) => {
           if (event === 'token' && data && data.text) {
             if (firstToken) {
               responseBubble.textContent = '';
               firstToken = false;
             }
-            assembled += data.text;
+            // Replace placeholder "Painting…" with the real description
+            // when the art flow sends its final token.
+            if (assembled === 'Painting…') {
+              assembled = data.text;
+            } else {
+              assembled += data.text;
+            }
             responseBubble.textContent = assembled;
+          } else if (event === 'art' && data) {
+            artPayload = data;
+            // Bloom the image out of the orb immediately; ring boost for
+            // the "creating" feel.
+            showArtImage(data.image_url);
+            bumpRing('outer', 0.9);
+            bumpRing('inner', 0.6);
           } else if (event === 'error') {
             streamErr = new Error((data && data.message) || 'stream error');
           }
@@ -1260,6 +1317,17 @@
 
         fetchEvents();
         fetchMemories();
+
+        // Art path: TTS audio is delivered inline via the `art` event, so
+        // play it through the same decoded-buffer path that drives the
+        // orb's audio-reactive pulse.
+        if (artPayload && artPayload.audio_b64) {
+          try {
+            const buffer = await decodeAudioFromBase64(artPayload.audio_b64);
+            playDecodedBuffer(buffer);
+          } catch (e) { console.warn('[art] audio playback failed', e); }
+          return;
+        }
 
         // Voice catches up at the end. Text is already on-screen; trigger
         // playback as soon as the audio buffer is decoded.
