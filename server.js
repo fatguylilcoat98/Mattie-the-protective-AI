@@ -103,7 +103,7 @@ app.use(express.static('public'));
 // Per Good Neighbor Guard Core Rules v1.1 - this enforces all 23 foundational rules
 app.use(claspionResponseMiddleware()); // Validate outgoing responses
 app.use(claspionMiddleware({
-  exemptPaths: ['/health', '/version', '/api/governance/state', '/favicon.ico'],
+  exemptPaths: ['/health', '/version', '/api/governance/state', '/api/activity/stream', '/favicon.ico'],
   exemptMethods: ['OPTIONS'],
   logAll: true
 }));
@@ -122,6 +122,7 @@ app.use('/api/scifi', sciFiModeRoutes);
 app.use('/api/oracle', oracleApiRoutes);
 app.use('/api/continuity', require('./routes/master-continuity'));
 app.use('/api/governance', require('./routes/governance'));
+app.use('/api/activity', require('./routes/activity'));
 
 // Consciousness routes (if available)
 if (consciousnessRoutes) {

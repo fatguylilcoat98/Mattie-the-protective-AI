@@ -75,7 +75,26 @@
       margin-bottom: 3px;
       text-shadow: 0 0 10px rgba(0, 229, 255, 0.6);
     }
-    .governance-status { font-size: 10px; color: #b0c4de; letter-spacing: 0.8px; }
+    .governance-status { font-size: 10px; color: #b0c4de; letter-spacing: 0.8px; transition: color 180ms ease, text-shadow 180ms ease; }
+    .governance-status.live {
+      color: #00e5ff;
+      text-shadow: 0 0 8px rgba(0, 229, 255, 0.7);
+      animation: claspion-flash 240ms ease-out;
+    }
+    .governance-status .ticker-stage {
+      display: inline-block;
+      padding: 0 2px;
+      animation: claspion-stage-in 240ms ease-out;
+    }
+    @keyframes claspion-flash {
+      0%   { opacity: 0.55; }
+      40%  { opacity: 1; }
+      100% { opacity: 1; }
+    }
+    @keyframes claspion-stage-in {
+      from { opacity: 0; transform: translateY(-2px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
     .active-rule { color: #39ff14; font-weight: 600; text-shadow: 0 0 6px rgba(57, 255, 20, 0.6); }
     .version-display {
       font-size: 9px; color: rgba(0, 229, 255, 0.6);
@@ -604,6 +623,86 @@
       document.getElementById('loginMessage').innerHTML = '';
     }
 
+    // ──────────────────────────────────────────────────────────────────
+    // Live activity stream (SSE)
+    //
+    // Subscribes to /api/activity/stream and turns real backend signals
+    // into visible orb-ring boosts + a CLASPION header ticker. Read-only:
+    // we never invent activity; if the stream is silent the UI is silent.
+    // ──────────────────────────────────────────────────────────────────
+    let activitySource = null;
+    const governanceStatusEl = document.querySelector('.governance-status');
+    const idleGovernanceHtml = governanceStatusEl ? governanceStatusEl.innerHTML : '';
+    let tickerRevertTimer = null;
+
+    function showClaspionStage(ev) {
+      if (!governanceStatusEl) return;
+      const parts = [];
+      if (ev.basis)    parts.push('BASIS: ' + ev.basis);
+      if (ev.intent)   parts.push('INTENT: ' + ev.intent);
+      if (ev.decision) parts.push('DECISION: ' + ev.decision);
+      if (typeof ev.latency_ms === 'number') parts.push(ev.latency_ms + 'ms');
+      const text = parts.join('  •  ') || ('CLASPION ' + (ev.stage || 'event'));
+      governanceStatusEl.classList.add('live');
+      governanceStatusEl.innerHTML = '<span class="ticker-stage">[CLASPION] ' + text + '</span>';
+      if (tickerRevertTimer) clearTimeout(tickerRevertTimer);
+      tickerRevertTimer = setTimeout(() => {
+        governanceStatusEl.classList.remove('live');
+        governanceStatusEl.innerHTML = idleGovernanceHtml;
+      }, 2800);
+    }
+
+    function bumpRing(band, amount) {
+      const rb = window.__orbRingBoost || (window.__orbRingBoost = { outer: 0, middle: 0, inner: 0 });
+      rb[band] = Math.min(1, (rb[band] || 0) + amount);
+    }
+
+    function handleActivityEvent(ev) {
+      if (!ev || !ev.type) return;
+      switch (ev.type) {
+        case 'claspion':
+          // Don't ticker-flash the dormant logs (governance disabled);
+          // they fire on every request and would drown the header.
+          if (!ev.dormant) showClaspionStage(ev);
+          bumpRing('outer', ev.dormant ? 0.25 : 0.7);
+          break;
+        case 'memory:write':
+        case 'memory:read':
+          bumpRing('middle', ev.type === 'memory:write' ? 0.8 : 0.45);
+          break;
+        case 'ai:call:start':
+          window.__orbAiCallActive = true;
+          bumpRing('inner', 0.6);
+          break;
+        case 'ai:call:end':
+          window.__orbAiCallActive = false;
+          bumpRing('inner', 0.4);
+          break;
+        default:
+          break;
+      }
+    }
+
+    function startActivityStream() {
+      if (activitySource) return; // already open
+      splendorSupabase.auth.getSession().then(({ data: { session } }) => {
+        if (!session) return;
+        const url = '/api/activity/stream?access_token=' + encodeURIComponent(session.access_token);
+        try {
+          activitySource = new EventSource(url);
+          activitySource.onmessage = (e) => {
+            try { handleActivityEvent(JSON.parse(e.data)); } catch (_) {}
+          };
+          activitySource.onerror = () => {
+            // Browser auto-reconnects; if the channel stays down the orb
+            // simply falls back to ambient animation. No fake activity.
+          };
+        } catch (e) {
+          console.warn('[activity-stream] EventSource init failed:', e);
+        }
+      });
+    }
+
     // Check auth state on load by testing backend access
     async function checkAuthState() {
       const { data: { session } } = await splendorSupabase.auth.getSession();
@@ -617,6 +716,7 @@
             // User is authenticated and authorized (owner)
             currentUser = session.user;
             hideLoginOverlay();
+            startActivityStream();
             return true;
           } else if (response.status === 403) {
             // User is authenticated but not authorized (not owner)
@@ -677,6 +777,7 @@
           // Success - user is owner
           currentUser = data.user;
           hideLoginOverlay();
+          startActivityStream();
           showLoginMessage('Welcome back!');
           setTimeout(clearLoginMessage, 3000);
         } catch (testError) {
@@ -1378,12 +1479,26 @@
                   state === 'thinking'  ? 1.5 :
                   state === 'speaking'  ? (1 + v * 1.5) : 1;
 
-      r1.rotation.x = t * 0.4 * mul; r1.rotation.z = t * 0.2 * mul;
-      r2.rotation.y = t * 0.5 * mul; r2.rotation.z = -t * 0.3 * mul;
-      r3.rotation.x = -t * 0.3 * mul; r3.rotation.y = t * 0.4 * mul;
-      r4.rotation.z = t * 0.6 * mul; r4.rotation.x = t * 0.2 * mul;
-      r5.rotation.y = t * 0.25 * mul;
-      r6.rotation.z = t * 0.18 * mul;
+      // Per-ring boosts driven by real backend signals (SSE). Each band's
+      // boost decays toward 0 over ~800ms. ai:call:start raises 'inner'
+      // and holds it until ai:call:end. memory:* blips 'middle'. claspion
+      // blips 'outer'. window.__orbRingBoost is written by the SSE handler
+      // below; we never invent activity here.
+      const rb = window.__orbRingBoost || (window.__orbRingBoost = { outer: 0, middle: 0, inner: 0 });
+      const aiOpen = window.__orbAiCallActive ? 1 : 0;
+      const outerBoost  = 1 + rb.outer  * 2.2;
+      const middleBoost = 1 + rb.middle * 1.8;
+      const innerBoost  = 1 + Math.max(rb.inner, aiOpen) * 2.0;
+      r1.rotation.x = t * 0.4 * mul * middleBoost; r1.rotation.z = t * 0.2 * mul * middleBoost;
+      r2.rotation.y = t * 0.5 * mul * middleBoost; r2.rotation.z = -t * 0.3 * mul * middleBoost;
+      r3.rotation.x = -t * 0.3 * mul * outerBoost; r3.rotation.y = t * 0.4 * mul * outerBoost;
+      r4.rotation.z = t * 0.6 * mul * outerBoost;  r4.rotation.x = t * 0.2 * mul * outerBoost;
+      r5.rotation.y = t * 0.25 * mul * innerBoost;
+      r6.rotation.z = t * 0.18 * mul * innerBoost;
+      // Decay transient boosts toward 0 (~800ms half-life at 60fps).
+      rb.outer  *= 0.965;
+      rb.middle *= 0.965;
+      rb.inner  *= 0.965;
 
       shell1.scale.setScalar(1 + Math.sin(t * 1.5) * 0.05 + v * 0.18);
       shell1.rotation.y = t * 0.1;
