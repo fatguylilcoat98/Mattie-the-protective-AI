@@ -1482,6 +1482,58 @@
       }
     }
 
+    // Fire the email intent route for the user's voice transcript. The
+    // server runs the regex set and decides whether anything goes out.
+    // If an email was actually dispatched, nudge the Realtime model via
+    // a system note so it doesn't hallucinate "I would email you, but…"
+    async function maybeFireEmailFromConverse(transcript) {
+      try {
+        const res = await splendorFetch('/api/email/send-on-command', {
+          method: 'POST',
+          body: JSON.stringify({ transcript, source: 'converse' }),
+        });
+        if (res.status === 429) {
+          if (converseDc && converseDc.readyState === 'open') {
+            try {
+              converseDc.send(JSON.stringify({
+                type: 'conversation.item.create',
+                item: {
+                  type: 'message',
+                  role: 'system',
+                  content: [{
+                    type: 'input_text',
+                    text: '[Email throttled — Chris recently received one. Tell him you just sent one and to give it a moment, then continue normally.]',
+                  }],
+                },
+              }));
+            } catch (_) {}
+          }
+          return;
+        }
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data.sent) return;
+        console.log('[converse] email dispatched:', data.subject);
+        if (converseDc && converseDc.readyState === 'open') {
+          try {
+            converseDc.send(JSON.stringify({
+              type: 'conversation.item.create',
+              item: {
+                type: 'message',
+                role: 'system',
+                content: [{
+                  type: 'input_text',
+                  text: '[NOTE: An email titled "' + data.subject + '" was just dispatched to Chris. Acknowledge briefly that it sent.]',
+                }],
+              },
+            }));
+          } catch (e) { console.warn('[converse] email-note inject failed', e); }
+        }
+      } catch (e) {
+        console.warn('[converse] email check failed', e);
+      }
+    }
+
     function handleConverseEvent(evt) {
       if (!evt || !evt.type) return;
       // Lightweight diagnostic — visible in DevTools so we can see exactly
@@ -1505,6 +1557,7 @@
           if (transcript) {
             renderConverseLine(converseUserLine, transcript);
             writeConverseSide({ user_text: transcript });
+            maybeFireEmailFromConverse(transcript);
           }
           break;
         }
