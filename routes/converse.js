@@ -82,32 +82,45 @@ async function generateImageDirect(userMessage) {
     'Beautiful composition, rich colors, painterly digital art, ' +
     'evocative and emotionally resonant.';
 
-  // Try dall-e-3 first; if the org / key doesn't have access OR any
-  // other failure, fall back to dall-e-2 which has broader availability.
-  const attempts = ['dall-e-3', 'dall-e-2'];
+  // Try gpt-image-1 first (current OpenAI image model — replaces the
+  // deprecated dall-e-2 and is more broadly available than dall-e-3).
+  // dall-e-3 stays as fallback for orgs that have it verified.
+  // gpt-image-1 returns base64 in b64_json (no url field) — wrap as a
+  // data: URL so the frontend's <img src="..."> works without changes.
+  const attempts = [
+    { model: 'gpt-image-1', opts: { size: '1024x1024' } },
+    { model: 'dall-e-3',    opts: { size: '1024x1024', quality: 'standard' } },
+  ];
   let lastErr = null;
-  for (const model of attempts) {
+  for (const { model, opts } of attempts) {
     try {
       console.log('[converse:art] calling', model, 'prompt length=', prompt.length);
-      const opts = { model, prompt, n: 1, size: '1024x1024' };
-      if (model === 'dall-e-3') opts.quality = 'standard';
-      const res = await client.images.generate(opts);
-      const url = res && res.data && res.data[0] && res.data[0].url;
-      if (!url) {
-        console.warn('[converse:art]', model, 'returned no url');
-        lastErr = `${model} returned no url`;
+      const res = await client.images.generate({ model, prompt, n: 1, ...opts });
+      const item = res && res.data && res.data[0];
+      if (!item) {
+        console.warn('[converse:art]', model, 'returned no data item');
+        lastErr = `${model} returned no data`;
         continue;
       }
+      let imageUrl = item.url || null;
+      if (!imageUrl && item.b64_json) {
+        imageUrl = 'data:image/png;base64,' + item.b64_json;
+      }
+      if (!imageUrl) {
+        console.warn('[converse:art]', model, 'returned no url and no b64_json');
+        lastErr = `${model} returned no image data`;
+        continue;
+      }
+      console.log('[converse:art]', model, 'OK; format=', item.url ? 'url' : 'base64');
       return {
-        imageUrl: url,
-        revisedPrompt: (res.data[0].revised_prompt) || null,
+        imageUrl,
+        revisedPrompt: item.revised_prompt || null,
         model,
       };
     } catch (err) {
       const msg = (err && err.message) || String(err);
       console.error('[converse:art]', model, 'error:', msg);
       lastErr = `${model}: ${msg}`;
-      // continue to next model
     }
   }
   return { error: lastErr || 'unknown image generation failure' };
