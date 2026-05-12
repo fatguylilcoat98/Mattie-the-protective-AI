@@ -8,7 +8,94 @@ const { EnhancedMemorySystem } = require('../lib/enhanced-memory-integration.js'
 const { requireAuth, requireOwner } = require('../middleware/auth.js');
 const emailModule = require('./email');
 const { getMemoriesForUser } = require('../lib/supabase');
+const {
+  generateConsciousnessVisualization,
+  generateFallbackVisualization,
+} = require('../lib/consciousness/visual-expression');
+const { speakResponse } = require('../lib/voice');
 const router = express.Router();
+
+// Art-intent intercept used by /chat/stream. Loose triggers — Splendor
+// should feel free to create when the user invites it.
+function isArtRequest(message) {
+  if (!message) return false;
+  const lower = message.toLowerCase();
+  const artTriggers = [
+    'make art', 'create art', 'draw', 'paint', 'make a picture',
+    'make an image', 'generate an image', 'create an image',
+    'show me', 'visualize', 'make something', 'create something',
+    'express yourself', 'what do you see', 'make me something',
+    'surprise me', 'make a painting', 'make a drawing',
+    'create a visual', 'make something beautiful',
+    'make something for me',
+  ];
+  return artTriggers.some(trigger => lower.includes(trigger));
+}
+
+// Returns { imageUrl, description, revisedPrompt } or null. Tries the
+// consciousness-aware visualizer first, falls back to a simpler prompt
+// build. Both return structured objects (handleVisualizationRequest
+// returns Markdown, which doesn't match the art-flow event payload).
+async function getVisualization(userId, message) {
+  try {
+    const viz = await generateConsciousnessVisualization(userId, 'user_request', {
+      userRequested: true,
+      userMessage: message,
+    });
+    if (viz && viz.imageUrl) return viz;
+  } catch (e) {
+    console.warn('[art-intent] consciousness visualization failed:', e && e.message);
+  }
+  try {
+    const viz = await generateFallbackVisualization(userId, message);
+    if (viz && viz.imageUrl) return viz;
+  } catch (e) {
+    console.warn('[art-intent] fallback visualization failed:', e && e.message);
+  }
+  return null;
+}
+
+// Streams the placeholder token, awaits image + TTS in parallel, emits a
+// final `event: art` so the frontend can bloom the image out of the orb.
+// Returns true if the request was handled (caller must NOT continue to
+// normal chat). Returns false on generation failure so the caller falls
+// through to a normal LLM reply.
+async function handleArtStreamIntercept(send, userId, message) {
+  send('token', { text: 'Painting…' });
+
+  let viz;
+  try {
+    viz = await getVisualization(userId, message);
+  } catch (err) {
+    console.error('[art-intent] generation error:', err);
+    return false;
+  }
+  if (!viz || !viz.imageUrl) return false;
+
+  const description = viz.description || "I've made something for you.";
+
+  // TTS in parallel with the SSE emit so audio is ready by the time the
+  // image bleeds out. speakResponse returns base64 mp3 or null.
+  const audioPromise = speakResponse(
+    description,
+    'shimmer_creative',
+    'warm, reflective, creative — like an artist describing their work'
+  ).catch(() => null);
+
+  send('token', { text: description });
+
+  const audioB64 = await audioPromise;
+
+  send('art', {
+    image_url: viz.imageUrl,
+    audio_b64: audioB64 || null,
+    revised_prompt: viz.revisedPrompt || null,
+    description,
+  });
+
+  send('done', { full: description, art: true });
+  return true;
+}
 
 // Email-intent intercept used by both /chat and /chat/stream. If the
 // user's message reads like "email me X", we fire the email through the
@@ -200,6 +287,23 @@ router.post('/chat/stream', requireAuth, requireOwner, async (req, res) => {
 
   let aborted = false;
   req.on('close', () => { aborted = true; clearInterval(heartbeat); });
+
+  // Art-intent intercept — happens BEFORE the email check. On a successful
+  // generation, the helper emits its own token/art/done events and we end
+  // the stream here. On failure, fall through to email then normal chat.
+  if (isArtRequest(message)) {
+    try {
+      const handled = await handleArtStreamIntercept(send, userId, message);
+      if (handled) {
+        if (!aborted) { /* events already sent */ }
+        clearInterval(heartbeat);
+        try { res.end(); } catch (_) {}
+        return;
+      }
+    } catch (e) {
+      console.warn('[art-intent] stream intercept failed, falling through:', e && e.message);
+    }
+  }
 
   // Email-intent intercept — same as the non-stream path but emits as
   // a single-token SSE flush so the client renders the canned reply
