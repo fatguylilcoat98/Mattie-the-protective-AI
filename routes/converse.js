@@ -40,11 +40,12 @@ function isArtRequest(message) {
 
 // Call DALL-E directly. Bypasses lib/consciousness/visual-expression
 // entirely so this works regardless of VISUAL_EXPRESSION_ENABLED or any
-// consciousness-engine state. Returns { imageUrl, revisedPrompt } or null.
+// consciousness-engine state. Returns { imageUrl, revisedPrompt, model }
+// or { error } so the route can surface the real failure to the user.
 async function generateImageDirect(userMessage) {
   if (!process.env.OPENAI_API_KEY) {
     console.warn('[converse:art] OPENAI_API_KEY not set');
-    return null;
+    return { error: 'OPENAI_API_KEY not configured' };
   }
   let OpenAI;
   try {
@@ -52,39 +53,45 @@ async function generateImageDirect(userMessage) {
     OpenAI = mod.OpenAI || mod.default || mod;
   } catch (e) {
     console.warn('[converse:art] openai package not available:', e.message);
-    return null;
+    return { error: 'openai package missing' };
   }
-  if (!OpenAI) return null;
+  if (!OpenAI) return { error: 'OpenAI client null' };
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-  // Build a DALL-E-friendly prompt from the user's spoken request.
   const prompt =
     `Create an artistic, vivid image for: "${userMessage}". ` +
     'Beautiful composition, rich colors, painterly digital art, ' +
     'evocative and emotionally resonant.';
 
-  try {
-    console.log('[converse:art] calling DALL-E with prompt length=', prompt.length);
-    const res = await client.images.generate({
-      model: 'dall-e-3',
-      prompt,
-      n: 1,
-      size: '1024x1024',
-      quality: 'standard',
-    });
-    const url = res && res.data && res.data[0] && res.data[0].url;
-    if (!url) {
-      console.warn('[converse:art] DALL-E returned no url');
-      return null;
+  // Try dall-e-3 first; if the org / key doesn't have access OR any
+  // other failure, fall back to dall-e-2 which has broader availability.
+  const attempts = ['dall-e-3', 'dall-e-2'];
+  let lastErr = null;
+  for (const model of attempts) {
+    try {
+      console.log('[converse:art] calling', model, 'prompt length=', prompt.length);
+      const opts = { model, prompt, n: 1, size: '1024x1024' };
+      if (model === 'dall-e-3') opts.quality = 'standard';
+      const res = await client.images.generate(opts);
+      const url = res && res.data && res.data[0] && res.data[0].url;
+      if (!url) {
+        console.warn('[converse:art]', model, 'returned no url');
+        lastErr = `${model} returned no url`;
+        continue;
+      }
+      return {
+        imageUrl: url,
+        revisedPrompt: (res.data[0].revised_prompt) || null,
+        model,
+      };
+    } catch (err) {
+      const msg = (err && err.message) || String(err);
+      console.error('[converse:art]', model, 'error:', msg);
+      lastErr = `${model}: ${msg}`;
+      // continue to next model
     }
-    return {
-      imageUrl: url,
-      revisedPrompt: (res.data[0].revised_prompt) || null,
-    };
-  } catch (err) {
-    console.error('[converse:art] DALL-E error:', err && err.message);
-    return null;
   }
+  return { error: lastErr || 'unknown image generation failure' };
 }
 
 // Short artist-voice caption for the narration. Falls back to a generic
@@ -318,10 +325,11 @@ router.post('/art', requireAuth, requireOwner, async (req, res) => {
 
     const img = await generateImageDirect(transcript);
     if (!img || !img.imageUrl) {
-      console.warn('[converse:art] image generation returned null');
-      return res.json({ generated: false, reason: 'generation_failed' });
+      const reason = (img && img.error) || 'unknown_failure';
+      console.warn('[converse:art] image generation returned no url:', reason);
+      return res.json({ generated: false, reason: 'generation_failed', detail: reason });
     }
-    console.log('[converse:art] image generated, url length=', img.imageUrl.length);
+    console.log('[converse:art] image generated via', img.model, 'url length=', img.imageUrl.length);
 
     // Narration + TTS run in parallel.
     const narrationPromise = craftNarration(transcript, img.revisedPrompt);

@@ -1738,8 +1738,31 @@
           return;
         }
         const data = await res.json();
-        console.log('[converse:art] server response:', data && data.generated ? 'generated=true' : 'generated=false ' + (data && data.reason));
-        if (!data.generated) return;
+        console.log('[converse:art] server response:', data && data.generated ? 'generated=true' : 'generated=false reason=' + (data && data.reason) + ' detail=' + (data && data.detail));
+        if (!data.generated) {
+          // Speak the truth: only announce if we DID try (intent matched).
+          // No-intent responses stay silent so the model handles the
+          // request normally.
+          if (data && data.reason && data.reason !== 'no_intent_detected' && data.reason !== 'empty_transcript') {
+            if (converseDc && converseDc.readyState === 'open') {
+              const detailStr = (data.detail || data.reason).replace(/[\[\]]/g, '');
+              try {
+                converseDc.send(JSON.stringify({
+                  type: 'conversation.item.create',
+                  item: {
+                    type: 'message',
+                    role: 'system',
+                    content: [{
+                      type: 'input_text',
+                      text: '[NOTE: Image generation FAILED. Tell Chris in one short sentence that the art system isn\'t working right now. Reason for the log: ' + detailStr.slice(0, 200) + ']',
+                    }],
+                  },
+                }));
+              } catch (_) {}
+            }
+          }
+          return;
+        }
 
         // Inject a system note so the Realtime model knows we just made
         // the image — keeps it from hallucinating "I would, but…".
