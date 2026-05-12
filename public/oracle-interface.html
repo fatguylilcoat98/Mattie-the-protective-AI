@@ -1462,8 +1462,11 @@
       const userText = pendingUserText.trim();
       const assistantText = pendingAssistantText.trim();
       if (!userText && !assistantText) return;
-      // Wait for the pair unless force=true (session-end flush).
-      if (!force && !(userText && assistantText)) return;
+      // Normally we wait for the user side to land before persisting so
+      // turns store as paired exchanges. But the assistant transcript can
+      // arrive before user transcription completes — so on the assistant
+      // 'done' tick we still write whatever we have. Memory rows for
+      // assistant-only turns are still valuable as conversational record.
       pendingUserText = '';
       pendingAssistantText = '';
       try {
@@ -1611,7 +1614,13 @@
               type: 'realtime',
               instructions: sessionInstructions,
               audio: {
-                input: { turn_detection: { type: 'semantic_vad' } },
+                input: {
+                  // Without transcription enabled, OpenAI never emits
+                  // input_audio_transcription.completed and we never see
+                  // what Chris said — so memory writes can't pair.
+                  transcription: { model: 'whisper-1' },
+                  turn_detection: { type: 'semantic_vad' },
+                },
                 output: { voice: tokenData.voice || 'shimmer' },
               },
             },
