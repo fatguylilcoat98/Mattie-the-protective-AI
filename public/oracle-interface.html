@@ -77,6 +77,11 @@
     }
     .governance-status { font-size: 10px; color: #b0c4de; letter-spacing: 0.8px; }
     .active-rule { color: #39ff14; font-weight: 600; text-shadow: 0 0 6px rgba(57, 255, 20, 0.6); }
+    .version-display {
+      font-size: 9px; color: rgba(0, 229, 255, 0.6);
+      letter-spacing: 0.8px; text-transform: uppercase;
+      margin-top: 2px; text-align: center;
+    }
     .sign-out-link {
       position: absolute; top: 12px; right: 16px;
       font-size: 10px; color: rgba(255, 255, 255, 0.4);
@@ -440,6 +445,7 @@
     <header class="claspion-governance">
       <div class="governance-content">
         <div class="governance-title">CLASPION GOVERNANCE</div>
+        <div class="version-display" id="versionDisplay">Loading version...</div>
         <div class="governance-status">
           CURRENT BINDING DECISIONS: 1. TRUTH OVER COMFORT [RULE 001] <span class="active-rule">[ACTIVE]</span>
         </div>
@@ -712,8 +718,25 @@
       window.location.reload();
     });
 
-    // Initialize auth state check
+    // Load and display version
+    async function loadVersion() {
+      try {
+        const response = await fetch('/version');
+        if (response.ok) {
+          const data = await response.json();
+          document.getElementById('versionDisplay').textContent = `v${data.version}`;
+        } else {
+          document.getElementById('versionDisplay').textContent = 'version unknown';
+        }
+      } catch (error) {
+        console.warn('Failed to load version:', error);
+        document.getElementById('versionDisplay').textContent = 'version unknown';
+      }
+    }
+
+    // Initialize auth state check and load version
     checkAuthState();
+    loadVersion();
 
     const memoryList = document.getElementById('memoryList');
     const pulseList = document.getElementById('pulseList');
