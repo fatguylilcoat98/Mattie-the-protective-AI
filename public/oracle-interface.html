@@ -1124,42 +1124,103 @@
       return res;
     }
 
+    // Read an SSE stream from a fetch response and call onEvent for each
+    // server-sent message. Returns when the stream ends.
+    async function readSse(res, onEvent) {
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let idx;
+        while ((idx = buffer.indexOf('\n\n')) !== -1) {
+          const raw = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 2);
+          let event = 'message';
+          let dataLines = [];
+          for (const line of raw.split('\n')) {
+            if (line.startsWith(':')) continue;
+            if (line.startsWith('event:')) event = line.slice(6).trim();
+            else if (line.startsWith('data:')) dataLines.push(line.slice(5).trimStart());
+          }
+          if (dataLines.length) {
+            try { onEvent(event, JSON.parse(dataLines.join('\n'))); }
+            catch (_) {}
+          }
+        }
+      }
+    }
+
+    async function streamChat(message) {
+      const res = await splendorFetch('/api/enhanced/chat/stream', {
+        method: 'POST',
+        body: JSON.stringify({ message }),
+      });
+      return res;
+    }
+
     async function sendMessage(text) {
       if (!text || !text.trim()) return;
       stopAudio();
       responseBubble.textContent = 'Thinking…';
       setState('thinking');
       try {
-        // Prefer the enhanced memory-aware endpoint. If it isn't
-        // configured (returns 503), fall back to the basic /api/chat
-        // so Splendor still responds.
-        let res = await postChat('/api/enhanced/chat', {
-          message: text,
-          include_memory: true,
-          include_consciousness: true
-        });
-        if (res.status === 503) {
-          res = await postChat('/api/chat', { message: text });
-        }
-        if (!res.ok) throw new Error('chat ' + res.status);
-        const data = await res.json();
-        const replyText = data.response || data.message || '(no response)';
-        // Refresh real data after a successful chat turn (non-blocking).
-        fetchEvents();
-        fetchMemories();
-        // Voice-on: stay in "thinking" while TTS prepares, then reveal text
-        // + start audio in the same tick so they land together. Voice-off:
-        // render text immediately as before.
-        if (voiceEnabled) {
-          const speech = await prepareSpeech(replyText);
-          responseBubble.textContent = replyText;
-          if (speech) {
-            speech.play();
+        const streamRes = await streamChat(text);
+        if (streamRes.status === 503 || !streamRes.ok || !streamRes.body) {
+          // Stream endpoint unavailable; fall back to single-shot.
+          let res = await postChat('/api/enhanced/chat', {
+            message: text,
+            include_memory: true,
+            include_consciousness: true,
+          });
+          if (res.status === 503) {
+            res = await postChat('/api/chat', { message: text });
+          }
+          if (!res.ok) throw new Error('chat ' + res.status);
+          const data = await res.json();
+          const replyText = data.response || data.message || '(no response)';
+          fetchEvents();
+          fetchMemories();
+          if (voiceEnabled) {
+            const speech = await prepareSpeech(replyText);
+            responseBubble.textContent = replyText;
+            if (speech) speech.play(); else setState(null);
           } else {
+            responseBubble.textContent = replyText;
             setState(null);
           }
+          return;
+        }
+
+        // Live token streaming.
+        let firstToken = true;
+        let assembled = '';
+        let streamErr = null;
+        await readSse(streamRes, (event, data) => {
+          if (event === 'token' && data && data.text) {
+            if (firstToken) {
+              responseBubble.textContent = '';
+              firstToken = false;
+            }
+            assembled += data.text;
+            responseBubble.textContent = assembled;
+          } else if (event === 'error') {
+            streamErr = new Error((data && data.message) || 'stream error');
+          }
+        });
+        if (streamErr) throw streamErr;
+
+        fetchEvents();
+        fetchMemories();
+
+        // Voice catches up at the end. Text is already on-screen; trigger
+        // playback as soon as the audio buffer is decoded.
+        if (voiceEnabled && assembled) {
+          const speech = await prepareSpeech(assembled);
+          if (speech) speech.play(); else setState(null);
         } else {
-          responseBubble.textContent = replyText;
           setState(null);
         }
       } catch (err) {

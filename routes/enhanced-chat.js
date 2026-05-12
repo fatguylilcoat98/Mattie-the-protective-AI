@@ -93,6 +93,94 @@ router.post('/chat', requireAuth, requireOwner, async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// STREAMING CHAT ENDPOINT — SSE
+// ═══════════════════════════════════════════════════════════════════════════════
+// Same memory + governance + activity-bus pipeline as POST /chat, but the
+// LLM reply streams token-by-token so the bubble can update live instead
+// of waiting for the full response.
+
+router.post('/chat/stream', requireAuth, requireOwner, async (req, res) => {
+  const {
+    message,
+    sessionId = generateSessionId(),
+    workspaceId
+  } = req.body;
+
+  const userId = req.userId;
+
+  if (!message) {
+    return res.status(400).json({ error: 'Message is required' });
+  }
+  if (!memorySystem) {
+    return res.status(503).json({
+      error: 'Enhanced memory system not available',
+      message: 'Missing required environment variables (SUPABASE_URL, SUPABASE_SERVICE_KEY)',
+      fallback: 'Use /api/chat for basic Splendor functionality'
+    });
+  }
+
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache, no-transform',
+    'Connection': 'keep-alive',
+    'X-Accel-Buffering': 'no',
+  });
+
+  const send = (event, data) => {
+    try {
+      res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    } catch (_) {}
+  };
+  send('open', { session_id: sessionId, ts: Date.now() });
+
+  // Keep the socket warm through proxies that timeout idle connections.
+  const heartbeat = setInterval(() => {
+    try { res.write(`: ping ${Date.now()}\n\n`); } catch (_) {}
+  }, 15000);
+
+  let aborted = false;
+  req.on('close', () => { aborted = true; clearInterval(heartbeat); });
+
+  try {
+    const result = await memorySystem.streamConversation(
+      userId,
+      message,
+      sessionId,
+      workspaceId,
+      {
+        onToken: (text) => {
+          if (!aborted && text) send('token', { text });
+        },
+        onError: (err) => {
+          if (!aborted) send('error', { message: err && err.message || String(err) });
+        },
+      },
+    );
+
+    if (!aborted) {
+      send('done', {
+        full: result.response,
+        memory_stats: result.memoryStats,
+        session_id: sessionId,
+        workspace_id: workspaceId,
+        context_summary: {
+          facts_used: result.context.facts.length,
+          interpretations_used: result.context.interpretations.length,
+          binding_rules_active: result.context.governingRules.length,
+          web_search_performed: result.memoryStats.webSearchPerformed,
+        },
+      });
+    }
+  } catch (err) {
+    console.error('Stream chat error:', err);
+    if (!aborted) send('error', { message: err && err.message || String(err) });
+  } finally {
+    clearInterval(heartbeat);
+    try { res.end(); } catch (_) {}
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // MEMORY MANAGEMENT ENDPOINTS
 // ═══════════════════════════════════════════════════════════════════════════════
 
