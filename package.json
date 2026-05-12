@@ -1,6 +1,6 @@
 {
   "name": "splendor",
-  "version": "15.10.3",
+  "version": "15.10.4",
   "description": "Splendor — The Remarkable AI · The Good Neighbor Guard",
   "main": "server.js",
   "scripts": {
@@ -53,7 +53,7 @@
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.1",
     "@react-three/postprocessing": "^3.0.4",
-    "@supabase/supabase-js": "^2.38.0",
+    "@supabase/supabase-js": "^2.105.4",
     "@types/three": "^0.184.1",
     "babel-loader": "^10.1.1",
     "bcryptjs": "^2.4.3",
