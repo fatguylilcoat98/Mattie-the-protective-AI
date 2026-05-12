@@ -944,13 +944,17 @@
       return { audio: data.audio, fallback: false };
     }
 
-    async function playAudioReactive(b64) {
-      stopAudio();
+    async function decodeAudioFromBase64(b64) {
       const ctx = getAudioContext();
       if (ctx.state === 'suspended') {
         try { await ctx.resume(); } catch (e) {}
       }
-      const buffer = await ctx.decodeAudioData(base64ToBuffer(b64));
+      return ctx.decodeAudioData(base64ToBuffer(b64));
+    }
+
+    function playDecodedBuffer(buffer) {
+      stopAudio();
+      const ctx = getAudioContext();
       const source = ctx.createBufferSource();
       source.buffer = buffer;
       source.connect(analyser);
@@ -961,6 +965,32 @@
       setState('speaking');
       source.start(0);
       tickOrbFromAudio();
+    }
+
+    async function playAudioReactive(b64) {
+      const buffer = await decodeAudioFromBase64(b64);
+      playDecodedBuffer(buffer);
+    }
+
+    // Fetch + decode TTS up-front so the caller can reveal text and start
+    // audio in the same tick. Resolves to a { play() } handle, or null on
+    // fallback / failure.
+    async function prepareSpeech(text) {
+      if (!voiceEnabled || !text) return null;
+      try {
+        const { audio, fallback } = await speakWithOpenAI(text);
+        if (audio) {
+          const buffer = await decodeAudioFromBase64(audio);
+          return { play: () => playDecodedBuffer(buffer) };
+        }
+        if (fallback) {
+          return { play: () => browserSpeak(text), fallback: true };
+        }
+      } catch (err) {
+        console.warn('voice prep failed', err);
+        return { play: () => browserSpeak(text), fallback: true };
+      }
+      return null;
     }
 
     function browserSpeak(text) {
@@ -1114,14 +1144,24 @@
         if (!res.ok) throw new Error('chat ' + res.status);
         const data = await res.json();
         const replyText = data.response || data.message || '(no response)';
-        responseBubble.textContent = replyText;
-        setState(null);
-        // Refresh real data after a successful chat turn
+        // Refresh real data after a successful chat turn (non-blocking).
         fetchEvents();
         fetchMemories();
-        // If the user has voice enabled, speak the reply with the
-        // audio-reactive orb. Otherwise the orb returns to idle.
-        await speakResponse(replyText);
+        // Voice-on: stay in "thinking" while TTS prepares, then reveal text
+        // + start audio in the same tick so they land together. Voice-off:
+        // render text immediately as before.
+        if (voiceEnabled) {
+          const speech = await prepareSpeech(replyText);
+          responseBubble.textContent = replyText;
+          if (speech) {
+            speech.play();
+          } else {
+            setState(null);
+          }
+        } else {
+          responseBubble.textContent = replyText;
+          setState(null);
+        }
       } catch (err) {
         console.warn('chat send failed:', err);
         responseBubble.textContent = 'I encountered an error processing your message. Please try again.';
