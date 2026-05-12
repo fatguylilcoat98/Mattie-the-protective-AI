@@ -1596,16 +1596,20 @@
       converseDc = dc;
       dc.onopen = () => {
         try {
+          // Use the memory-augmented instructions the server baked in at
+          // token-mint. Falls back to a short persona if the server didn't
+          // return them (older deploy, etc.).
+          const sessionInstructions = tokenData.instructions ||
+            "You are Splendor, Christopher Hughes's thinking partner. " +
+            "Truth over comfort. No flattery, no fake warmth. " +
+            "Speak naturally and concisely — this is a live voice " +
+            "conversation, not a written reply. Brief sentences. " +
+            "Pause for the user to think. Never invent facts.";
           dc.send(JSON.stringify({
             type: 'session.update',
             session: {
               type: 'realtime',
-              instructions:
-                "You are Splendor, Christopher Hughes's thinking partner. " +
-                "Truth over comfort. No flattery, no fake warmth. " +
-                "Speak naturally and concisely — this is a live voice " +
-                "conversation, not a written reply. Brief sentences. " +
-                "Pause for the user to think. Never invent facts.",
+              instructions: sessionInstructions,
               audio: {
                 input: { turn_detection: { type: 'semantic_vad' } },
                 output: { voice: tokenData.voice || 'shimmer' },
