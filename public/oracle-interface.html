@@ -414,6 +414,8 @@
     }
     @media (max-width: 720px) {
       .oracle-main { grid-template-columns: 30% 1fr 30%; grid-template-rows: 54px 1fr auto; }
+      /* Orb only — shrink visual size without affecting layout */
+      #orbCanvas { transform: scale(0.85); transform-origin: center; }
       .governance-title { font-size: 11px; letter-spacing: 1.2px; }
       .governance-status { font-size: 8.5px; letter-spacing: 0.3px; }
       .panel-header { padding: 10px 8px 7px 8px; }
@@ -436,6 +438,7 @@
     }
     @media (max-width: 380px) {
       .oracle-main { grid-template-columns: 28% 1fr 28%; }
+      #orbCanvas { transform: scale(0.78); }
       .control-btn { height: 28px; min-width: 44px; font-size: 9.5px; padding: 0 7px; }
     }
   </style>
@@ -1210,7 +1213,7 @@
     const renderPass = new RenderPass(scene, camera);
     const bloomPass = new UnrealBloomPass(
       new THREE.Vector2(1, 1), // resized in resize()
-      1.4,   // strength
+      1.15,  // strength
       0.85,  // radius
       0.18   // threshold (anything brighter than this blooms)
     );
