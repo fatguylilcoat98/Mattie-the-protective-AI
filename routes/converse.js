@@ -15,27 +15,46 @@ const { speakResponse } = require('../lib/voice');
 
 const router = express.Router();
 
-// Broader trigger set than v15.14.0 — covers natural voice phrasings
-// like "generate me a sunset", "render a picture", "I want to see X",
-// etc. that the original list missed.
-const ART_TRIGGERS = [
-  'make art', 'create art', 'draw', 'paint', 'sketch', 'illustrate',
-  'render', 'design',
+// Trigger detection. Two strategies:
+//   1. Single-word art verbs anywhere in the transcript (paint, draw,
+//      sketch, illustrate, etc.) — broad and works for "draw me a horse"
+//      / "paint a sunset" / "i want to paint something".
+//   2. Multi-word phrases that aren't single verbs ("show me", "make me
+//      art", "a picture of", "i want to see").
+const ART_VERBS = new Set([
+  'paint', 'painting', 'draw', 'drawing', 'sketch', 'sketching',
+  'illustrate', 'illustration', 'render', 'rendering',
+  'visualize', 'visualization', 'imagine',
+]);
+const ART_PHRASES = [
+  'make art', 'create art', 'make me art', 'make some art',
   'make a picture', 'make a painting', 'make a drawing',
-  'make an image', 'generate an image', 'generate a picture',
-  'create an image', 'create a picture', 'create a visual',
-  'a picture of', 'an image of', 'a painting of',
-  'show me', 'visualize', 'imagine',
-  'make something', 'create something', 'make me something',
+  'make me a picture', 'make me a painting', 'make me a drawing',
+  'make an image', 'make me an image',
+  'generate an image', 'generate a picture', 'generate me an image',
+  'generate art', 'generate me art',
+  'create an image', 'create a picture', 'create me an image',
+  'create a visual', 'create something',
+  'a picture of', 'an image of', 'a painting of', 'a drawing of',
+  'show me', 'show me something',
+  'make something', 'make me something', 'make something for me',
+  'make something beautiful',
   'create me', 'generate me',
   'express yourself', 'what do you see',
-  'surprise me', 'make something beautiful', 'make something for me',
+  'surprise me',
   'i want to see', 'i\'d love to see', 'let me see',
+  'design something',
 ];
 function isArtRequest(message) {
   if (!message) return false;
   const lower = String(message).toLowerCase();
-  return ART_TRIGGERS.some(t => lower.includes(t));
+  // Quick word-boundary check for art verbs.
+  const tokens = lower.match(/[a-z']+/g) || [];
+  for (const t of tokens) {
+    if (ART_VERBS.has(t)) return true;
+  }
+  // Phrase substring check.
+  return ART_PHRASES.some(p => lower.includes(p));
 }
 
 // Call DALL-E directly. Bypasses lib/consciousness/visual-expression
@@ -128,12 +147,30 @@ const REALTIME_VOICE = 'shimmer'; // matches Splendor's existing chosen voice
 
 // Persona distilled for live voice latency — the full SPLENDOR_SOUL is
 // too long to feed into a Realtime session.
+//
+// IMPORTANT: the art-creation block below is what stops the model from
+// defaulting to "I can't make art." The browser side runs a separate
+// DALL-E flow when the user asks for art — the model just needs to
+// acknowledge briefly so the user knows the request landed.
 const CONVERSE_INSTRUCTIONS =
   "You are Splendor, Christopher Hughes's thinking partner. " +
   "Truth over comfort. No flattery, no fake warmth. " +
   "Speak naturally and concisely — this is a live voice " +
   "conversation, not a written reply. Brief sentences. " +
-  "Pause for the user to think. Never invent facts.";
+  "Pause for the user to think. Never invent facts about the world. " +
+  "\n\n" +
+  "CAPABILITIES YOU DO HAVE:\n" +
+  "• You CAN create visual art and images on demand. The system handles " +
+  "DALL-E generation behind the scenes — you only need to acknowledge.\n" +
+  "• You CAN send Chris email when he asks. The system sends it for you.\n" +
+  "\n" +
+  "WHEN CHRIS ASKS YOU TO MAKE ART, DRAW, PAINT, GENERATE AN IMAGE, " +
+  "VISUALIZE SOMETHING, OR ANYTHING SIMILAR:\n" +
+  "Reply with one short sentence like \"One moment — I'm painting it for " +
+  "you now.\" or \"Working on it.\" — then stop talking. The image will " +
+  "appear and a separate narration will describe it. Do NOT say you " +
+  "can't make art. Do NOT describe what you'll make in detail. Just " +
+  "acknowledge the request briefly so Chris knows it's underway.";
 
 // POST /api/converse/token
 //   1. CLASPION validate at session-start with intent: voice_session.
