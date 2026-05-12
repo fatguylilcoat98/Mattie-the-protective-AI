@@ -92,8 +92,11 @@ router.post('/token', requireAuth, requireOwner, async (req, res) => {
               // Opt in to user-side transcription. Without this, the
               // `conversation.item.input_audio_transcription.completed`
               // event never fires and we never know what Chris said,
-              // so turns can't be persisted to memory.
-              transcription: { model: 'whisper-1' },
+              // so turns can't be persisted to memory. gpt-4o-mini-transcribe
+              // is the Realtime-API-native transcription model and is
+              // accepted reliably on gpt-realtime sessions (whisper-1
+              // can be silently dropped on newer models).
+              transcription: { model: 'gpt-4o-mini-transcribe' },
               turn_detection: { type: 'semantic_vad' },
             },
             output: { voice: REALTIME_VOICE },
