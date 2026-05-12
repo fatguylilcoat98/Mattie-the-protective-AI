@@ -1,6 +1,6 @@
 {
   "name": "splendor",
-  "version": "15.10.5",
+  "version": "15.10.7",
   "description": "Splendor — The Remarkable AI · The Good Neighbor Guard",
   "main": "server.js",
   "scripts": {
@@ -30,6 +30,7 @@
     "memory:test": "node tests/memory-system-tests.js",
     "memory:test:unit": "node tests/memory-system-tests.js --unit",
     "memory:migrate": "node scripts/memory-migration.js",
+    "memory:audit": "node scripts/migration-audit.js",
     "server:enhanced": "node routes/enhanced-chat.js",
     "build:react": "webpack --mode production",
     "dev:react": "webpack serve --mode development",
