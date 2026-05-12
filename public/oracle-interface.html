@@ -289,26 +289,66 @@
       --voice-level: 0;
       min-width: 0; min-height: 0;
     }
-    /* Art overlay — image blooms out of the orb's center on `event: art`. */
-    .art-overlay {
-      position: absolute;
-      top: 50%; left: 50%;
-      width: 92%;
-      height: 92%;
-      transform: translate(-50%, -50%) scale(0.04);
-      opacity: 0;
-      background-size: contain;
-      background-position: center;
-      background-repeat: no-repeat;
-      filter: drop-shadow(0 0 24px rgba(0, 229, 255, 0.45));
-      transition: transform 1800ms cubic-bezier(0.22, 1, 0.36, 1),
-                  opacity 1000ms ease;
-      z-index: 5;
+    /* Art canvas — full-viewport overlay. Image starts as a tiny circle
+       at the orb's center, expands to a glowing disc (~35vmin), then
+       uncircles and fills the screen. JS drives the timing. */
+    #artCanvas {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
       pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
     }
-    .art-overlay.bloomed {
-      transform: translate(-50%, -50%) scale(1);
+    #artCanvas.visible {
+      pointer-events: all;
+    }
+    #artCanvas img {
+      position: absolute;
+      border-radius: 50%;
+      width: 0px;
+      height: 0px;
+      object-fit: cover;
+      transform: translate(-50%, -50%);
+      top: 50%;
+      left: 50%;
+      box-shadow:
+        0 0 60px rgba(0, 255, 200, 0.4),
+        0 0 120px rgba(0, 200, 255, 0.2);
+      transition: none; /* JS drives the size transition for phase 1 */
+    }
+    #artDismiss {
+      position: fixed;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 51;
+      background: rgba(0,0,0,0.6);
+      color: rgba(255,255,255,0.8);
+      border: 1px solid rgba(0,255,200,0.3);
+      border-radius: 24px;
+      padding: 10px 28px;
+      font-size: 14px;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s ease;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      font-family: inherit;
+    }
+    #artDismiss.visible {
       opacity: 1;
+      pointer-events: auto;
+    }
+    #artDismiss:hover {
+      background: rgba(0,255,200,0.15);
+      border-color: rgba(0,255,200,0.6);
     }
     #orbCanvas {
       position: absolute; inset: 0;
@@ -541,8 +581,13 @@
 
     <main class="neural-center" id="neuralCenter">
       <canvas id="orbCanvas"></canvas>
-      <div class="art-overlay" id="artOverlay"></div>
     </main>
+
+    <!-- Art canvas: full-viewport overlay that holds Splendor's creation. -->
+    <div id="artCanvas">
+      <img id="artImage" src="" alt="Splendor's creation" />
+    </div>
+    <button id="artDismiss" type="button">Tap to return</button>
 
     <aside class="pulse-panel">
       <div class="panel-header">
@@ -1012,23 +1057,139 @@
       return { audio: data.audio, fallback: false };
     }
 
-    // Bloom a DALL-E image out of the orb center. Called when the
-    // stream emits `event: art`. The .art-overlay CSS does the easing.
-    function showArtImage(url) {
-      const overlay = document.getElementById('artOverlay');
-      if (!overlay || !url) return;
-      overlay.style.backgroundImage = 'url("' + url.replace(/"/g, '\\"') + '")';
-      // Force reflow so the transition fires from the initial state.
-      void overlay.offsetWidth;
-      overlay.classList.add('bloomed');
+    // ────────────────────────────────────────────────────────────────
+    // Orb "creating" pulse — rhythmic ring boost while DALL-E generates.
+    // window.__orbRingBoost is an object { outer, middle, inner } that
+    // the orb's frame() loop reads each tick. Push values into it on a
+    // 25fps interval; the frame loop's natural decay smooths the curve.
+    // ────────────────────────────────────────────────────────────────
+    let _orbCreatingInterval = null;
+
+    function startOrbCreating() {
+      const rb = window.__orbRingBoost ||
+                 (window.__orbRingBoost = { outer: 0, middle: 0, inner: 0 });
+      rb.outer = 0.9; rb.middle = 0.7; rb.inner = 0.5;
+      let phase = 0;
+      if (_orbCreatingInterval) clearInterval(_orbCreatingInterval);
+      _orbCreatingInterval = setInterval(() => {
+        phase += 0.08;
+        const r = window.__orbRingBoost ||
+                  (window.__orbRingBoost = { outer: 0, middle: 0, inner: 0 });
+        const pulse = 0.5 + Math.sin(phase) * 0.4; // ~0.1..0.9
+        r.outer  = Math.max(0.5, pulse);
+        r.middle = Math.max(0.4, pulse * 0.85);
+        r.inner  = Math.max(0.3, pulse * 0.65);
+      }, 40);
     }
-    function dismissArtImage() {
-      const overlay = document.getElementById('artOverlay');
-      if (!overlay) return;
-      overlay.classList.remove('bloomed');
-      // Let the transition complete before clearing the bg-image so the
-      // image fades out instead of snapping away.
-      setTimeout(() => { overlay.style.backgroundImage = ''; }, 1100);
+
+    function stopOrbCreating() {
+      if (_orbCreatingInterval) {
+        clearInterval(_orbCreatingInterval);
+        _orbCreatingInterval = null;
+      }
+      // Let the natural decay in the frame loop fade the rings out.
+      const rb = window.__orbRingBoost;
+      if (rb) { rb.outer *= 0.5; rb.middle *= 0.5; rb.inner *= 0.5; }
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    // Orb emergence — two-phase animation.
+    //  Phase 1 (rAF, 800ms): tiny circle at orb center -> ~35vmin disc.
+    //  Phase 2 (CSS, 1.1s):  uncircles + grows to fill the viewport.
+    // ────────────────────────────────────────────────────────────────
+    function triggerOrbEmergence(imageUrl, onComplete) {
+      const canvas = document.getElementById('artCanvas');
+      const img = document.getElementById('artImage');
+      if (!canvas || !img || !imageUrl) return;
+
+      img.onload = () => {
+        canvas.classList.add('visible');
+        canvas.style.opacity = '1';
+        img.style.borderRadius = '50%';
+        img.style.width = '0px';
+        img.style.height = '0px';
+        img.style.transition = 'none';
+        img.style.opacity = '1';
+        // force reflow before the rAF loop starts
+        img.getBoundingClientRect();
+
+        const expandDuration = 800;
+        const expandStart = performance.now();
+        const targetCircleSize = Math.min(window.innerWidth, window.innerHeight) * 0.35;
+
+        function expandCircle(now) {
+          const elapsed = now - expandStart;
+          const progress = Math.min(elapsed / expandDuration, 1);
+          const eased = 1 - Math.pow(1 - progress, 3);
+          const size = eased * targetCircleSize;
+          img.style.width  = size + 'px';
+          img.style.height = size + 'px';
+          // Bleed the pulse down as the disc lands.
+          const rb = window.__orbRingBoost;
+          if (rb) {
+            const tail = 2.0 * (1 - eased);
+            rb.outer  = Math.max(rb.outer,  tail);
+            rb.middle = Math.max(rb.middle, tail * 0.8);
+            rb.inner  = Math.max(rb.inner,  tail * 0.6);
+          }
+          if (progress < 1) {
+            requestAnimationFrame(expandCircle);
+          } else {
+            fillScreen(onComplete);
+          }
+        }
+        requestAnimationFrame(expandCircle);
+      };
+
+      img.onerror = () => {
+        console.warn('[art] image failed to load:', imageUrl);
+        stopOrbCreating();
+      };
+
+      img.src = imageUrl;
+    }
+
+    function fillScreen(onComplete) {
+      const img = document.getElementById('artImage');
+      const dismiss = document.getElementById('artDismiss');
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const targetSize = Math.max(vw, vh) * 1.05;
+      img.style.transition =
+        'width 1.1s cubic-bezier(0.16, 1, 0.3, 1),' +
+        'height 1.1s cubic-bezier(0.16, 1, 0.3, 1),' +
+        'border-radius 0.9s ease';
+      img.style.width  = targetSize + 'px';
+      img.style.height = targetSize + 'px';
+      img.style.borderRadius = '12px';
+
+      stopOrbCreating();
+
+      setTimeout(() => {
+        if (dismiss) dismiss.classList.add('visible');
+        if (typeof onComplete === 'function') onComplete();
+      }, 1200);
+    }
+
+    function dismissArt() {
+      const canvas = document.getElementById('artCanvas');
+      const img = document.getElementById('artImage');
+      const dismiss = document.getElementById('artDismiss');
+      if (dismiss) dismiss.classList.remove('visible');
+      if (!img || !canvas) return;
+      img.style.transition =
+        'width 0.7s ease-in, height 0.7s ease-in,' +
+        'border-radius 0.5s ease, opacity 0.7s ease';
+      img.style.width  = '0px';
+      img.style.height = '0px';
+      img.style.borderRadius = '50%';
+      img.style.opacity = '0';
+      setTimeout(() => {
+        canvas.classList.remove('visible');
+        canvas.style.opacity = '0';
+        img.src = '';
+        img.style.opacity = '1';
+      }, 750);
     }
 
     async function decodeAudioFromBase64(b64) {
@@ -1287,12 +1448,17 @@
         let streamErr = null;
         let artPayload = null;
         // Any prior art is dismissed when a new turn starts.
-        dismissArtImage();
+        dismissArt();
         await readSse(streamRes, (event, data) => {
           if (event === 'token' && data && data.text) {
             if (firstToken) {
               responseBubble.textContent = '';
               firstToken = false;
+              // The art flow's very first token is the "Painting…"
+              // placeholder. Kick the orb into its creating pulse.
+              if (data.text === 'Painting…') {
+                startOrbCreating();
+              }
             }
             // Replace placeholder "Painting…" with the real description
             // when the art flow sends its final token.
@@ -1304,11 +1470,17 @@
             responseBubble.textContent = assembled;
           } else if (event === 'art' && data) {
             artPayload = data;
-            // Bloom the image out of the orb immediately; ring boost for
-            // the "creating" feel.
-            showArtImage(data.image_url);
-            bumpRing('outer', 0.9);
-            bumpRing('inner', 0.6);
+            // Full-viewport emergence: tiny circle from the orb's center,
+            // expand to a disc, uncircle, fill the screen. Audio plays
+            // after the image has landed so narration follows reveal.
+            triggerOrbEmergence(data.image_url, async () => {
+              if (data.audio_b64) {
+                try {
+                  const buffer = await decodeAudioFromBase64(data.audio_b64);
+                  playDecodedBuffer(buffer);
+                } catch (e) { console.warn('[art] audio playback failed', e); }
+              }
+            });
           } else if (event === 'error') {
             streamErr = new Error((data && data.message) || 'stream error');
           }
@@ -1318,16 +1490,9 @@
         fetchEvents();
         fetchMemories();
 
-        // Art path: TTS audio is delivered inline via the `art` event, so
-        // play it through the same decoded-buffer path that drives the
-        // orb's audio-reactive pulse.
-        if (artPayload && artPayload.audio_b64) {
-          try {
-            const buffer = await decodeAudioFromBase64(artPayload.audio_b64);
-            playDecodedBuffer(buffer);
-          } catch (e) { console.warn('[art] audio playback failed', e); }
-          return;
-        }
+        // Art path: audio playback is started inside the emergence
+        // callback (after the image lands). Nothing more to do here.
+        if (artPayload) return;
 
         // Voice catches up at the end. Text is already on-screen; trigger
         // playback as soon as the audio buffer is decoded.
@@ -1848,6 +2013,12 @@
         try { converseMicStream && converseMicStream.getTracks().forEach(t => t.stop()); } catch (_) {}
       }
     });
+
+    // Dismiss button for the art canvas
+    (function wireArtDismiss() {
+      const btn = document.getElementById('artDismiss');
+      if (btn) btn.addEventListener('click', dismissArt);
+    })();
 
     // Initial + polling
     fetchMemories();
