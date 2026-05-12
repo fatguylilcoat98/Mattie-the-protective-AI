@@ -87,7 +87,17 @@ router.post('/token', requireAuth, requireOwner, async (req, res) => {
           type: 'realtime',
           model: REALTIME_MODEL,
           instructions: finalInstructions,
-          audio: { output: { voice: REALTIME_VOICE } },
+          audio: {
+            input: {
+              // Opt in to user-side transcription. Without this, the
+              // `conversation.item.input_audio_transcription.completed`
+              // event never fires and we never know what Chris said,
+              // so turns can't be persisted to memory.
+              transcription: { model: 'whisper-1' },
+              turn_detection: { type: 'semantic_vad' },
+            },
+            output: { voice: REALTIME_VOICE },
+          },
         },
       }),
     });
