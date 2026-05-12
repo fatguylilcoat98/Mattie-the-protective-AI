@@ -6,12 +6,13 @@
 */
 
 const express = require('express');
+const { requireAuth, requireOwner } = require('../middleware/auth');
 const router = express.Router();
 const { getMemoriesForUser, storeMemory, verifyUser, supabase } = require('../lib/supabase');
 const { storeMemory: storePineconeMemory, deleteMemory: deletePineconeMemory } = require('../lib/pinecone');
 
 // GET /api/memory/check — returns all memories for current user (test endpoint)
-router.get('/check', async (req, res) => {
+router.get('/check', requireAuth, requireOwner, async (req, res) => {
   try {
     const { userid: userId, authtoken: authToken } = req.headers;
 
@@ -49,18 +50,13 @@ router.get('/check', async (req, res) => {
 });
 
 // Get user's memories
-router.get('/:userId', async (req, res) => {
+router.get('/:userId', requireAuth, requireOwner, async (req, res) => {
   try {
-    const { userId } = req.params;
-    const { authToken } = req.headers;
-
-    // Verify user if token provided
-    if (authToken) {
-      const user = await verifyUser(authToken);
-      if (!user || user.id !== userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
-      }
+    // Verify URL param matches authenticated user
+    if (req.params.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Cannot access other users data' });
     }
+    const userId = req.user.id;
 
     const memories = await getMemoriesForUser(userId, 50);
 
@@ -79,21 +75,17 @@ router.get('/:userId', async (req, res) => {
 });
 
 // Add a manual memory
-router.post('/:userId', async (req, res) => {
+router.post('/:userId', requireAuth, requireOwner, async (req, res) => {
   try {
-    const { userId } = req.params;
-    const { content, type = 'general', owner = 'self', authToken } = req.body;
+    // Verify URL param matches authenticated user
+    if (req.params.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Cannot access other users data' });
+    }
+    const userId = req.user.id;
+    const { content, type = 'general', owner = 'self' } = req.body;
 
     if (!content) {
       return res.status(400).json({ error: 'Content required' });
-    }
-
-    // Verify user if token provided
-    if (authToken) {
-      const user = await verifyUser(authToken);
-      if (!user || user.id !== userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
-      }
     }
 
     const memory = await storeMemory(userId, content, type, owner);
@@ -125,18 +117,14 @@ router.post('/:userId', async (req, res) => {
 });
 
 // Delete a memory
-router.delete('/:userId/:memoryId', async (req, res) => {
+router.delete('/:userId/:memoryId', requireAuth, requireOwner, async (req, res) => {
   try {
-    const { userId, memoryId } = req.params;
-    const { authToken } = req.body;
-
-    // Verify user if token provided
-    if (authToken) {
-      const user = await verifyUser(authToken);
-      if (!user || user.id !== userId) {
-        return res.status(401).json({ error: 'Unauthorized' });
-      }
+    // Verify URL param matches authenticated user
+    if (req.params.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Cannot access other users data' });
     }
+    const userId = req.user.id;
+    const { memoryId } = req.params;
 
     const { error } = await supabase
       .from('memories')

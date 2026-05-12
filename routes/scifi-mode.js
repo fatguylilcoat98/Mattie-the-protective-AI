@@ -9,6 +9,7 @@
 // API endpoints for toggling expensive experimental features
 
 const express = require('express');
+const { requireAuth, requireOwner } = require('../middleware/auth');
 const router = express.Router();
 const {
   isSciFiModeEnabled,
@@ -22,9 +23,12 @@ const {
 } = require('../lib/scifi-orchestrator');
 
 // Get current sci-fi mode status
-router.get('/status/:userId', async (req, res) => {
+router.get('/status/:userId', requireAuth, requireOwner, async (req, res) => {
   try {
-    const { userId } = req.params;
+    if (req.params.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Cannot access other users data' });
+    }
+    const userId = req.user.id;
     const status = await getSciFiModeStatus(userId);
     const orchestratorStatus = await getSciFiStatusForUser(userId);
 
@@ -44,9 +48,12 @@ router.get('/status/:userId', async (req, res) => {
 });
 
 // Toggle sci-fi mode on/off
-router.post('/toggle/:userId', async (req, res) => {
+router.post('/toggle/:userId', requireAuth, requireOwner, async (req, res) => {
   try {
-    const { userId } = req.params;
+    if (req.params.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Cannot access other users data' });
+    }
+    const userId = req.user.id;
     const { enabled } = req.body; // Optional: specify enabled state
 
     const result = await toggleSciFiMode(userId, enabled);
@@ -78,9 +85,12 @@ router.post('/toggle/:userId', async (req, res) => {
 });
 
 // Enable sci-fi mode
-router.post('/enable/:userId', async (req, res) => {
+router.post('/enable/:userId', requireAuth, requireOwner, async (req, res) => {
   try {
-    const { userId } = req.params;
+    if (req.params.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Cannot access other users data' });
+    }
+    const userId = req.user.id;
     const result = await toggleSciFiMode(userId, true);
 
     if (!result) {
@@ -107,9 +117,12 @@ router.post('/enable/:userId', async (req, res) => {
 });
 
 // Disable sci-fi mode
-router.post('/disable/:userId', async (req, res) => {
+router.post('/disable/:userId', requireAuth, requireOwner, async (req, res) => {
   try {
-    const { userId } = req.params;
+    if (req.params.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Cannot access other users data' });
+    }
+    const userId = req.user.id;
     const result = await toggleSciFiMode(userId, false);
 
     if (!result) {
@@ -136,7 +149,7 @@ router.post('/disable/:userId', async (req, res) => {
 });
 
 // Get system-wide sci-fi mode status (admin endpoint)
-router.get('/system/status', async (req, res) => {
+router.get('/system/status', requireAuth, requireOwner, async (req, res) => {
   try {
     const systemStatus = getSystemSciFiStatus();
 

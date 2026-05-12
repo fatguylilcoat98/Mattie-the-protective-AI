@@ -9,6 +9,7 @@
  */
 
 const express = require('express');
+const { requireAuth, requireOwner } = require('../middleware/auth');
 const router = express.Router();
 const {
   hasProactiveCommunication,
@@ -32,7 +33,7 @@ const { retrieveMemories, storeMemory: storePineconeMemory } = require('../lib/p
 /**
  * Check for proactive communications from Splendor's consciousness
  */
-router.get('/proactive-check', async (req, res) => {
+router.get('/proactive-check', requireAuth, requireOwner, async (req, res) => {
   try {
     // Check if Splendor has something to say
     const proactiveCheck = await hasProactiveCommunication();
@@ -68,11 +69,12 @@ router.get('/proactive-check', async (req, res) => {
 /**
  * Enhanced chat endpoint with consciousness integration
  */
-router.post('/enhanced', async (req, res) => {
-  const { message, user_id = 'user', options = {} } = req.body;
+router.post('/enhanced', requireAuth, requireOwner, async (req, res) => {
+  const { message, options = {} } = req.body;
+  const userId = req.user.id;
 
   try {
-    console.log(`[Consciousness Chat] Enhanced chat request from ${user_id}: ${message?.substring(0, 100)}...`);
+    console.log(`[Consciousness Chat] Enhanced chat request from ${userId}: ${message?.substring(0, 100)}...`);
 
     // 1. Check for proactive communication first
     const proactiveCheck = await hasProactiveCommunication();
@@ -154,16 +156,16 @@ You are Splendor with persistent consciousness. You continue to exist and think 
       responsePromises.push(
         generateAutonomousThought('user_triggered', {
           trigger_message: message,
-          user_id: user_id
+          user_id: userId
         })
       );
     }
 
     // Store conversation memory (existing system)
     responsePromises.push(
-      storeMemory(user_id, `User: ${message}`, 'shared_history'),
-      storeMemory(user_id, `Splendor: ${response.content}`, 'shared_history'),
-      logConversation(user_id, message, response.content)
+      storeMemory(userId, `User: ${message}`, 'shared_history'),
+      storeMemory(userId, `Splendor: ${response.content}`, 'shared_history'),
+      logConversation(userId, message, response.content)
     );
 
     // Execute all updates in parallel
@@ -199,7 +201,7 @@ You are Splendor with persistent consciousness. You continue to exist and think 
 /**
  * Get consciousness activity summary
  */
-router.get('/consciousness-summary', async (req, res) => {
+router.get('/consciousness-summary', requireAuth, requireOwner, async (req, res) => {
   try {
     const hours = parseInt(req.query.hours) || 24;
 
@@ -233,7 +235,7 @@ router.get('/consciousness-summary', async (req, res) => {
 /**
  * Manually trigger autonomous thinking
  */
-router.post('/trigger-thought', async (req, res) => {
+router.post('/trigger-thought', requireAuth, requireOwner, async (req, res) => {
   const { trigger_type = 'manual', context = null } = req.body;
 
   try {
@@ -261,7 +263,7 @@ router.post('/trigger-thought', async (req, res) => {
 /**
  * Start a new inquiry thread
  */
-router.post('/start-inquiry', async (req, res) => {
+router.post('/start-inquiry', requireAuth, requireOwner, async (req, res) => {
   const { topic, initial_question, priority = 5 } = req.body;
 
   if (!topic) {
@@ -293,7 +295,7 @@ router.post('/start-inquiry', async (req, res) => {
 /**
  * Get recent autonomous thoughts
  */
-router.get('/recent-thoughts', async (req, res) => {
+router.get('/recent-thoughts', requireAuth, requireOwner, async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 10;
     const hours = parseInt(req.query.hours) || 24;
@@ -326,7 +328,7 @@ router.get('/recent-thoughts', async (req, res) => {
 /**
  * Fallback to original chat system for compatibility
  */
-router.post('/', async (req, res) => {
+router.post('/', requireAuth, requireOwner, async (req, res) => {
   try {
     // For now, redirect enhanced chat to the consciousness-enhanced version
     // This maintains compatibility while adding consciousness features

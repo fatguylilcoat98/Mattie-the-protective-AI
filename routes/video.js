@@ -6,6 +6,7 @@
  */
 
 const express = require('express');
+const { requireAuth, requireOwner } = require('../middleware/auth');
 const router = express.Router();
 const Anthropic = require('@anthropic-ai/sdk');
 
@@ -73,7 +74,7 @@ async function generateVideo(prompt) {
 // ─────────────────────────────────────────────
 // POST /api/video/generate
 // ─────────────────────────────────────────────
-router.post('/generate', async (req, res) => {
+router.post('/generate', requireAuth, requireOwner, async (req, res) => {
   const { concept } = req.body;
 
   if (!concept || !concept.trim()) {
@@ -157,7 +158,7 @@ router.post('/generate', async (req, res) => {
 // ─────────────────────────────────────────────
 // GET /api/video/status/:requestId
 // ─────────────────────────────────────────────
-router.get('/status/:requestId', async (req, res) => {
+router.get('/status/:requestId', requireAuth, requireOwner, async (req, res) => {
   const { requestId } = req.params;
 
   if (!MODELSLAB_API_KEY) {

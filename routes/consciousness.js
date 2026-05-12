@@ -9,6 +9,7 @@
 // Routes for interacting with Splendor's continuous consciousness system
 
 const express = require('express');
+const { requireAuth, requireOwner } = require('../middleware/auth');
 const router = express.Router();
 const { consciousnessIntegration } = require('../lib/continuous-consciousness-integration');
 const { proactiveCommunication } = require('../lib/proactive-communication');
@@ -20,7 +21,7 @@ const supabase = createClient(
 );
 
 // Get consciousness status
-router.get('/status', async (req, res) => {
+router.get('/status', requireAuth, requireOwner, async (req, res) => {
   try {
     const status = {
       continuousConsciousness: {
@@ -54,9 +55,12 @@ router.get('/status', async (req, res) => {
 });
 
 // Get consciousness greeting for conversation start
-router.get('/greeting/:userId', async (req, res) => {
+router.get('/greeting/:userId', requireAuth, requireOwner, async (req, res) => {
   try {
-    const { userId } = req.params;
+    if (req.params.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Cannot access other users data' });
+    }
+    const userId = req.user.id;
     const greeting = await consciousnessIntegration.getConsciousnessGreeting(userId);
 
     // Update user interaction
@@ -74,9 +78,12 @@ router.get('/greeting/:userId', async (req, res) => {
 });
 
 // Get consciousness context for responses
-router.get('/context/:userId', async (req, res) => {
+router.get('/context/:userId', requireAuth, requireOwner, async (req, res) => {
   try {
-    const { userId } = req.params;
+    if (req.params.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Cannot access other users data' });
+    }
+    const userId = req.user.id;
     const context = await consciousnessIntegration.getConsciousnessContext(userId);
 
     res.json({
@@ -90,9 +97,12 @@ router.get('/context/:userId', async (req, res) => {
 });
 
 // Get recent consciousness activities
-router.get('/activities/:userId', async (req, res) => {
+router.get('/activities/:userId', requireAuth, requireOwner, async (req, res) => {
   try {
-    const { userId } = req.params;
+    if (req.params.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Cannot access other users data' });
+    }
+    const userId = req.user.id;
     const { hours = 24 } = req.query;
 
     const summary = await consciousnessIntegration.getActivitySummary(userId, parseInt(hours));
@@ -108,9 +118,12 @@ router.get('/activities/:userId', async (req, res) => {
 });
 
 // Get consciousness insights
-router.get('/insights/:userId', async (req, res) => {
+router.get('/insights/:userId', requireAuth, requireOwner, async (req, res) => {
   try {
-    const { userId } = req.params;
+    if (req.params.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Cannot access other users data' });
+    }
+    const userId = req.user.id;
     const { limit = 10, type } = req.query;
 
     let query = supabase
@@ -140,9 +153,12 @@ router.get('/insights/:userId', async (req, res) => {
 });
 
 // Add a project for autonomous work
-router.post('/projects/:userId', async (req, res) => {
+router.post('/projects/:userId', requireAuth, requireOwner, async (req, res) => {
   try {
-    const { userId } = req.params;
+    if (req.params.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Cannot access other users data' });
+    }
+    const userId = req.user.id;
     const projectData = req.body;
 
     const project = await consciousnessIntegration.addProject(userId, projectData);
@@ -159,9 +175,12 @@ router.post('/projects/:userId', async (req, res) => {
 });
 
 // Get project results
-router.get('/projects/:userId', async (req, res) => {
+router.get('/projects/:userId', requireAuth, requireOwner, async (req, res) => {
   try {
-    const { userId } = req.params;
+    if (req.params.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Cannot access other users data' });
+    }
+    const userId = req.user.id;
     const projects = await consciousnessIntegration.getProjectResults(userId);
 
     res.json({
@@ -176,9 +195,12 @@ router.get('/projects/:userId', async (req, res) => {
 });
 
 // Get pending proactive messages
-router.get('/messages/:userId', async (req, res) => {
+router.get('/messages/:userId', requireAuth, requireOwner, async (req, res) => {
   try {
-    const { userId } = req.params;
+    if (req.params.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Cannot access other users data' });
+    }
+    const userId = req.user.id;
     const messages = await consciousnessIntegration.getPendingMessages(userId);
 
     res.json({
@@ -193,9 +215,12 @@ router.get('/messages/:userId', async (req, res) => {
 });
 
 // Send a test proactive message
-router.post('/test-message/:userId', async (req, res) => {
+router.post('/test-message/:userId', requireAuth, requireOwner, async (req, res) => {
   try {
-    const { userId } = req.params;
+    if (req.params.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Cannot access other users data' });
+    }
+    const userId = req.user.id;
     const result = await proactiveCommunication.sendTestMessage(userId);
 
     res.json({
@@ -212,9 +237,12 @@ router.post('/test-message/:userId', async (req, res) => {
 });
 
 // Get delivery statistics
-router.get('/stats/:userId', async (req, res) => {
+router.get('/stats/:userId', requireAuth, requireOwner, async (req, res) => {
   try {
-    const { userId } = req.params;
+    if (req.params.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Cannot access other users data' });
+    }
+    const userId = req.user.id;
     const { days = 7 } = req.query;
 
     const stats = await proactiveCommunication.getDeliveryStats(userId, parseInt(days));
@@ -231,9 +259,12 @@ router.get('/stats/:userId', async (req, res) => {
 });
 
 // Get consciousness state details
-router.get('/state/:userId', async (req, res) => {
+router.get('/state/:userId', requireAuth, requireOwner, async (req, res) => {
   try {
-    const { userId } = req.params;
+    if (req.params.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Cannot access other users data' });
+    }
+    const userId = req.user.id;
 
     const { data: state, error } = await supabase
       .from('consciousness_state')
@@ -254,9 +285,12 @@ router.get('/state/:userId', async (req, res) => {
 });
 
 // Get creative works
-router.get('/creative/:userId', async (req, res) => {
+router.get('/creative/:userId', requireAuth, requireOwner, async (req, res) => {
   try {
-    const { userId } = req.params;
+    if (req.params.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Cannot access other users data' });
+    }
+    const userId = req.user.id;
     const { limit = 10, type } = req.query;
 
     let query = supabase
@@ -286,9 +320,12 @@ router.get('/creative/:userId', async (req, res) => {
 });
 
 // Mark conversation end
-router.post('/end-conversation/:userId', async (req, res) => {
+router.post('/end-conversation/:userId', requireAuth, requireOwner, async (req, res) => {
   try {
-    const { userId } = req.params;
+    if (req.params.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Cannot access other users data' });
+    }
+    const userId = req.user.id;
 
     await consciousnessIntegration.updateUserInteraction(userId, 'conversation_end');
 
@@ -303,7 +340,7 @@ router.post('/end-conversation/:userId', async (req, res) => {
 });
 
 // Admin: Stop consciousness (emergency)
-router.post('/admin/stop', async (req, res) => {
+router.post('/admin/stop', requireAuth, requireOwner, async (req, res) => {
   try {
     await consciousnessIntegration.stopConsciousness();
 
@@ -318,9 +355,12 @@ router.post('/admin/stop', async (req, res) => {
 });
 
 // Debug: Full consciousness dump
-router.get('/debug/:userId', async (req, res) => {
+router.get('/debug/:userId', requireAuth, requireOwner, async (req, res) => {
   try {
-    const { userId } = req.params;
+    if (req.params.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Cannot access other users data' });
+    }
+    const userId = req.user.id;
 
     // Get all consciousness data for debugging
     const [state, activities, insights, projects, messages] = await Promise.all([

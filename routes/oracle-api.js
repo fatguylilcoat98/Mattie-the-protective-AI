@@ -75,10 +75,9 @@ router.get('/memories/recent', requireAuth, requireOwner, async (req, res) => {
 });
 
 // Get memory statistics for dashboard
-router.get('/memories/stats', async (req, res) => {
+router.get('/memories/stats', requireAuth, requireOwner, async (req, res) => {
   try {
-    const userIdRaw = req.query.user_id || 'default-user';
-    const userId = stringToUUID(userIdRaw);
+    const userId = req.user.id;
 
     // Get memory counts by provenance
     const { data: provenanceStats, error: provenanceError } = await supabase
@@ -181,7 +180,7 @@ router.get('/events/recent', requireAuth, requireOwner, async (req, res) => {
 // ============================================================================
 
 // Get Continuity Engine status
-router.get('/continuity/status', async (req, res) => {
+router.get('/continuity/status', requireAuth, requireOwner, async (req, res) => {
   try {
     const status = continuityEngine.getStatus();
     const recentHistory = continuityEngine.getRecentHistory(5);
@@ -216,7 +215,7 @@ router.get('/continuity/status', async (req, res) => {
 // ============================================================================
 
 // Enhanced governance status for Oracle HUD
-router.get('/governance/oracle-status', async (req, res) => {
+router.get('/governance/oracle-status', requireAuth, requireOwner, async (req, res) => {
   try {
     // Try to get governance state
     let governanceStatus = {

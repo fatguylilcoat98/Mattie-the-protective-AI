@@ -20,8 +20,7 @@ function testProvenanceDetermination() {
 
     const sourceType = sourceContext.source_type || 'conversation';
     switch (sourceType) {
-      case 'user_direct':
-      case 'user_statement':
+      case 'user_direct_statement':
         return 'USER_STATED';
       case 'external_search':
       case 'web_search':
@@ -43,8 +42,7 @@ function testProvenanceDetermination() {
   const testCases = [
     { sourceContext: {}, expected: 'INFERRED' },
     { sourceContext: { source_type: 'conversation' }, expected: 'INFERRED' },
-    { sourceContext: { source_type: 'user_direct' }, expected: 'USER_STATED' },
-    { sourceContext: { source_type: 'user_statement' }, expected: 'USER_STATED' },
+    { sourceContext: { source_type: 'user_direct_statement' }, expected: 'USER_STATED' },
     { sourceContext: { source_type: 'external_search' }, expected: 'VERIFIED_FACT' },
     { sourceContext: { source_type: 'web_search' }, expected: 'VERIFIED_FACT' },
     { sourceContext: { source_type: 'system_event' }, expected: 'SYSTEM_EVENT' },
@@ -83,8 +81,7 @@ function testMemoryDataStructure() {
 
       const sourceType = sourceContext.source_type || 'conversation';
       switch (sourceType) {
-        case 'user_direct':
-        case 'user_statement':
+        case 'user_direct_statement':
           return 'USER_STATED';
         case 'external_search':
         case 'web_search':

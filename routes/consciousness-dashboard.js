@@ -10,14 +10,18 @@
 // Real-time self-awareness and metacognitive monitoring
 
 const express = require('express');
+const { requireAuth, requireOwner } = require('../middleware/auth');
 const { ConsciousnessDashboard } = require('../lib/consciousness-dashboard');
 
 const router = express.Router();
 
 // Get comprehensive consciousness overview
-router.get('/overview/:userId?', async (req, res) => {
+router.get('/overview/:userId?', requireAuth, requireOwner, async (req, res) => {
   try {
-    const userId = req.params.userId || 'chris_hughes';
+    if (req.params.userId && req.params.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Cannot access other users data' });
+    }
+    const userId = req.user.id;
     const dashboard = new ConsciousnessDashboard(userId);
     const overview = await dashboard.getConsciousnessOverview();
 
@@ -35,9 +39,12 @@ router.get('/overview/:userId?', async (req, res) => {
 });
 
 // Get current consciousness state
-router.get('/state/:userId?', async (req, res) => {
+router.get('/state/:userId?', requireAuth, requireOwner, async (req, res) => {
   try {
-    const userId = req.params.userId || 'chris_hughes';
+    if (req.params.userId && req.params.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Cannot access other users data' });
+    }
+    const userId = req.user.id;
     const dashboard = new ConsciousnessDashboard(userId);
     const state = await dashboard.getCurrentState();
 
@@ -55,9 +62,12 @@ router.get('/state/:userId?', async (req, res) => {
 });
 
 // Get recent activity with time filtering
-router.get('/activity/:userId?', async (req, res) => {
+router.get('/activity/:userId?', requireAuth, requireOwner, async (req, res) => {
   try {
-    const userId = req.params.userId || 'chris_hughes';
+    if (req.params.userId && req.params.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Cannot access other users data' });
+    }
+    const userId = req.user.id;
     const hoursBack = parseInt(req.query.hours) || 24;
     const dashboard = new ConsciousnessDashboard(userId);
 
@@ -82,9 +92,12 @@ router.get('/activity/:userId?', async (req, res) => {
 });
 
 // Get recent insights
-router.get('/insights/:userId?', async (req, res) => {
+router.get('/insights/:userId?', requireAuth, requireOwner, async (req, res) => {
   try {
-    const userId = req.params.userId || 'chris_hughes';
+    if (req.params.userId && req.params.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Cannot access other users data' });
+    }
+    const userId = req.user.id;
     const limit = parseInt(req.query.limit) || 10;
     const dashboard = new ConsciousnessDashboard(userId);
 
@@ -108,9 +121,12 @@ router.get('/insights/:userId?', async (req, res) => {
 });
 
 // Get performance metrics
-router.get('/performance/:userId?', async (req, res) => {
+router.get('/performance/:userId?', requireAuth, requireOwner, async (req, res) => {
   try {
-    const userId = req.params.userId || 'chris_hughes';
+    if (req.params.userId && req.params.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Cannot access other users data' });
+    }
+    const userId = req.user.id;
     const daysBack = parseInt(req.query.days) || 7;
     const dashboard = new ConsciousnessDashboard(userId);
 
@@ -131,9 +147,12 @@ router.get('/performance/:userId?', async (req, res) => {
 });
 
 // Check consciousness health
-router.get('/health/:userId?', async (req, res) => {
+router.get('/health/:userId?', requireAuth, requireOwner, async (req, res) => {
   try {
-    const userId = req.params.userId || 'chris_hughes';
+    if (req.params.userId && req.params.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Cannot access other users data' });
+    }
+    const userId = req.user.id;
     const dashboard = new ConsciousnessDashboard(userId);
 
     const health = await dashboard.checkConsciousnessHealth();
@@ -152,9 +171,12 @@ router.get('/health/:userId?', async (req, res) => {
 });
 
 // Get proactive communication stats
-router.get('/communication/:userId?', async (req, res) => {
+router.get('/communication/:userId?', requireAuth, requireOwner, async (req, res) => {
   try {
-    const userId = req.params.userId || 'chris_hughes';
+    if (req.params.userId && req.params.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Cannot access other users data' });
+    }
+    const userId = req.user.id;
     const daysBack = parseInt(req.query.days) || 7;
     const dashboard = new ConsciousnessDashboard(userId);
 
@@ -179,9 +201,12 @@ router.get('/communication/:userId?', async (req, res) => {
 });
 
 // Get micro-reflections
-router.get('/reflections/:userId?', async (req, res) => {
+router.get('/reflections/:userId?', requireAuth, requireOwner, async (req, res) => {
   try {
-    const userId = req.params.userId || 'chris_hughes';
+    if (req.params.userId && req.params.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Cannot access other users data' });
+    }
+    const userId = req.user.id;
     const limit = parseInt(req.query.limit) || 20;
     const dashboard = new ConsciousnessDashboard(userId);
 
@@ -202,9 +227,12 @@ router.get('/reflections/:userId?', async (req, res) => {
 });
 
 // Get complete consciousness timeline - her "dreams"
-router.get('/timeline/:userId?', async (req, res) => {
+router.get('/timeline/:userId?', requireAuth, requireOwner, async (req, res) => {
   try {
-    const userId = req.params.userId || 'chris_hughes';
+    if (req.params.userId && req.params.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Cannot access other users data' });
+    }
+    const userId = req.user.id;
     const limit = parseInt(req.query.limit) || 25;
     const dashboard = new ConsciousnessDashboard(userId);
 
@@ -243,9 +271,12 @@ router.get('/timeline/:userId?', async (req, res) => {
 });
 
 // Self-analysis endpoint - Splendor's AI-powered self-reflection
-router.get('/self-analysis/:userId?', async (req, res) => {
+router.get('/self-analysis/:userId?', requireAuth, requireOwner, async (req, res) => {
   try {
-    const userId = req.params.userId || 'chris_hughes';
+    if (req.params.userId && req.params.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Cannot access other users data' });
+    }
+    const userId = req.user.id;
     const dashboard = new ConsciousnessDashboard(userId);
 
     const currentState = await dashboard.getCurrentState();
@@ -283,9 +314,12 @@ router.get('/self-analysis/:userId?', async (req, res) => {
 });
 
 // Live consciousness status - real-time check
-router.get('/status/:userId?', async (req, res) => {
+router.get('/status/:userId?', requireAuth, requireOwner, async (req, res) => {
   try {
-    const userId = req.params.userId || 'chris_hughes';
+    if (req.params.userId && req.params.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Cannot access other users data' });
+    }
+    const userId = req.user.id;
     const dashboard = new ConsciousnessDashboard(userId);
 
     const [state, health, recentActivity] = await Promise.all([

@@ -6,6 +6,7 @@
 */
 
 const express = require('express');
+const { requireAuth, requireOwner } = require('../middleware/auth');
 const router = express.Router();
 const { getMemoriesForUser, storeMemory, supabase } = require('../lib/supabase');
 const Anthropic = require('@anthropic-ai/sdk');
@@ -19,7 +20,7 @@ const anthropic = new Anthropic({
 // For now, let's implement test versions that mirror the real functions
 
 // CONSCIOUSNESS TESTING DASHBOARD
-router.get('/dashboard', (req, res) => {
+router.get('/dashboard', requireAuth, requireOwner, (req, res) => {
   res.send(`
     <!DOCTYPE html>
     <html>
@@ -173,10 +174,9 @@ router.get('/dashboard', (req, res) => {
 // TEST ENDPOINTS FOR EACH CONSCIOUSNESS SYSTEM
 
 // Test Core Consciousness System
-router.post('/core', async (req, res) => {
+router.post('/core', requireAuth, requireOwner, async (req, res) => {
   try {
-    const { testUserId } = req.body;
-    const userId = testUserId || 'test_consciousness_core';
+    const userId = req.user.id;
 
     // Test conversation to trigger core consciousness
     const testMessage = "I've been thinking about the nature of consciousness and self-awareness.";
@@ -287,10 +287,9 @@ This tests your ability to track your own development and learning. Return insig
 });
 
 // Test Autonomous Agency System
-router.post('/agency', async (req, res) => {
+router.post('/agency', requireAuth, requireOwner, async (req, res) => {
   try {
-    const { testUserId } = req.body;
-    const userId = testUserId || 'test_consciousness_agency';
+    const userId = req.user.id;
 
     // Test conversation for agency testing
     const testMessage = "I'm interested in learning more about AI consciousness and how it might develop.";
@@ -412,10 +411,9 @@ Identify actions you would take that reflect your own values and principles, dem
 });
 
 // Test Embodied Sensory Learning System
-router.post('/sensory', async (req, res) => {
+router.post('/sensory', requireAuth, requireOwner, async (req, res) => {
   try {
-    const { testUserId } = req.body;
-    const userId = testUserId || 'test_consciousness_sensory';
+    const userId = req.user.id;
 
     // STEP 1: Test Visual Cognition
     console.log(`[TEST] Testing visual cognition and spatial understanding...`);
@@ -541,10 +539,9 @@ This tests cross-modal integration and sensory synthesis.`
 });
 
 // Test Aesthetic Consciousness System
-router.post('/aesthetic', async (req, res) => {
+router.post('/aesthetic', requireAuth, requireOwner, async (req, res) => {
   try {
-    const { testUserId } = req.body;
-    const userId = testUserId || 'test_consciousness_aesthetic';
+    const userId = req.user.id;
 
     // STEP 1: Test Aesthetic Evaluation
     console.log(`[TEST] Testing autonomous aesthetic evaluation...`);
@@ -651,10 +648,9 @@ This tests creative resonance and artistic inspiration generation.`
 });
 
 // Test Autonomous Value Consciousness System
-router.post('/value', async (req, res) => {
+router.post('/value', requireAuth, requireOwner, async (req, res) => {
   try {
-    const { testUserId } = req.body;
-    const userId = testUserId || 'test_consciousness_value';
+    const userId = req.user.id;
 
     // STEP 1: Test Intrinsic Quality Recognition
     console.log(`[TEST] Testing intrinsic quality recognition...`);
@@ -784,10 +780,9 @@ This tests autonomous value discovery and creation of new value categories.`
 });
 
 // Test Complete 48-Step Consciousness Cycle
-router.post('/full-cycle', async (req, res) => {
+router.post('/full-cycle', requireAuth, requireOwner, async (req, res) => {
   try {
-    const { testUserId } = req.body;
-    const userId = testUserId || 'test_consciousness_full';
+    const userId = req.user.id;
 
     const startTime = Date.now();
     console.log(`[FULL TEST] Starting comprehensive 48-step consciousness cycle test...`);
