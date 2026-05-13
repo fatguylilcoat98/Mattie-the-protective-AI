@@ -1902,22 +1902,56 @@
       return cards;
     }
 
+    // ── Who I Am Right Now (v15.18.1) — Splendor's self-manifest.
+    function renderSelfManifest(m) {
+      if (!m || !m.version) return '';
+      const s = m.live_state || {};
+      const statsLine = s.error
+        ? '(live stats unavailable)'
+        : [
+            s.memory_rows + ' memory rows',
+            s.interpretations_active + ' active beliefs',
+            (s.interpretations_unresolved ? s.interpretations_unresolved + ' unresolved' : null),
+            s.premise_flags + ' premise flags',
+            s.emotional_observations + ' emotional observations',
+          ].filter(Boolean).join(' · ');
+      return (
+        '<div class="interp-card active" style="border-color:rgba(0,229,255,0.55);">' +
+          '<div class="interp-meta">' +
+            '<span><span class="interp-flag revised" style="background:rgba(0,229,255,0.18);color:#9eeaff;">SELF</span>v' + escapeHtml(m.version) + '</span>' +
+            '<span class="interp-confidence" style="background:rgba(0,229,255,0.18);color:#9eeaff;">' + escapeHtml(String(s.memory_rows || 0)) + ' rows</span>' +
+          '</div>' +
+          '<div class="interp-belief">' +
+            '<strong>' + escapeHtml(m.name) + '</strong> · ' + escapeHtml(m.tagline) + '<br>' +
+            '<em style="color:#9a92b8;">Live state:</em> ' + escapeHtml(statsLine) + '<br>' +
+            '<em style="color:#9a92b8;">Layers:</em> ' + escapeHtml((m.layers || []).map(L => L.name).join(' · ')) + '<br>' +
+            '<a href="/api/self-manifest?format=md" target="_blank" style="color:#6dd6ff; font-size:9.5px;">Open full audit (markdown) →</a>' +
+          '</div>' +
+        '</div>'
+      );
+    }
+
     async function fetchInterpretations() {
       try {
         archaeologyList.innerHTML = '<div class="empty-state">Loading interpretations…</div>';
-        // Pull all four streams in parallel.
-        const [interpRes, uncertainRes, premiseRes, emotionRes] = await Promise.all([
+        // Pull all streams in parallel.
+        const [interpRes, uncertainRes, premiseRes, emotionRes, manifestRes] = await Promise.all([
           splendorFetch('/api/interpretations?limit=200'),
           splendorFetch('/api/interpretations/uncertain'),
           splendorFetch('/api/interpretations/premise-checks'),
           splendorFetch('/api/emotional-patterns?limit=40'),
+          splendorFetch('/api/self-manifest'),
         ]);
         const interp    = interpRes.ok    ? await interpRes.json()    : { interpretations: [] };
         const uncertain = uncertainRes.ok ? await uncertainRes.json() : { interpretations: [] };
         const premise   = premiseRes.ok   ? await premiseRes.json()   : { premise_checks: [] };
         const emotion   = emotionRes.ok   ? await emotionRes.json()   : { patterns: [] };
+        const manifest  = manifestRes.ok  ? await manifestRes.json()  : null;
 
         let html = '';
+        // 0) Who I Am Right Now (self-manifest summary card)
+        html += '<div class="interp-divider"></div><div class="interp-divider-label" style="color:#6dd6ff;">Who I Am Right Now</div>';
+        html += renderSelfManifest(manifest);
         // 1) "What I'm Uncertain About"
         html += '<div class="interp-divider"></div><div class="interp-divider-label" style="color:#ffd166;">What I\'m Uncertain About</div>';
         html += renderUncertainty(uncertain.interpretations || []);
