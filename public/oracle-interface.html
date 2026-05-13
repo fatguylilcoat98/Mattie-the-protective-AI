@@ -1243,7 +1243,12 @@
         analyser.fftSize = 256;
         analyser.smoothingTimeConstant = 0.65;
         freqData = new Uint8Array(analyser.frequencyBinCount);
-        analyser.connect(audioCtx.destination);
+        // analyser is a PURE FFT TAP. Do NOT wire it to destination —
+        // each audio source connects to destination separately for
+        // playback, and to analyser separately for FFT-driven orb
+        // pulse. Wiring both through analyser caused the v15.15.0
+        // Converse echo (audio played twice: once via <audio> element,
+        // once via the analyser->destination chain).
       }
       return audioCtx;
     }
@@ -1447,7 +1452,12 @@
       const ctx = getAudioContext();
       const source = ctx.createBufferSource();
       source.buffer = buffer;
+      // Branch the graph: analyser for FFT-driven orb pulse, destination
+      // for actual speaker playback. The analyser is NOT wired to
+      // destination (see getAudioContext) so each source must drive both
+      // explicitly. This avoids the v15.15.0 Converse double-output bug.
       source.connect(analyser);
+      source.connect(ctx.destination);
       source.onended = () => {
         if (currentSource === source) stopAudio();
       };
