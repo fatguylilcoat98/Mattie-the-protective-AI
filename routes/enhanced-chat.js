@@ -8,92 +8,58 @@ const { EnhancedMemorySystem } = require('../lib/enhanced-memory-integration.js'
 const { requireAuth, requireOwner } = require('../middleware/auth.js');
 const emailModule = require('./email');
 const { getMemoriesForUser } = require('../lib/supabase');
-const {
-  generateConsciousnessVisualization,
-  generateFallbackVisualization,
-} = require('../lib/consciousness/visual-expression');
-const { speakResponse } = require('../lib/voice');
+const { generateArt, isArtRequest } = require('../lib/art-generator');
 const router = express.Router();
 
-// Art-intent intercept used by /chat/stream. Loose triggers — Splendor
-// should feel free to create when the user invites it.
-function isArtRequest(message) {
-  if (!message) return false;
-  const lower = message.toLowerCase();
-  const artTriggers = [
-    'make art', 'create art', 'draw', 'paint', 'make a picture',
-    'make an image', 'generate an image', 'create an image',
-    'show me', 'visualize', 'make something', 'create something',
-    'express yourself', 'what do you see', 'make me something',
-    'surprise me', 'make a painting', 'make a drawing',
-    'create a visual', 'make something beautiful',
-    'make something for me',
-  ];
-  return artTriggers.some(trigger => lower.includes(trigger));
-}
-
-// Returns { imageUrl, description, revisedPrompt } or null. Tries the
-// consciousness-aware visualizer first, falls back to a simpler prompt
-// build. Both return structured objects (handleVisualizationRequest
-// returns Markdown, which doesn't match the art-flow event payload).
-async function getVisualization(userId, message) {
-  try {
-    const viz = await generateConsciousnessVisualization(userId, 'user_request', {
-      userRequested: true,
-      userMessage: message,
-    });
-    if (viz && viz.imageUrl) return viz;
-  } catch (e) {
-    console.warn('[art-intent] consciousness visualization failed:', e && e.message);
-  }
-  try {
-    const viz = await generateFallbackVisualization(userId, message);
-    if (viz && viz.imageUrl) return viz;
-  } catch (e) {
-    console.warn('[art-intent] fallback visualization failed:', e && e.message);
-  }
-  return null;
-}
-
-// Streams the placeholder token, awaits image + TTS in parallel, emits a
-// final `event: art` so the frontend can bloom the image out of the orb.
-// Returns true if the request was handled (caller must NOT continue to
-// normal chat). Returns false on generation failure so the caller falls
-// through to a normal LLM reply.
+// Streams the placeholder token, runs the unified art generator, then
+// emits `event: art` on success or `event: art_failed` on failure so the
+// frontend can surface a real reason. Returns true if the request was
+// handled (caller must NOT continue to normal chat).
 async function handleArtStreamIntercept(send, userId, message) {
   send('token', { text: 'Painting…' });
 
-  let viz;
+  let result;
   try {
-    viz = await getVisualization(userId, message);
+    result = await generateArt({ userId, userMessage: message, source: 'chat' });
   } catch (err) {
-    console.error('[art-intent] generation error:', err);
-    return false;
+    console.error('[art-intent] generator threw:', err);
+    send('art_failed', {
+      error_category: 'unknown',
+      error_message: (err && err.message) || 'unexpected error',
+      reply: "I couldn't make that — something went wrong on my side. Want to try again?",
+    });
+    send('done', { full: '', art: true, ok: false });
+    return true;
   }
-  if (!viz || !viz.imageUrl) return false;
 
-  const description = viz.description || "I've made something for you.";
+  if (!result.ok) {
+    const userFacing = (
+      result.errorCategory === 'policy_block' ? "That request was blocked by content policy — try a different idea." :
+      result.errorCategory === 'timeout'      ? "Image generation took too long. Let's try again." :
+      result.errorCategory === 'rate_limit'   ? "I'm being rate-limited right now. Give it a minute." :
+      result.errorCategory === 'permission'   ? "My image-generation key isn't authorized. Chris needs to check the OpenAI account." :
+                                                `Image couldn't be generated — ${result.errorMessage}`
+    );
+    send('art_failed', {
+      request_id: result.requestId,
+      error_category: result.errorCategory,
+      error_message: result.errorMessage,
+      reply: userFacing,
+    });
+    send('done', { full: userFacing, art: true, ok: false });
+    return true;
+  }
 
-  // TTS in parallel with the SSE emit so audio is ready by the time the
-  // image bleeds out. speakResponse returns base64 mp3 or null.
-  const audioPromise = speakResponse(
-    description,
-    'shimmer_creative',
-    'warm, reflective, creative — like an artist describing their work'
-  ).catch(() => null);
-
-  send('token', { text: description });
-
-  const audioB64 = await audioPromise;
-
+  send('token', { text: result.description });
   send('art', {
-    image_url: viz.imageUrl,
-    audio_b64: audioB64 || null,
-    revised_prompt: viz.revisedPrompt || null,
-    description,
+    request_id: result.requestId,
+    image_url: result.imageUrl,
+    audio_b64: result.audioB64 || null,
+    revised_prompt: result.revisedPrompt || null,
+    description: result.description,
+    model: result.model,
   });
-
-  send('done', { full: description, art: true });
+  send('done', { full: result.description, art: true, ok: true });
   return true;
 }
 

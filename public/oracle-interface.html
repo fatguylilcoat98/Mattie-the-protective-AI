@@ -882,10 +882,35 @@
           bumpRing('inner', 0.4);
           break;
         case 'converse:art_generated':
-          // The art flow's own setState('creating') already fires from
-          // the SSE 'Painting…' token; this just nudges the rings.
+        case 'art:generated':
+          // Success — let the state flow naturally to speaking when
+          // playDecodedBuffer fires. Just nudge the rings.
           bumpRing('outer', 0.6);
           bumpRing('inner', 0.4);
+          break;
+        case 'art:start':
+          // Server-side art generator started — enter creating state.
+          // startOrbCreating() drives the rhythmic ring pulse during
+          // the ~10-15s while DALL-E runs.
+          setState('creating');
+          if (typeof startOrbCreating === 'function') startOrbCreating();
+          console.log('[art-bus] art:start request_id=' + ev.request_id);
+          break;
+        case 'art:failed':
+          // Server-side generator failed. Stop the creating pulse,
+          // surface the reason via setFault + a bubble banner.
+          if (typeof stopOrbCreating === 'function') stopOrbCreating();
+          console.warn('[art-bus] art:failed category=' + ev.error_category + ' message=' + ev.error_message);
+          setFault(ev.error_message || ev.error_category || 'art generation failed');
+          if (typeof responseBubble !== 'undefined' && responseBubble) {
+            const msg = ev.error_category === 'policy_block'
+              ? 'Content-policy blocked that request — try a different idea.'
+              : 'Image generation failed — ' + (ev.error_message || ev.error_category || 'unknown reason');
+            responseBubble.textContent = msg;
+            setTimeout(() => {
+              if (responseBubble.textContent === msg) responseBubble.textContent = '';
+            }, 6000);
+          }
           break;
         case 'converse:session_start':
           bumpRing('outer', 0.4);
@@ -1694,9 +1719,11 @@
             }
           } else if (event === 'art' && data) {
             artPayload = data;
+            console.log('[art-stream] art event received request_id=' + data.request_id + ' model=' + data.model);
             // Full-viewport emergence: tiny circle from the orb's center,
             // expand to a disc, uncircle, fill the screen. Audio plays
             // after the image has landed so narration follows reveal.
+            if (typeof stopOrbCreating === 'function') stopOrbCreating();
             triggerOrbEmergence(data.image_url, async () => {
               if (data.audio_b64) {
                 try {
@@ -1705,6 +1732,13 @@
                 } catch (e) { console.warn('[art] audio playback failed', e); }
               }
             });
+          } else if (event === 'art_failed' && data) {
+            console.warn('[art-stream] art_failed', data);
+            if (typeof stopOrbCreating === 'function') stopOrbCreating();
+            const reply = data.reply || ('Image generation failed — ' + (data.error_message || data.error_category || 'unknown'));
+            responseBubble.textContent = reply;
+            assembled = reply;
+            setFault(data.error_message || data.error_category || 'art_failed');
           } else if (event === 'error') {
             streamErr = new Error((data && data.message) || 'stream error');
           }
