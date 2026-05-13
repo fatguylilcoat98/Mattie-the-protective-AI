@@ -2148,17 +2148,24 @@
           }
           break;
         }
-        case 'response.audio_transcript.delta': {
-          if (evt.delta) {
-            assistantTranscriptBuffer += evt.delta;
+        case 'response.audio_transcript.delta':
+        case 'response.output_audio_transcript.delta':
+        case 'response.output_text.delta': {
+          // Newer OpenAI Realtime API variants use the longer name and
+          // sometimes split text into output_text. Accept all three.
+          const chunk = evt.delta || (evt.text && evt.text.delta) || '';
+          if (chunk) {
+            assistantTranscriptBuffer += chunk;
             renderConverseLine(converseSplendorLine, assistantTranscriptBuffer);
             bumpRing('inner', 0.25);
             setState('speaking');
           }
           break;
         }
-        case 'response.audio_transcript.done': {
-          const finalText = (evt.transcript || assistantTranscriptBuffer || '').trim();
+        case 'response.audio_transcript.done':
+        case 'response.output_audio_transcript.done':
+        case 'response.output_text.done': {
+          const finalText = (evt.transcript || evt.text || assistantTranscriptBuffer || '').trim();
           if (finalText) {
             renderConverseLine(converseSplendorLine, finalText);
             writeConverseSide({ assistant_text: finalText });
@@ -2166,9 +2173,34 @@
           assistantTranscriptBuffer = '';
           break;
         }
-        case 'response.done':
+        case 'response.done': {
           setState(null);
+          // Belt-and-suspenders: if neither transcript.done variant fired,
+          // dig the assistant transcript out of the final response object
+          // so memory still captures Splendor's side.
+          try {
+            const out = (evt.response && evt.response.output) || [];
+            let recovered = '';
+            for (const item of out) {
+              const parts = (item && item.content) || [];
+              for (const p of parts) {
+                if (p && (p.transcript || p.text)) {
+                  recovered += (p.transcript || p.text);
+                }
+              }
+            }
+            recovered = recovered.trim();
+            if (recovered && recovered !== assistantTranscriptBuffer.trim()) {
+              console.log('[converse] recovered assistant transcript from response.done len=' + recovered.length);
+              renderConverseLine(converseSplendorLine, recovered);
+              writeConverseSide({ assistant_text: recovered });
+              assistantTranscriptBuffer = '';
+            }
+          } catch (e) {
+            console.warn('[converse] response.done recovery failed', e && e.message);
+          }
           break;
+        }
         case 'error':
           console.warn('[converse] server error event:', evt);
           showConverseBlock((evt.error && evt.error.message) || 'connection error');
