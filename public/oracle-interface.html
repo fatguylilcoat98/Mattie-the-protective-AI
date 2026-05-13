@@ -1000,6 +1000,17 @@
             fetchInterpretations();
           }
           break;
+        case 'interpretation:contradicted':
+          // Pre-response contradiction detector flagged something.
+          // Stronger ring pulse + outer band so it reads as a real event.
+          bumpRing('outer', 0.8);
+          bumpRing('middle', 0.6);
+          console.log('[archaeology] contradiction flagged, count=' + (ev.count || 0));
+          if (typeof archaeologyLoaded !== 'undefined' && archaeologyLoaded &&
+              typeof fetchInterpretations === 'function') {
+            fetchInterpretations();
+          }
+          break;
         case 'converse:art_generated':
         case 'art:generated':
           // Success — let the state flow naturally to speaking when
@@ -1784,15 +1795,20 @@
         archaeologyList.innerHTML = '<div class="empty-state">No interpretations recorded yet. Splendor will start forming them as you talk.</div>';
         return;
       }
-      // Split into active vs superseded, then timeline-render.
-      const active = rows.filter(r => r.status === 'active');
-      const superseded = rows.filter(r => r.status !== 'active');
+      // Split into active vs contradicted vs other (superseded/etc),
+      // then timeline-render with contradicted called out separately.
+      const active       = rows.filter(r => r.status === 'active');
+      const contradicted = rows.filter(r => r.status === 'contradicted');
+      const superseded   = rows.filter(r => r.status !== 'active' && r.status !== 'contradicted');
 
       const renderCard = (r) => {
-        const isSuperseded = r.status !== 'active';
+        const isActive       = r.status === 'active';
+        const isContradicted = r.status === 'contradicted';
+        const isSuperseded   = !isActive; // covers contradicted + superseded for styling
         const flags = [];
         if (r.unresolved) flags.push('<span class="interp-flag unresolved">UNRESOLVED</span>');
-        if (r.contradicted_by) flags.push('<span class="interp-flag contradicted">CONTRADICTED</span>');
+        if (isContradicted) flags.push('<span class="interp-flag contradicted">CONTRADICTED</span>');
+        else if (r.contradicted_by) flags.push('<span class="interp-flag contradicted">CONTRADICTED</span>');
         if (r.revised_belief) flags.push('<span class="interp-flag revised">REVISED</span>');
         const revisionBlock = r.revised_belief && isSuperseded
           ? '<div class="interp-revision">→ ' + escapeHtml(r.revised_belief) +
@@ -1816,6 +1832,10 @@
       if (active.length > 0) {
         html += '<div class="interp-divider"></div><div class="interp-divider-label">Currently held (' + active.length + ')</div>';
         html += active.map(renderCard).join('');
+      }
+      if (contradicted.length > 0) {
+        html += '<div class="interp-divider"></div><div class="interp-divider-label" style="color:#ff7878;">Recently contradicted (' + contradicted.length + ')</div>';
+        html += contradicted.map(renderCard).join('');
       }
       if (superseded.length > 0) {
         html += '<div class="interp-divider"></div><div class="interp-divider-label">Revised / Superseded (' + superseded.length + ')</div>';
