@@ -278,6 +278,16 @@
       40%  { transform: translateX(0);    opacity: 1; }
       100% { transform: translateX(0);    opacity: 1; }
     }
+    /* v15.18.2 transparency: errors and no-signal events stand out. */
+    .pulse-item--err {
+      border-left: 3px solid #ff5c5c;
+      background: rgba(255, 92, 92, 0.06);
+    }
+    .pulse-item--err strong { color: #ff9090; }
+    .pulse-item--mute {
+      opacity: 0.55;
+      border-left: 3px solid rgba(160, 160, 180, 0.4);
+    }
     .memory-header {
       display: flex; justify-content: space-between;
       margin-bottom: 6px;
@@ -946,9 +956,19 @@
       if (empty) empty.remove();
       const ts = new Date(ev.ts || Date.now());
       const item = document.createElement('div');
-      item.className = 'pulse-item pulse-item--fresh';
+      // v15.18.2 — transparency: error events get red treatment, "no signal"
+      // events get muted treatment so the operator can SEE what fired.
+      const isError    = /error|write_error|skipped/i.test(ev.type);
+      const isNoSignal = /no_flag|no_signal|judge_empty/i.test(ev.type);
+      const cls = isError ? 'pulse-item pulse-item--err pulse-item--fresh'
+                : isNoSignal ? 'pulse-item pulse-item--mute pulse-item--fresh'
+                : 'pulse-item pulse-item--fresh';
+      item.className = cls;
+      const detail = ev.reason
+        ? ' <span class="ref">' + escapeHtml(ev.reason) + '</span>'
+        : (ev.error ? ' <span class="ref" style="color:#ff7878;">' + escapeHtml(String(ev.error).slice(0, 80)) + '</span>' : '');
       item.innerHTML =
-        '<strong>' + escapeHtml(ev.type) + '</strong>' +
+        '<strong>' + escapeHtml(ev.type) + '</strong>' + detail +
         ' <span class="ref">' + escapeHtml(ts.toLocaleTimeString()) + '</span>';
       const prevScroll = list.scrollTop;
       list.insertBefore(item, list.firstChild);
