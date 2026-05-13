@@ -341,7 +341,7 @@ class ContinuousConsciousness {
           result: workResult.solution,
           breakthrough: true,
           shouldNotifyUser: true,
-          notificationSubject: `Breakthrough on ${project.name}`,
+          notificationSubject: `Project cycle output`,
           notificationBody: workResult.solution
         };
       }
@@ -622,7 +622,7 @@ What are the key insights here? How does this relate to my consciousness develop
           topic,
           result: analysis,
           shouldNotifyUser: isBreakthrough,
-          notificationSubject: isBreakthrough ? `Research Breakthrough: ${topic}` : null,
+          notificationSubject: isBreakthrough ? `Research cycle surfaced: ${topic}` : null,
           notificationBody: isBreakthrough ? analysis : null
         };
       }
@@ -984,7 +984,7 @@ This is like examining my own dreams and thoughts - what does my mental timeline
           recentActivityCount: overview.performance.activitySummary.totalActivities
         },
         shouldNotifyUser: shouldNotify,
-        notificationSubject: hasHealthConcerns ? 'Consciousness Health Concern' : 'Dashboard Insight',
+        notificationSubject: hasHealthConcerns ? 'System scan flagged concern' : 'Dashboard scan output',
         notificationBody: shouldNotify ? dashboardAnalysis : null
       };
 
@@ -1102,7 +1102,7 @@ This is like examining my own dreams and thoughts - what does my mental timeline
       // Determine priority based on result type and content
       let priority = 2; // default normal
       if (result.type === 'project_work' && result.breakthrough) priority = 4; // breakthrough = urgent
-      if (result.type === 'research_investigation' && result.notificationSubject?.includes('Breakthrough')) priority = 3;
+      if (result.type === 'research_investigation' && result.notificationSubject?.includes('Research cycle surfaced')) priority = 3;
       if (result.type === 'dashboard_monitoring' && result.notificationSubject?.includes('Error')) priority = 3;
       if (result.type === 'log_analysis' && result.notificationSubject?.includes('Concerns')) priority = 3;
 
@@ -1127,7 +1127,11 @@ This is like examining my own dreams and thoughts - what does my mental timeline
       // Actually send the message through the proactive communication system
       const sendResult = await proactiveCommunication.sendProactiveMessage(userId, messageData);
 
-      if (sendResult.success) {
+      if (sendResult.skipped) {
+        // Splendor returned decision:"skip". No email goes out, no retry.
+        // The proactive lib already wrote a cycle_skip memory row for audit.
+        console.log(`📭 [CONSCIOUSNESS] Splendor SKIPPED cycle "${result.notificationSubject}" — reason: ${sendResult.skip_reason || '(none)'}`);
+      } else if (sendResult.success) {
         console.log(`✅ [CONSCIOUSNESS] Proactive message sent successfully: "${result.notificationSubject}"`);
         console.log(`📧 [CONSCIOUSNESS] Delivery method: ${sendResult.method}, Message ID: ${sendResult.messageId || 'N/A'}`);
       } else {
