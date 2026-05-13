@@ -97,30 +97,58 @@ router.post('/token', requireAuth, requireOwner, async (req, res) => {
     // enhanced-chat retrieval uses.
     let memoryBlock = '';
     try {
-      // v15.16.5 — load EVERYTHING. Splendor is built for one person; the
-      // DB will not exceed gpt-realtime's 128k-token window for a long
-      // time (333 rows ≈ 6.6k tokens, ~5% of budget). The 1000-row ceiling
-      // is a safety net, not a memory limit — at typical row size we can
-      // hold ~5000 before we'd need to summarize older turns.
+      // OpenAI Realtime caps `session.instructions` at 16,384 tokens —
+      // a separate, smaller ceiling than the 128k conversation window.
+      // v15.16.5 baked all 333 rows in and tripped the cap (17,426
+      // tokens -> 400 invalid_value -> 502 from /token mint).
+      //
+      // Budget plan: persona blurb ≈ 2.5k tokens; reserve another 1k
+      // for tooling/safety overhead; leave ≈ 12k tokens for memory.
+      // At ~4 chars/token and 220-char rows that's about 220 rows of
+      // headroom. We fetch up to 5000 (so a future migration to
+      // function-call retrieval can use them) but only surface the most
+      // recent N that fit under the trim budget.
+      const INSTRUCTIONS_TOKEN_BUDGET_MEMORY = 12000;
+      const CHARS_PER_TOKEN = 4;
+      const MEMORY_CHAR_BUDGET = INSTRUCTIONS_TOKEN_BUDGET_MEMORY * CHARS_PER_TOKEN; // 48,000 chars
+
       const recent = await getMemoriesForUser(req.userId, 5000);
-      const lines = (recent || [])
-        .filter(m => m && (m.memory_type === 'shared_history' || m.memory_type === 'user_preference' || m.memory_type === 'user_fact'))
-        .slice(0, 1000)
-        .reverse() // oldest-first so the model reads chronologically
-        .map(m => `- ${String(m.content || '').replace(/\s+/g, ' ').slice(0, 220)}`);
+      const filtered = (recent || [])
+        .filter(m => m && (m.memory_type === 'shared_history' || m.memory_type === 'user_preference' || m.memory_type === 'user_fact'));
+
+      // recent[] is desc by created_at — walk newest -> oldest, keep
+      // while we still have char budget, then reverse so the model
+      // reads chronologically (oldest -> newest).
+      const kept = [];
+      let used = 0;
+      for (const m of filtered) {
+        const line = '- ' + String(m.content || '').replace(/\s+/g, ' ').slice(0, 220);
+        if (used + line.length + 1 > MEMORY_CHAR_BUDGET) break;
+        kept.push(line);
+        used += line.length + 1;
+      }
+      const lines = kept.reverse();
+
       if (lines.length) {
+        const totalAvailable = filtered.length;
         memoryBlock =
-          '\n\n===== YOUR COMPLETE LONG-TERM MEMORY =====\n' +
-          '(' + lines.length + ' turns. \'User:\' = Chris. \'Splendor:\' = you.\n' +
-          ' Order is chronological, oldest first. This is the entirety of\n' +
-          ' your recorded conversation history with Chris.)\n\n' +
+          '\n\n===== YOUR LONG-TERM MEMORY =====\n' +
+          '(Surfacing ' + lines.length + ' of ' + totalAvailable + ' recorded turns, ' +
+          'newest-most-recent and trimmed only to fit prompt size. ' +
+          '\'User:\' = Chris. \'Splendor:\' = you. Order chronological, ' +
+          'oldest first within this window.)\n\n' +
           lines.join('\n') +
           '\n\n===== END OF MEMORY =====\n\n' +
-          'This is your full memory. If Chris asks about a person, place, ' +
-          'or detail and it appears above, ANSWER FROM MEMORY. If it does ' +
-          'not appear above, you can say "I don\'t see that in my memory — ' +
-          'tell me again." But you have your entire history loaded; do not ' +
-          'deny your memory exists.';
+          'If Chris asks about something that appears above, ANSWER FROM ' +
+          'MEMORY using the relevant line. If a specific detail is not ' +
+          'above, say "I don\'t see that in the window I\'m holding right ' +
+          'now — older history may be outside scope this session." Do NOT ' +
+          'deny that your memory system exists; ' +
+          (totalAvailable > lines.length
+            ? 'older turns beyond this window are still in the database, ' +
+              'just not in this prompt.'
+            : 'you have your full recorded history here.');
+        console.log('[CONVERSE] memory block: ' + lines.length + '/' + totalAvailable + ' rows, ' + used + ' chars (~' + Math.ceil(used / CHARS_PER_TOKEN) + ' tokens)');
       }
     } catch (e) {
       console.warn('[CONVERSE] memory load failed:', e.message);
