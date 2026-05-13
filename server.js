@@ -127,6 +127,7 @@ app.use('/api/converse', require('./routes/converse'));
 app.use('/api/email', require('./routes/email'));
 app.use('/api/interpretations', require('./routes/interpretations'));
 app.use('/api/emotional-patterns', require('./routes/emotional-patterns'));
+app.use('/api/self-manifest', require('./routes/self-manifest'));
 
 // Consciousness routes (if available)
 if (consciousnessRoutes) {
