@@ -82,7 +82,11 @@ router.post('/token', requireAuth, requireOwner, async (req, res) => {
     // enhanced-chat retrieval uses.
     let memoryBlock = '';
     try {
-      const recent = await getMemoriesForUser(req.userId, 30);
+      // v15.16.3 — widen the Converse session-start window. With ~300 rows
+      // per user and only the latest 30 surfaced, anything 30+ turns ago
+      // is invisible. 60 doubles the recall surface without blowing the
+      // realtime instruction budget.
+      const recent = await getMemoriesForUser(req.userId, 60);
       const lines = (recent || [])
         .filter(m => m && (m.memory_type === 'shared_history' || m.memory_type === 'user_preference' || m.memory_type === 'user_fact'))
         .slice(0, 24)
