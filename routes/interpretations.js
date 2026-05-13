@@ -86,4 +86,25 @@ router.get('/unresolved', requireAuth, requireOwner, async (req, res) => {
   }
 });
 
+// "What I'm Uncertain About" — feeds the v15.17.3 self-reflection panel.
+// Returns active beliefs that are either low-confidence (<0.5) or
+// explicitly flagged unresolved.
+router.get('/uncertain', requireAuth, requireOwner, async (req, res) => {
+  if (!ensureSupabase(res)) return;
+  try {
+    const { data, error } = await supabase
+      .from('interpretations')
+      .select('id, belief, confidence, unresolved, formed_at, contradicted_by, revised_belief')
+      .eq('user_id', req.userId)
+      .eq('status', 'active')
+      .or('confidence.lt.0.5,unresolved.eq.true')
+      .order('confidence', { ascending: true })
+      .limit(50);
+    if (error) throw error;
+    res.json({ count: (data || []).length, interpretations: data || [] });
+  } catch (err) {
+    res.status(500).json({ error: 'internal_error', message: err.message });
+  }
+});
+
 module.exports = router;
