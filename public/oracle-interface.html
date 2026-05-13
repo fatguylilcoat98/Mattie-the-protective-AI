@@ -1011,6 +1011,18 @@
             fetchInterpretations();
           }
           break;
+        case 'interpretation:premise_flagged':
+          // Premise check (v15.18.0) — Splendor caught a hidden assumption
+          // worth naming before answering. Distinct ring signature so
+          // it's visually different from contradiction.
+          bumpRing('outer', 0.9);
+          bumpRing('inner', 0.6);
+          console.log('[archaeology] premise flagged, count=' + (ev.count || 0));
+          if (typeof archaeologyLoaded !== 'undefined' && archaeologyLoaded &&
+              typeof fetchInterpretations === 'function') {
+            fetchInterpretations();
+          }
+          break;
         case 'converse:art_generated':
         case 'art:generated':
           // Success — let the state flow naturally to speaking when
@@ -1838,6 +1850,30 @@
       return cards;
     }
 
+    // ── Premise Check timeline (v15.18.0) — hidden assumptions she named.
+    function renderPremiseChecks(rows) {
+      if (!Array.isArray(rows) || rows.length === 0) {
+        return '<div class="empty-state" style="font-size:10px;">No premise flags yet. She\'ll log them when a question carries an assumption worth naming.</div>';
+      }
+      return rows.slice(0, 15).map(r => {
+        const date = new Date(r.created_at).toLocaleString();
+        const msg = (r.user_message || '').replace(/\s+/g, ' ').slice(0, 140);
+        return (
+          '<div class="interp-card active" style="border-color:rgba(191,90,242,0.5);">' +
+            '<div class="interp-meta">' +
+              '<span><span class="interp-flag revised" style="background:rgba(191,90,242,0.18);color:#d8c8ff;">PREMISE</span>' + escapeHtml(date) + '</span>' +
+            '</div>' +
+            '<div class="interp-belief">' +
+              '<em style="color:#9a92b8;">You asked:</em> "' + escapeHtml(msg) + '"<br>' +
+              '<em style="color:#9a92b8;">Hidden assumption:</em> ' + escapeHtml(r.presupposition || '') +
+              (r.conflict_reason ? '<br><em style="color:#9a92b8;">Why flagged:</em> ' + escapeHtml(r.conflict_reason) : '') +
+              (r.prompt_text ? '<br><em style="color:#9a92b8;">I said:</em> "' + escapeHtml(r.prompt_text) + '"' : '') +
+            '</div>' +
+          '</div>'
+        );
+      }).join('');
+    }
+
     // ── Emotional timeline — observations only, never invented.
     function renderEmotionalTimeline(rows) {
       if (!Array.isArray(rows) || rows.length === 0) {
@@ -1869,21 +1905,26 @@
     async function fetchInterpretations() {
       try {
         archaeologyList.innerHTML = '<div class="empty-state">Loading interpretations…</div>';
-        // Pull all three streams in parallel.
-        const [interpRes, uncertainRes, emotionRes] = await Promise.all([
+        // Pull all four streams in parallel.
+        const [interpRes, uncertainRes, premiseRes, emotionRes] = await Promise.all([
           splendorFetch('/api/interpretations?limit=200'),
           splendorFetch('/api/interpretations/uncertain'),
+          splendorFetch('/api/interpretations/premise-checks'),
           splendorFetch('/api/emotional-patterns?limit=40'),
         ]);
         const interp    = interpRes.ok    ? await interpRes.json()    : { interpretations: [] };
         const uncertain = uncertainRes.ok ? await uncertainRes.json() : { interpretations: [] };
+        const premise   = premiseRes.ok   ? await premiseRes.json()   : { premise_checks: [] };
         const emotion   = emotionRes.ok   ? await emotionRes.json()   : { patterns: [] };
 
         let html = '';
         // 1) "What I'm Uncertain About"
         html += '<div class="interp-divider"></div><div class="interp-divider-label" style="color:#ffd166;">What I\'m Uncertain About</div>';
         html += renderUncertainty(uncertain.interpretations || []);
-        // 2) Belief timeline (active / contradicted / superseded)
+        // 2) Premises I questioned (v15.18.0)
+        html += '<div class="interp-divider"></div><div class="interp-divider-label" style="color:#bf5af2;">Premises I Questioned</div>';
+        html += renderPremiseChecks(premise.premise_checks || []);
+        // 3) Belief timeline (active / contradicted / superseded)
         const rows = interp.interpretations || [];
         const active       = rows.filter(r => r.status === 'active');
         const contradicted = rows.filter(r => r.status === 'contradicted');

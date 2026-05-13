@@ -86,6 +86,24 @@ router.get('/unresolved', requireAuth, requireOwner, async (req, res) => {
   }
 });
 
+// Premise Check timeline (v15.18.0) — shows the hidden assumptions
+// Splendor named openly before answering.
+router.get('/premise-checks', requireAuth, requireOwner, async (req, res) => {
+  if (!ensureSupabase(res)) return;
+  try {
+    const { data, error } = await supabase
+      .from('premise_checks')
+      .select('id, user_message, presupposition, conflict_reason, prompt_text, created_at')
+      .eq('user_id', req.userId)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    if (error) throw error;
+    res.json({ count: (data || []).length, premise_checks: data || [] });
+  } catch (err) {
+    res.status(500).json({ error: 'internal_error', message: err.message });
+  }
+});
+
 // "What I'm Uncertain About" — feeds the v15.17.3 self-reflection panel.
 // Returns active beliefs that are either low-confidence (<0.5) or
 // explicitly flagged unresolved.
