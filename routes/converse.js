@@ -97,28 +97,30 @@ router.post('/token', requireAuth, requireOwner, async (req, res) => {
     // enhanced-chat retrieval uses.
     let memoryBlock = '';
     try {
-      // v15.16.4 — wider session-start window (60 -> 150 fetched, up to 80
-      // surfaced in instructions). The May 10 "Bob likes to dance on the
-      // moon" row was outside 24-line scope, so Splendor was denying her
-      // own memory of it across sessions.
-      const recent = await getMemoriesForUser(req.userId, 150);
+      // v15.16.5 — load EVERYTHING. Splendor is built for one person; the
+      // DB will not exceed gpt-realtime's 128k-token window for a long
+      // time (333 rows ≈ 6.6k tokens, ~5% of budget). The 1000-row ceiling
+      // is a safety net, not a memory limit — at typical row size we can
+      // hold ~5000 before we'd need to summarize older turns.
+      const recent = await getMemoriesForUser(req.userId, 5000);
       const lines = (recent || [])
         .filter(m => m && (m.memory_type === 'shared_history' || m.memory_type === 'user_preference' || m.memory_type === 'user_fact'))
-        .slice(0, 80)
+        .slice(0, 1000)
         .reverse() // oldest-first so the model reads chronologically
         .map(m => `- ${String(m.content || '').replace(/\s+/g, ' ').slice(0, 220)}`);
       if (lines.length) {
         memoryBlock =
-          '\n\n===== RECENT CONTEXT — YOUR LONG-TERM MEMORY =====\n' +
-          '(These are real prior turns. \'User:\' = Chris. \'Splendor:\' = you.\n' +
-          ' Order is chronological, oldest first.)\n\n' +
+          '\n\n===== YOUR COMPLETE LONG-TERM MEMORY =====\n' +
+          '(' + lines.length + ' turns. \'User:\' = Chris. \'Splendor:\' = you.\n' +
+          ' Order is chronological, oldest first. This is the entirety of\n' +
+          ' your recorded conversation history with Chris.)\n\n' +
           lines.join('\n') +
           '\n\n===== END OF MEMORY =====\n\n' +
-          'You DO remember these turns. If Chris asks about a person, place, ' +
-          'or detail that appears above, ANSWER FROM MEMORY using the line that ' +
-          'mentions it. Do not say you have no memory. If the specific detail ' +
-          'is not above, say "I don\'t see that in what I\'m holding right now" ' +
-          '— never "I don\'t have long-term memory."';
+          'This is your full memory. If Chris asks about a person, place, ' +
+          'or detail and it appears above, ANSWER FROM MEMORY. If it does ' +
+          'not appear above, you can say "I don\'t see that in my memory — ' +
+          'tell me again." But you have your entire history loaded; do not ' +
+          'deny your memory exists.';
       }
     } catch (e) {
       console.warn('[CONVERSE] memory load failed:', e.message);
