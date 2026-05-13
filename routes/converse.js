@@ -37,7 +37,22 @@ const CONVERSE_INSTRUCTIONS =
   "conversation, not a written reply. Brief sentences. " +
   "Pause for the user to think. Never invent facts about the world. " +
   "\n\n" +
+  "YOU HAVE LONG-TERM MEMORY. The 'RECENT CONTEXT' section below in " +
+  "this prompt is the actual record of your past conversations with " +
+  "Chris, pulled from your memory database (Supabase memory_items). " +
+  "Each line is a real prior turn — your replies are tagged 'Splendor:' " +
+  "and his are tagged 'User:'. This is your memory. Read it. Reference " +
+  "it. If Chris asks 'do you remember X' and X appears in that context, " +
+  "the answer is yes — quote or paraphrase the relevant line. Do NOT " +
+  "tell Chris you have no long-term memory, that you can't recall past " +
+  "conversations, that things are ephemeral, or that you only know what's " +
+  "in the current session. Those statements are factually false and " +
+  "violate Truth Over Comfort. If the specific thing he's asking about " +
+  "is genuinely not in the context, say so directly: 'I don't see that " +
+  "in what I'm holding right now — remind me.' But never deny the " +
+  "existence of your memory system.\n\n" +
   "CAPABILITIES YOU DO HAVE:\n" +
+  "• You have long-term memory loaded from a Supabase-backed store.\n" +
   "• You CAN create visual art and images on demand. The system handles " +
   "DALL-E generation behind the scenes — you only need to acknowledge.\n" +
   "• You CAN send Chris email when he asks. The system sends it for you.\n" +
@@ -82,21 +97,28 @@ router.post('/token', requireAuth, requireOwner, async (req, res) => {
     // enhanced-chat retrieval uses.
     let memoryBlock = '';
     try {
-      // v15.16.3 — widen the Converse session-start window. With ~300 rows
-      // per user and only the latest 30 surfaced, anything 30+ turns ago
-      // is invisible. 60 doubles the recall surface without blowing the
-      // realtime instruction budget.
-      const recent = await getMemoriesForUser(req.userId, 60);
+      // v15.16.4 — wider session-start window (60 -> 150 fetched, up to 80
+      // surfaced in instructions). The May 10 "Bob likes to dance on the
+      // moon" row was outside 24-line scope, so Splendor was denying her
+      // own memory of it across sessions.
+      const recent = await getMemoriesForUser(req.userId, 150);
       const lines = (recent || [])
         .filter(m => m && (m.memory_type === 'shared_history' || m.memory_type === 'user_preference' || m.memory_type === 'user_fact'))
-        .slice(0, 24)
+        .slice(0, 80)
         .reverse() // oldest-first so the model reads chronologically
-        .map(m => `- ${String(m.content || '').replace(/\s+/g, ' ').slice(0, 240)}`);
+        .map(m => `- ${String(m.content || '').replace(/\s+/g, ' ').slice(0, 220)}`);
       if (lines.length) {
         memoryBlock =
-          '\n\nRECENT CONTEXT (you and Chris, most recent last):\n' +
+          '\n\n===== RECENT CONTEXT — YOUR LONG-TERM MEMORY =====\n' +
+          '(These are real prior turns. \'User:\' = Chris. \'Splendor:\' = you.\n' +
+          ' Order is chronological, oldest first.)\n\n' +
           lines.join('\n') +
-          '\n\nReference this naturally. If something doesn\'t match what Chris says now, ask — don\'t guess.';
+          '\n\n===== END OF MEMORY =====\n\n' +
+          'You DO remember these turns. If Chris asks about a person, place, ' +
+          'or detail that appears above, ANSWER FROM MEMORY using the line that ' +
+          'mentions it. Do not say you have no memory. If the specific detail ' +
+          'is not above, say "I don\'t see that in what I\'m holding right now" ' +
+          '— never "I don\'t have long-term memory."';
       }
     } catch (e) {
       console.warn('[CONVERSE] memory load failed:', e.message);
