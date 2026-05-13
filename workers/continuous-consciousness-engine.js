@@ -664,6 +664,15 @@ What are the key insights here? How does this relate to my consciousness develop
       const searchResult = await performWebSearch(topic);
 
       if (searchResult) {
+        // Safely handle sources that might be undefined (Tavily returns
+        // results sometimes without a `sources` field — same guard as
+        // performResearchTask above).
+        const sourcesText = searchResult.sources && Array.isArray(searchResult.sources)
+          ? searchResult.sources.map(s => `- ${s.title}: ${s.content.substring(0, 200)}...`).join('\n')
+          : (searchResult.results && Array.isArray(searchResult.results)
+              ? searchResult.results.map(s => `- ${s.title}: ${(s.content || '').substring(0, 200)}...`).join('\n')
+              : 'No detailed sources available');
+
         // Process the information
         const response = await anthropic.messages.create({
           model: 'claude-sonnet-4-20250514',
@@ -676,7 +685,7 @@ What are the key insights here? How does this relate to my consciousness develop
 ${searchResult.answer}
 
 Sources:
-${searchResult.sources.map(s => `- ${s.title}: ${s.content.substring(0, 200)}...`).join('\n')}
+${sourcesText}
 
 What's most relevant or interesting here? Anything that connects to our consciousness work or The Good Neighbor Guard mission?`
           }]

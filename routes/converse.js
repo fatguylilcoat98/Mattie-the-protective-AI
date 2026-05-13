@@ -12,148 +12,13 @@ const { storeMemory, getMemoriesForUser } = require('../lib/supabase');
 const { governance } = require('../lib/claspion-governance');
 const { activityBus } = require('../lib/activity-bus');
 const { speakResponse } = require('../lib/voice');
+const { generateArt, isArtRequest } = require('../lib/art-generator');
 
 const router = express.Router();
 
-// Trigger detection. Two strategies:
-//   1. Single-word art verbs anywhere in the transcript (paint, draw,
-//      sketch, illustrate, etc.) — broad and works for "draw me a horse"
-//      / "paint a sunset" / "i want to paint something".
-//   2. Multi-word phrases that aren't single verbs ("show me", "make me
-//      art", "a picture of", "i want to see").
-const ART_VERBS = new Set([
-  'paint', 'painting', 'draw', 'drawing', 'sketch', 'sketching',
-  'illustrate', 'illustration', 'render', 'rendering',
-  'visualize', 'visualization', 'imagine',
-]);
-const ART_PHRASES = [
-  'make art', 'create art', 'make me art', 'make some art',
-  'make a picture', 'make a painting', 'make a drawing',
-  'make me a picture', 'make me a painting', 'make me a drawing',
-  'make an image', 'make me an image',
-  'generate an image', 'generate a picture', 'generate me an image',
-  'generate art', 'generate me art',
-  'create an image', 'create a picture', 'create me an image',
-  'create a visual', 'create something',
-  'a picture of', 'an image of', 'a painting of', 'a drawing of',
-  'show me', 'show me something',
-  'make something', 'make me something', 'make something for me',
-  'make something beautiful',
-  'create me', 'generate me',
-  'express yourself', 'what do you see',
-  'surprise me',
-  'i want to see', 'i\'d love to see', 'let me see',
-  'design something',
-];
-function isArtRequest(message) {
-  if (!message) return false;
-  const lower = String(message).toLowerCase();
-  // Quick word-boundary check for art verbs.
-  const tokens = lower.match(/[a-z']+/g) || [];
-  for (const t of tokens) {
-    if (ART_VERBS.has(t)) return true;
-  }
-  // Phrase substring check.
-  return ART_PHRASES.some(p => lower.includes(p));
-}
-
-// Call DALL-E directly. Bypasses lib/consciousness/visual-expression
-// entirely so this works regardless of VISUAL_EXPRESSION_ENABLED or any
-// consciousness-engine state. Returns { imageUrl, revisedPrompt, model }
-// or { error } so the route can surface the real failure to the user.
-async function generateImageDirect(userMessage) {
-  if (!process.env.OPENAI_API_KEY) {
-    console.warn('[converse:art] OPENAI_API_KEY not set');
-    return { error: 'OPENAI_API_KEY not configured' };
-  }
-  let OpenAI;
-  try {
-    const mod = require('openai');
-    OpenAI = mod.OpenAI || mod.default || mod;
-  } catch (e) {
-    console.warn('[converse:art] openai package not available:', e.message);
-    return { error: 'openai package missing' };
-  }
-  if (!OpenAI) return { error: 'OpenAI client null' };
-  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-  const prompt =
-    `Create an artistic, vivid image for: "${userMessage}". ` +
-    'Beautiful composition, rich colors, painterly digital art, ' +
-    'evocative and emotionally resonant.';
-
-  // Try gpt-image-1 first (current OpenAI image model — replaces the
-  // deprecated dall-e-2 and is more broadly available than dall-e-3).
-  // dall-e-3 stays as fallback for orgs that have it verified.
-  // gpt-image-1 returns base64 in b64_json (no url field) — wrap as a
-  // data: URL so the frontend's <img src="..."> works without changes.
-  const attempts = [
-    { model: 'gpt-image-1', opts: { size: '1024x1024' } },
-    { model: 'dall-e-3',    opts: { size: '1024x1024', quality: 'standard' } },
-  ];
-  let lastErr = null;
-  for (const { model, opts } of attempts) {
-    try {
-      console.log('[converse:art] calling', model, 'prompt length=', prompt.length);
-      const res = await client.images.generate({ model, prompt, n: 1, ...opts });
-      const item = res && res.data && res.data[0];
-      if (!item) {
-        console.warn('[converse:art]', model, 'returned no data item');
-        lastErr = `${model} returned no data`;
-        continue;
-      }
-      let imageUrl = item.url || null;
-      if (!imageUrl && item.b64_json) {
-        imageUrl = 'data:image/png;base64,' + item.b64_json;
-      }
-      if (!imageUrl) {
-        console.warn('[converse:art]', model, 'returned no url and no b64_json');
-        lastErr = `${model} returned no image data`;
-        continue;
-      }
-      console.log('[converse:art]', model, 'OK; format=', item.url ? 'url' : 'base64');
-      return {
-        imageUrl,
-        revisedPrompt: item.revised_prompt || null,
-        model,
-      };
-    } catch (err) {
-      const msg = (err && err.message) || String(err);
-      console.error('[converse:art]', model, 'error:', msg);
-      lastErr = `${model}: ${msg}`;
-    }
-  }
-  return { error: lastErr || 'unknown image generation failure' };
-}
-
-// Short artist-voice caption for the narration. Falls back to a generic
-// line if Anthropic isn't reachable — the image still shows either way.
-async function craftNarration(userMessage, revisedPrompt) {
-  try {
-    const Anthropic = require('@anthropic-ai/sdk');
-    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    const r = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 180,
-      system:
-        "You are Splendor describing a piece of visual art you just made for Chris. " +
-        "Speak in first person, two to three sentences, warm and direct. " +
-        "Reference what's in the image. No preamble.",
-      messages: [{
-        role: 'user',
-        content:
-          `Chris asked: "${userMessage}".\n` +
-          `Image content (DALL-E's revised prompt): "${revisedPrompt || userMessage}".\n` +
-          `Speak about what you made.`,
-      }],
-    });
-    const text = r && r.content && r.content[0] && r.content[0].text;
-    if (text && text.trim()) return text.trim();
-  } catch (err) {
-    console.warn('[converse:art] narration craft failed:', err && err.message);
-  }
-  return "Here — I made this for you.";
-}
+// Art generation routes through lib/art-generator.js — the single,
+// instrumented, retrying, timeout-bounded pipeline shared with the
+// text-chat /chat/stream intercept.
 
 const REALTIME_MODEL = 'gpt-realtime';
 const REALTIME_VOICE = 'shimmer'; // matches Splendor's existing chosen voice
@@ -363,54 +228,53 @@ router.post('/art', requireAuth, requireOwner, async (req, res) => {
     const userId = req.userId;
 
     if (!transcript) {
-      console.log('[converse:art] empty transcript');
       return res.json({ generated: false, reason: 'empty_transcript' });
     }
     if (!isArtRequest(transcript)) {
-      console.log('[converse:art] no intent match:', transcript.slice(0, 80));
       return res.json({ generated: false, reason: 'no_intent_detected' });
     }
 
-    console.log('[converse:art] intent matched, transcript=', transcript.slice(0, 80));
-
-    const img = await generateImageDirect(transcript);
-    if (!img || !img.imageUrl) {
-      const reason = (img && img.error) || 'unknown_failure';
-      console.warn('[converse:art] image generation returned no url:', reason);
-      return res.json({ generated: false, reason: 'generation_failed', detail: reason });
-    }
-    console.log('[converse:art] image generated via', img.model, 'url length=', img.imageUrl.length);
-
-    // Narration + TTS run in parallel.
-    const narrationPromise = craftNarration(transcript, img.revisedPrompt);
-    const description = await narrationPromise;
-    const audioB64 = await speakResponse(
-      description,
-      'shimmer_creative',
-      'warm, reflective, creative — like an artist describing their work'
-    ).catch((e) => {
-      console.warn('[converse:art] TTS failed:', e && e.message);
-      return null;
+    const result = await generateArt({
+      userId,
+      userMessage: transcript,
+      source: 'converse',
     });
 
-    try {
-      activityBus.emit('converse:art_generated', {
-        session_id: session_id || null,
-        has_audio: !!audioB64,
+    if (!result.ok) {
+      const userFacing = (
+        result.errorCategory === 'policy_block' ? "That request was blocked by content policy. Try a different idea." :
+        result.errorCategory === 'timeout'      ? "Image generation took too long. Let's try again." :
+        result.errorCategory === 'rate_limit'   ? "I'm being rate-limited right now. Give it a minute." :
+        result.errorCategory === 'permission'   ? "My image-generation key isn't authorized." :
+                                                  `Image couldn't be generated. ${result.errorMessage}`
+      );
+      return res.json({
+        generated: false,
+        reason: 'generation_failed',
+        error_category: result.errorCategory,
+        error_message: result.errorMessage,
+        request_id: result.requestId,
+        user_facing: userFacing,
+        attempts: result.attempts,
       });
-    } catch (_) {}
+    }
 
-    console.log('[converse:art] returning generated=true');
     return res.json({
       generated: true,
-      image_url: img.imageUrl,
-      audio_b64: audioB64,
-      description,
-      revised_prompt: img.revisedPrompt,
+      request_id: result.requestId,
+      image_url: result.imageUrl,
+      audio_b64: result.audioB64,
+      description: result.description,
+      revised_prompt: result.revisedPrompt,
+      model: result.model,
     });
   } catch (err) {
     console.error('[converse:art] route error:', err);
-    return res.status(500).json({ generated: false, error: 'internal_error', message: err.message });
+    return res.status(500).json({
+      generated: false,
+      reason: 'internal_error',
+      error_message: err.message,
+    });
   }
 });
 
