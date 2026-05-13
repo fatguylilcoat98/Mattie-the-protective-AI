@@ -109,9 +109,11 @@ router.post('/token', requireAuth, requireOwner, async (req, res) => {
       // headroom. We fetch up to 5000 (so a future migration to
       // function-call retrieval can use them) but only surface the most
       // recent N that fit under the trim budget.
-      const INSTRUCTIONS_TOKEN_BUDGET_MEMORY = 12000;
+      // v15.17.1 — reserve ~1,500 tokens for the [SELF REFLECTION] block
+      // appended below. Net memory budget: 12,000 - 1,500 = 10,500 tokens.
+      const INSTRUCTIONS_TOKEN_BUDGET_MEMORY = 10500;
       const CHARS_PER_TOKEN = 4;
-      const MEMORY_CHAR_BUDGET = INSTRUCTIONS_TOKEN_BUDGET_MEMORY * CHARS_PER_TOKEN; // 48,000 chars
+      const MEMORY_CHAR_BUDGET = INSTRUCTIONS_TOKEN_BUDGET_MEMORY * CHARS_PER_TOKEN; // 42,000 chars
 
       const recent = await getMemoriesForUser(req.userId, 5000);
       const filtered = (recent || [])
@@ -155,7 +157,19 @@ router.post('/token', requireAuth, requireOwner, async (req, res) => {
       console.warn('[CONVERSE] memory load failed:', e.message);
     }
 
-    const finalInstructions = CONVERSE_INSTRUCTIONS + memoryBlock;
+    // v15.17.1 — Reflexive layer. Pull Splendor's logged beliefs for
+    // the user and inject them into the Converse session-start prompt
+    // so her past thinking shapes voice replies the same way it
+    // shapes text-chat replies.
+    let selfReflection = '';
+    try {
+      const { loadReflexiveContext } = require('../lib/interpretation-engine');
+      selfReflection = await loadReflexiveContext(req.userId);
+    } catch (e) {
+      console.warn('[CONVERSE] reflexive load failed:', e && e.message);
+    }
+
+    const finalInstructions = CONVERSE_INSTRUCTIONS + memoryBlock + (selfReflection || '');
 
     const upstream = await fetch('https://api.openai.com/v1/realtime/client_secrets', {
       method: 'POST',
