@@ -146,6 +146,107 @@
     .provenance-panel .panel-title { color: #00e5ff; text-shadow: 0 0 6px rgba(0, 229, 255, 0.4); }
     .pulse-panel .panel-title { color: #bf5af2; text-shadow: 0 0 6px rgba(191, 90, 242, 0.4); }
 
+    /* Continuity Core: panel tabs (Cognitive Pulse | Cognitive Archaeology) */
+    .panel-tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 4px;
+      flex-wrap: wrap;
+    }
+    .panel-tab {
+      background: transparent;
+      border: 1px solid rgba(191, 90, 242, 0.25);
+      color: rgba(191, 90, 242, 0.7);
+      padding: 4px 8px;
+      border-radius: 5px;
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: 0.9px;
+      text-transform: uppercase;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+    }
+    .panel-tab:hover { color: #bf5af2; }
+    .panel-tab.active {
+      background: rgba(191, 90, 242, 0.18);
+      color: #ffffff;
+      border-color: rgba(191, 90, 242, 0.6);
+      text-shadow: 0 0 5px rgba(191, 90, 242, 0.5);
+    }
+
+    /* Interpretation cards */
+    .interp-card {
+      border-radius: 7px;
+      padding: 9px 10px;
+      margin-bottom: 9px;
+      font-size: 10.5px; line-height: 1.45;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    }
+    .interp-card.active {
+      background: linear-gradient(135deg, rgba(20, 16, 32, 0.92), rgba(28, 22, 44, 0.85));
+      border: 1px solid rgba(191, 90, 242, 0.45);
+    }
+    .interp-card.superseded {
+      background: rgba(15, 18, 26, 0.55);
+      border: 1px solid rgba(160, 160, 180, 0.18);
+      color: rgba(220, 220, 240, 0.55);
+    }
+    .interp-card.unresolved {
+      border-left: 3px solid #ffd166;
+    }
+    .interp-card.revised .interp-revision {
+      margin-top: 4px;
+      padding: 5px 7px;
+      background: rgba(0, 229, 255, 0.06);
+      border-left: 2px solid rgba(0, 229, 255, 0.5);
+      font-size: 10px;
+      color: #b8eaff;
+      border-radius: 0 4px 4px 0;
+    }
+    .interp-meta {
+      display: flex; justify-content: space-between; gap: 6px;
+      font-size: 9px; color: #9a92b8;
+      margin-bottom: 4px; letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .interp-confidence {
+      display: inline-block;
+      padding: 1px 5px;
+      border-radius: 3px;
+      background: rgba(191, 90, 242, 0.18);
+      color: #d8c8ff;
+    }
+    .interp-belief { color: #f0e9ff; }
+    .interp-card.superseded .interp-belief {
+      text-decoration: line-through;
+      text-decoration-color: rgba(255, 100, 100, 0.4);
+    }
+    .interp-flag {
+      display: inline-block;
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 8.5px; font-weight: 700;
+      letter-spacing: 0.6px; text-transform: uppercase;
+      margin-right: 4px;
+    }
+    .interp-flag.unresolved { background: rgba(255, 209, 102, 0.18); color: #ffd166; }
+    .interp-flag.revised    { background: rgba(0, 229, 255, 0.18);   color: #6dd6ff; }
+    .interp-flag.contradicted { background: rgba(255, 92, 92, 0.18); color: #ff7878; }
+    .interp-divider {
+      height: 1px;
+      background: linear-gradient(to right, transparent, rgba(191, 90, 242, 0.4), transparent);
+      margin: 14px 0 10px 0;
+    }
+    .interp-divider-label {
+      text-align: center;
+      font-size: 9px;
+      color: rgba(191, 90, 242, 0.6);
+      letter-spacing: 1.5px;
+      margin: -16px 0 8px 0;
+      text-transform: uppercase;
+    }
+
     .panel-body {
       padding: 12px;
       flex: 1; overflow-y: auto;
@@ -608,11 +709,17 @@
 
     <aside class="pulse-panel">
       <div class="panel-header">
-        <div class="panel-title">Cognitive Pulse</div>
-        <div class="panel-subtitle">Live System Events</div>
+        <div class="panel-tabs" id="pulseTabs">
+          <button type="button" class="panel-tab active" data-tab="pulse">Cognitive Pulse</button>
+          <button type="button" class="panel-tab" data-tab="archaeology">Cognitive Archaeology</button>
+        </div>
+        <div class="panel-subtitle" id="panelSubtitle">Live System Events</div>
       </div>
       <div class="panel-body" id="pulseList">
         <div class="empty-state">Loading events…</div>
+      </div>
+      <div class="panel-body" id="archaeologyList" hidden>
+        <div class="empty-state">Loading interpretations…</div>
       </div>
     </aside>
 
@@ -880,6 +987,18 @@
         case 'ai:call:end':
           window.__orbAiCallActive = false;
           bumpRing('inner', 0.4);
+          break;
+        case 'interpretation:formed':
+        case 'interpretation:revised':
+          // Continuity Core just wrote new beliefs. If the archaeology
+          // panel has been opened, refresh it; otherwise just bump the
+          // middle ring so something visible reflects the change.
+          bumpRing('middle', 0.6);
+          console.log('[archaeology] bus event:', ev.type, 'count=' + (ev.count || 0));
+          if (typeof archaeologyLoaded !== 'undefined' && archaeologyLoaded &&
+              typeof fetchInterpretations === 'function') {
+            fetchInterpretations();
+          }
           break;
         case 'converse:art_generated':
         case 'art:generated':
@@ -1613,6 +1732,108 @@
         lastEventCount = events.length;
       } catch (e) {
         renderEvents([]);
+      }
+    }
+
+    // ──────────────────────────────────────────────────────────────────
+    // Continuity Core: Cognitive Archaeology panel
+    // ──────────────────────────────────────────────────────────────────
+    const archaeologyList = document.getElementById('archaeologyList');
+    const panelTabs = document.getElementById('pulseTabs');
+    const panelSubtitle = document.getElementById('panelSubtitle');
+    let archaeologyLoaded = false;
+
+    function switchPanelTab(target) {
+      if (!panelTabs) return;
+      const buttons = panelTabs.querySelectorAll('.panel-tab');
+      buttons.forEach(b => b.classList.toggle('active', b.dataset.tab === target));
+      if (target === 'pulse') {
+        pulseList.hidden = false;
+        archaeologyList.hidden = true;
+        if (panelSubtitle) panelSubtitle.textContent = 'Live System Events';
+      } else {
+        pulseList.hidden = true;
+        archaeologyList.hidden = false;
+        if (panelSubtitle) panelSubtitle.textContent = 'How my understanding has evolved';
+        if (!archaeologyLoaded) {
+          fetchInterpretations();
+          archaeologyLoaded = true;
+        }
+      }
+    }
+    if (panelTabs) {
+      panelTabs.querySelectorAll('.panel-tab').forEach(btn => {
+        btn.addEventListener('click', () => switchPanelTab(btn.dataset.tab));
+      });
+    }
+
+    function fmtConfidence(c) {
+      if (typeof c !== 'number') return '—';
+      return Math.round(c * 100) + '%';
+    }
+    function fmtTimestamp(iso) {
+      try {
+        const d = new Date(iso);
+        return d.toLocaleString();
+      } catch (_) { return ''; }
+    }
+
+    function renderInterpretations(rows) {
+      if (!archaeologyList) return;
+      if (!Array.isArray(rows) || rows.length === 0) {
+        archaeologyList.innerHTML = '<div class="empty-state">No interpretations recorded yet. Splendor will start forming them as you talk.</div>';
+        return;
+      }
+      // Split into active vs superseded, then timeline-render.
+      const active = rows.filter(r => r.status === 'active');
+      const superseded = rows.filter(r => r.status !== 'active');
+
+      const renderCard = (r) => {
+        const isSuperseded = r.status !== 'active';
+        const flags = [];
+        if (r.unresolved) flags.push('<span class="interp-flag unresolved">UNRESOLVED</span>');
+        if (r.contradicted_by) flags.push('<span class="interp-flag contradicted">CONTRADICTED</span>');
+        if (r.revised_belief) flags.push('<span class="interp-flag revised">REVISED</span>');
+        const revisionBlock = r.revised_belief && isSuperseded
+          ? '<div class="interp-revision">→ ' + escapeHtml(r.revised_belief) +
+            (r.contradicted_by ? '<br><em>Reason: ' + escapeHtml(r.contradicted_by) + '</em>' : '') +
+            '</div>'
+          : '';
+        return (
+          '<div class="interp-card ' + (isSuperseded ? 'superseded' : 'active') +
+          (r.unresolved ? ' unresolved' : '') + (r.revised_belief ? ' revised' : '') + '">' +
+            '<div class="interp-meta">' +
+              '<span>' + flags.join('') + escapeHtml(fmtTimestamp(r.formed_at)) + '</span>' +
+              '<span class="interp-confidence">' + escapeHtml(fmtConfidence(r.confidence)) + '</span>' +
+            '</div>' +
+            '<div class="interp-belief">' + escapeHtml(r.belief) + '</div>' +
+            revisionBlock +
+          '</div>'
+        );
+      };
+
+      let html = '';
+      if (active.length > 0) {
+        html += '<div class="interp-divider"></div><div class="interp-divider-label">Currently held (' + active.length + ')</div>';
+        html += active.map(renderCard).join('');
+      }
+      if (superseded.length > 0) {
+        html += '<div class="interp-divider"></div><div class="interp-divider-label">Revised / Superseded (' + superseded.length + ')</div>';
+        html += superseded.map(renderCard).join('');
+      }
+      archaeologyList.innerHTML = html;
+    }
+
+    async function fetchInterpretations() {
+      try {
+        archaeologyList.innerHTML = '<div class="empty-state">Loading interpretations…</div>';
+        const res = await splendorFetch('/api/interpretations?limit=200');
+        if (!res.ok) throw new Error('not ok');
+        const data = await res.json();
+        renderInterpretations(data.interpretations || []);
+      } catch (e) {
+        console.warn('[archaeology] fetch failed', e);
+        renderInterpretations([]);
       }
     }
 

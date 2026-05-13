@@ -13,6 +13,7 @@ const { governance } = require('../lib/claspion-governance');
 const { activityBus } = require('../lib/activity-bus');
 const { speakResponse } = require('../lib/voice');
 const { generateArt, isArtRequest } = require('../lib/art-generator');
+const { evaluateTurn: evaluateInterpretationTurn } = require('../lib/interpretation-engine');
 
 const router = express.Router();
 
@@ -260,6 +261,19 @@ router.post('/turn', requireAuth, requireOwner, async (req, res) => {
         session_id: session_id || null,
         creation_reason: 'converse_assistant_turn',
       }).catch(e => console.error('[CONVERSE] assistant memory failed:', e.message));
+    }
+
+    // Continuity Core (v15.17.0): only run the belief audit when BOTH
+    // sides of the turn are present. Frontend writes user + assistant
+    // sides independently in writeConverseSide, so we'll wait for the
+    // assistant-side call (it carries the freshly-spoken response).
+    if (user_text && assistant_text && user_text.trim() && assistant_text.trim()) {
+      evaluateInterpretationTurn({
+        userId,
+        userMessage: user_text.trim(),
+        assistantResponse: assistant_text.trim(),
+        surface: 'converse',
+      }).catch(e => console.warn('[interp] dispatch failed:', e && e.message));
     }
 
     res.json({ ok: true });
