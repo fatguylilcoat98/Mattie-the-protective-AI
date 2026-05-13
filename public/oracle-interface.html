@@ -160,6 +160,23 @@
       font-size: 11px; line-height: 1.4;
       box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
     }
+    /* Live-pushed memory cards land with a brief glow + slide-in. */
+    .memory-card--fresh {
+      animation: provenance-arrive 1.2s ease-out;
+    }
+    @keyframes provenance-arrive {
+      0%   { transform: translateY(-8px); opacity: 0; box-shadow: 0 0 0 0 rgba(0, 229, 255, 0.6); }
+      40%  { transform: translateY(0);    opacity: 1; box-shadow: 0 0 18px 4px rgba(0, 229, 255, 0.35); }
+      100% { transform: translateY(0);    opacity: 1; box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35); }
+    }
+    .pulse-item--fresh {
+      animation: pulse-arrive 1.2s ease-out;
+    }
+    @keyframes pulse-arrive {
+      0%   { transform: translateX(-6px); opacity: 0; }
+      40%  { transform: translateX(0);    opacity: 1; }
+      100% { transform: translateX(0);    opacity: 1; }
+    }
     .memory-header {
       display: flex; justify-content: space-between;
       margin-bottom: 6px;
@@ -767,6 +784,74 @@
       rb[band] = Math.min(1, (rb[band] || 0) + amount);
     }
 
+    // ── Provenance Stream live push ─────────────────────────────────
+    // Memory events arriving on the SSE bus prepend a card to the panel
+    // immediately, without a full re-render, and without disturbing
+    // scroll position. The 30-second poll remains as a reconciliation
+    // fallback (see fetchMemories interval).
+    const PROVENANCE_CAP = 12;
+    function provenancePushFromBus(ev) {
+      const list = document.getElementById('memoryList');
+      if (!list) return;
+      const empty = list.querySelector('.empty-state');
+      if (empty) empty.remove();
+      const isWrite = ev.type === 'memory:write';
+      const ts = new Date(ev.ts || Date.now());
+      const card = document.createElement('div');
+      card.className = 'memory-card memory-card--fresh';
+      const memType = escapeHtml(ev.memory_type || (isWrite ? 'shared_history' : 'recall'));
+      const cat = escapeHtml(ev.category || '');
+      const provenance = escapeHtml(ev.provenance || '');
+      const subtitle = isWrite
+        ? `Wrote ${memType}${provenance ? ' · ' + provenance : ''}${cat ? ' · ' + cat : ''}`
+        : `Read ${ev.count != null ? ev.count + ' rows' : 'recent context'}`;
+      card.innerHTML =
+        '<div class="memory-header">' +
+          '<span>' + (isWrite ? 'Memory written' : 'Memory recalled') + '</span>' +
+          '<span class="ref">' + escapeHtml(ts.toLocaleTimeString()) + '</span>' +
+        '</div>' +
+        '<div class="memory-content">' + subtitle + '</div>' +
+        (isWrite && ev.source_type
+          ? '<div class="memory-meta">source: ' + escapeHtml(ev.source_type) + '</div>'
+          : '');
+      // Preserve scroll position when prepending.
+      const prevScroll = list.scrollTop;
+      list.insertBefore(card, list.firstChild);
+      // Trim to cap.
+      while (list.children.length > PROVENANCE_CAP) {
+        list.removeChild(list.lastChild);
+      }
+      // Restore scroll (insertBefore can shift it when at top).
+      list.scrollTop = prevScroll;
+      // Strip the "fresh" highlight class after the CSS fade-in animation.
+      setTimeout(() => { card.classList.remove('memory-card--fresh'); }, 1400);
+    }
+
+    // ── Cognitive Pulse live push ───────────────────────────────────
+    // Mirrors provenancePushFromBus but for the events panel. Every audit
+    // event from the SSE bus surfaces as a single pulse row. The 5-second
+    // poll remains as reconciliation.
+    const PULSE_CAP = 40;
+    function cognitivePushFromBus(ev) {
+      const list = document.getElementById('pulseList');
+      if (!list) return;
+      const empty = list.querySelector('.empty-state');
+      if (empty) empty.remove();
+      const ts = new Date(ev.ts || Date.now());
+      const item = document.createElement('div');
+      item.className = 'pulse-item pulse-item--fresh';
+      item.innerHTML =
+        '<strong>' + escapeHtml(ev.type) + '</strong>' +
+        ' <span class="ref">' + escapeHtml(ts.toLocaleTimeString()) + '</span>';
+      const prevScroll = list.scrollTop;
+      list.insertBefore(item, list.firstChild);
+      while (list.children.length > PULSE_CAP) {
+        list.removeChild(list.lastChild);
+      }
+      list.scrollTop = prevScroll;
+      setTimeout(() => { item.classList.remove('pulse-item--fresh'); }, 1400);
+    }
+
     function handleActivityEvent(ev) {
       if (!ev || !ev.type) return;
       switch (ev.type) {
@@ -777,8 +862,16 @@
           bumpRing('outer', ev.dormant ? 0.25 : 0.7);
           break;
         case 'memory:write':
+          bumpRing('middle', 0.8);
+          if (typeof window.__orbNodePulse === 'function') window.__orbNodePulse(0.9);
+          setState('writing', { transient: true, ttl: 700, preferIdleOnly: true });
+          // Incrementally surface to the Provenance Stream sidebar.
+          provenancePushFromBus(ev);
+          break;
         case 'memory:read':
-          bumpRing('middle', ev.type === 'memory:write' ? 0.8 : 0.45);
+          bumpRing('middle', 0.45);
+          if (typeof window.__orbNodePulse === 'function') window.__orbNodePulse(0.5);
+          setState('reading', { transient: true, ttl: 600, preferIdleOnly: true });
           break;
         case 'ai:call:start':
           window.__orbAiCallActive = true;
@@ -788,9 +881,21 @@
           window.__orbAiCallActive = false;
           bumpRing('inner', 0.4);
           break;
+        case 'converse:art_generated':
+          // The art flow's own setState('creating') already fires from
+          // the SSE 'Painting…' token; this just nudges the rings.
+          bumpRing('outer', 0.6);
+          bumpRing('inner', 0.4);
+          break;
+        case 'converse:session_start':
+          bumpRing('outer', 0.4);
+          break;
         default:
           break;
       }
+      // Every audit event flows into the Cognitive Pulse panel for the
+      // live feed regardless of which switch branch ran above.
+      cognitivePushFromBus(ev);
     }
 
     function startActivityStream() {
@@ -964,9 +1069,121 @@
     // reads window.__orbVoiceLevel each frame to scale + glow.
     window.__orbVoiceLevel = 0;
 
-    function setState(name) {
-      document.body.classList.remove('state-thinking', 'state-listening', 'state-pulse', 'state-speaking');
-      if (name) document.body.classList.add('state-' + name);
+    // ──────────────────────────────────────────────────────────────────
+    // ORB STATE MACHINE
+    //
+    // Canonical states the orb responds to. The orb's frame loop reads
+    // `currentState` and the visual style follows. Setters are typed and
+    // the previous state is logged on transition for debugging.
+    //
+    //   idle       — nothing happening; subtle base motion only.
+    //   listening  — mic capturing audio (text-chat ASR or Converse VAD).
+    //   streaming  — LLM tokens arriving (or chat stream in flight).
+    //   speaking   — assistant audio playing (TTS buffer or Converse track).
+    //   creating   — image generation in flight.
+    //   reading    — memory:read just fired (transient ~700ms).
+    //   writing    — memory:write just fired (transient ~700ms).
+    //   fault      — error path just fired (auto-clears after ~2s).
+    //
+    // Transient states (reading / writing / fault) auto-expire. The
+    // setState() helper accepts options:
+    //   transient: true                 — auto-clear back to idle after `ttl`
+    //   ttl: <ms>                       — override the transient lifetime
+    //   preferIdleOnly: true            — only set if already idle (so a
+    //                                     memory read doesn't interrupt
+    //                                     speaking/streaming)
+    // ──────────────────────────────────────────────────────────────────
+    const ORB_STATES = Object.freeze({
+      IDLE: 'idle',
+      LISTENING: 'listening',
+      STREAMING: 'streaming',
+      SPEAKING: 'speaking',
+      CREATING: 'creating',
+      READING: 'reading',
+      WRITING: 'writing',
+      FAULT: 'fault',
+    });
+    const ALL_STATE_NAMES = new Set(Object.values(ORB_STATES));
+    let currentOrbState = ORB_STATES.IDLE;
+    window.__orbState = ORB_STATES.IDLE;
+    let transientStateTimer = null;
+    let streamingTokenTimer = null;
+    const stateListeners = [];
+
+    function onOrbStateChange(fn) {
+      if (typeof fn === 'function') stateListeners.push(fn);
+    }
+
+    function setState(name, opts) {
+      // null/undefined/'' all map to idle.
+      const next = (name && String(name)) || ORB_STATES.IDLE;
+      const options = opts || {};
+      if (!ALL_STATE_NAMES.has(next)) {
+        console.warn('[orb-state] invalid state ignored:', name);
+        return;
+      }
+      if (options.preferIdleOnly && currentOrbState !== ORB_STATES.IDLE) {
+        // Bump rings but skip the state flip — a memory read shouldn't
+        // overwrite an active speaking/streaming display.
+        return;
+      }
+      if (currentOrbState !== next) {
+        const prev = currentOrbState;
+        currentOrbState = next;
+        window.__orbState = next;
+        for (const s of ALL_STATE_NAMES) {
+          document.body.classList.remove('state-' + s);
+        }
+        if (next !== ORB_STATES.IDLE) {
+          document.body.classList.add('state-' + next);
+        }
+        console.log('[orb-state]', prev, '->', next);
+        for (const fn of stateListeners) {
+          try { fn(next, prev); } catch (_) {}
+        }
+      }
+      if (transientStateTimer) {
+        clearTimeout(transientStateTimer);
+        transientStateTimer = null;
+      }
+      if (options.transient) {
+        const ttl = options.ttl || 700;
+        transientStateTimer = setTimeout(() => {
+          if (currentOrbState === next) setState(ORB_STATES.IDLE);
+          transientStateTimer = null;
+        }, ttl);
+      }
+    }
+
+    // Streaming heartbeat: caller fires this on every token. If no token
+    // arrives within ~2s, the orb falls back to idle (or whatever the
+    // caller flips it to — typically speaking when TTS lands).
+    function tickStreaming() {
+      if (currentOrbState !== ORB_STATES.STREAMING) {
+        setState(ORB_STATES.STREAMING);
+      }
+      if (streamingTokenTimer) clearTimeout(streamingTokenTimer);
+      streamingTokenTimer = setTimeout(() => {
+        if (currentOrbState === ORB_STATES.STREAMING) {
+          setState(ORB_STATES.IDLE);
+        }
+        streamingTokenTimer = null;
+      }, 2000);
+    }
+    function endStreaming() {
+      if (streamingTokenTimer) {
+        clearTimeout(streamingTokenTimer);
+        streamingTokenTimer = null;
+      }
+    }
+
+    function setFault(reason) {
+      console.warn('[orb-state] fault:', reason || '(no reason)');
+      setState(ORB_STATES.FAULT, { transient: true, ttl: 2000 });
+    }
+
+    function currentStateName() {
+      return currentOrbState;
     }
 
     // Universal click-feedback ripple so the user always sees the tap register
@@ -1354,10 +1571,10 @@
         const data = await res.json();
         const events = data && Array.isArray(data.events) ? data.events : [];
         renderEvents(events);
-        if (events.length > lastEventCount) {
-          setState('pulse');
-          setTimeout(() => setState(null), 700);
-        }
+        // No more setState('pulse') here — the SSE-driven panel update
+        // path (handleActivityEvent) handles per-event visual flashing
+        // and ring boosts. The polling fetch is now a reconciliation
+        // safety net only.
         lastEventCount = events.length;
       } catch (e) {
         renderEvents([]);
@@ -1413,7 +1630,9 @@
       if (!text || !text.trim()) return;
       stopAudio();
       responseBubble.textContent = 'Thinking…';
-      setState('thinking');
+      // Enter the streaming state immediately; tickStreaming() resets
+      // a 2s heartbeat each time a real token arrives.
+      setState('streaming');
       try {
         const streamRes = await streamChat(text);
         if (streamRes.status === 503 || !streamRes.ok || !streamRes.body) {
@@ -1434,10 +1653,10 @@
           if (voiceEnabled) {
             const speech = await prepareSpeech(replyText);
             responseBubble.textContent = replyText;
-            if (speech) speech.play(); else setState(null);
+            if (speech) speech.play(); else setState('idle');
           } else {
             responseBubble.textContent = replyText;
-            setState(null);
+            setState('idle');
           }
           return;
         }
@@ -1454,9 +1673,9 @@
             if (firstToken) {
               responseBubble.textContent = '';
               firstToken = false;
-              // The art flow's very first token is the "Painting…"
-              // placeholder. Kick the orb into its creating pulse.
               if (data.text === 'Painting…') {
+                // Art flow placeholder — enter creating state.
+                setState('creating');
                 startOrbCreating();
               }
             }
@@ -1468,6 +1687,11 @@
               assembled += data.text;
             }
             responseBubble.textContent = assembled;
+            // Token arrived — bump the streaming heartbeat. (creating
+            // state stays in place until 'art' event lands.)
+            if (currentStateName() !== 'creating') {
+              tickStreaming();
+            }
           } else if (event === 'art' && data) {
             artPayload = data;
             // Full-viewport emergence: tiny circle from the orb's center,
@@ -1485,6 +1709,7 @@
             streamErr = new Error((data && data.message) || 'stream error');
           }
         });
+        endStreaming();
         if (streamErr) throw streamErr;
 
         fetchEvents();
@@ -1498,14 +1723,15 @@
         // playback as soon as the audio buffer is decoded.
         if (voiceEnabled && assembled) {
           const speech = await prepareSpeech(assembled);
-          if (speech) speech.play(); else setState(null);
+          if (speech) speech.play(); else setState('idle');
         } else {
-          setState(null);
+          setState('idle');
         }
       } catch (err) {
+        endStreaming();
         console.warn('chat send failed:', err);
         responseBubble.textContent = 'I encountered an error processing your message. Please try again.';
-        setState(null);
+        setFault(err && err.message);
       }
     }
 
@@ -1968,7 +2194,39 @@
       const pc = new RTCPeerConnection();
       conversePc = pc;
       pc.ontrack = (e) => {
-        if (e && e.streams && e.streams[0]) converseAudio.srcObject = e.streams[0];
+        if (!e || !e.streams || !e.streams[0]) return;
+        const remote = e.streams[0];
+        // Keep the <audio> element playback so the user hears Splendor.
+        converseAudio.srcObject = remote;
+        // ALSO tap the remote stream into the Web Audio analyser so the
+        // orb's __orbVoiceLevel pulses with her voice in Converse the
+        // same way it does for TTS in text chat. Connect ONLY to the
+        // analyser; the <audio> element already drives device output.
+        try {
+          const ctx = getAudioContext();
+          if (ctx.state === 'suspended') {
+            ctx.resume().catch(() => {});
+          }
+          // Safari can throw on createMediaStreamSource if the audio
+          // context isn't yet user-gesture-unlocked; the surrounding
+          // try/catch keeps the call non-fatal — Converse still works,
+          // the orb just won't pulse on her voice on that browser.
+          const sourceNode = ctx.createMediaStreamSource(remote);
+          if (typeof converseAnalyserSource !== 'undefined' &&
+              converseAnalyserSource && converseAnalyserSource.disconnect) {
+            try { converseAnalyserSource.disconnect(); } catch (_) {}
+          }
+          window.__converseAnalyserSource = sourceNode;
+          sourceNode.connect(analyser);
+          // Prime the orb's FFT tick loop so the level updates start
+          // immediately even if we weren't in a 'speaking' state yet.
+          if (!rafId) {
+            rafId = requestAnimationFrame(tickOrbFromAudio);
+          }
+          setState('speaking');
+        } catch (err) {
+          console.warn('[converse] analyser tap failed:', err && err.message);
+        }
       };
       stream.getTracks().forEach(t => pc.addTrack(t, stream));
 
@@ -2072,6 +2330,12 @@
       } catch (_) {}
       converseMicStream = null;
       try { converseAudio.srcObject = null; } catch (_) {}
+      try {
+        if (window.__converseAnalyserSource) {
+          window.__converseAnalyserSource.disconnect();
+          window.__converseAnalyserSource = null;
+        }
+      } catch (_) {}
 
       converseSessionId = null;
       converseStrip.hidden = true;
@@ -2107,8 +2371,12 @@
     // Initial + polling
     fetchMemories();
     fetchEvents();
-    setInterval(fetchEvents, 5000);
-    setInterval(fetchMemories, 30000);
+    // Reconciliation polling. The SSE bus is the primary update path
+    // (see handleActivityEvent + provenance/cognitive push); these
+    // intervals exist only as a safety net in case SSE drops or events
+    // are dropped server-side. Cadence slowed accordingly.
+    setInterval(fetchEvents, 30000);
+    setInterval(fetchMemories, 60000);
   </script>
 
   <!-- 3D neural orb (Three.js, vanilla module — no React) -->
@@ -2258,7 +2526,7 @@
     for (let i = 0; i < particleCount; i++) {
       const m = new THREE.Mesh(
         new THREE.SphereGeometry(0.025, 6, 6),
-        new THREE.MeshBasicMaterial({ color: 0x4ff0b7 })
+        new THREE.MeshBasicMaterial({ color: 0x4ff0b7, transparent: true, opacity: 0.25 })
       );
       particles.push({
         mesh: m,
@@ -2298,60 +2566,111 @@
     window.addEventListener('resize', resize);
     window.addEventListener('orientationchange', resize);
 
+    // State -> color palette. Eight states; idle is the resting palette.
+    // Tweens between palettes are smoothed in the frame loop (~300ms).
     const COLORS = {
       idle:      { primary: 0x00e5ff, secondary: 0x4ff0b7 },
       listening: { primary: 0x39ff14, secondary: 0x00f5d4 },
-      thinking:  { primary: 0xbf5af2, secondary: 0xff6b9d },
-      speaking:  { primary: 0x00e5ff, secondary: 0x00f5d4 }
+      streaming: { primary: 0xbf5af2, secondary: 0xff6b9d },
+      speaking:  { primary: 0x00e5ff, secondary: 0x00f5d4 },
+      creating:  { primary: 0xffd166, secondary: 0xff6b9d },
+      reading:   { primary: 0x4ff0b7, secondary: 0x00e5ff },
+      writing:   { primary: 0xbf5af2, secondary: 0x4ff0b7 },
+      fault:     { primary: 0xff5c5c, secondary: 0xff3b3b },
     };
 
+    // The Three.js module is a separate inline <script type="module">
+    // so it can't see the top-level `currentOrbState` directly — the
+    // canonical state setter publishes it on window.__orbState.
     function currentStateName() {
-      const cl = document.body.classList;
-      if (cl.contains('state-listening')) return 'listening';
-      if (cl.contains('state-thinking'))  return 'thinking';
-      if (cl.contains('state-speaking'))  return 'speaking';
-      return 'idle';
+      return window.__orbState || 'idle';
     }
+
+    // ─── Smoothing buffers ──────────────────────────────────────────────
+    // EMA over ~4 frames so the core throbs with the speech envelope, not
+    // raw FFT noise.
+    let vSmoothed = 0;
+    // Color targets — we lerp toward these each frame for the ~300ms
+    // cross-fade between state palettes.
+    const primaryColor   = new THREE.Color(COLORS.idle.primary);
+    const secondaryColor = new THREE.Color(COLORS.idle.secondary);
+    const tmpColor       = new THREE.Color();
+    // Ring boost idle baseline. Without this the rings can stall almost
+    // entirely at idle; with it they breathe perceptibly even when no
+    // events are firing. Values are intentionally small.
+    const RING_IDLE_FLOOR = { outer: 0.07, middle: 0.05, inner: 0.04 };
+    // Neural-node opacity targets — wired to memory bus events.
+    const nodeMeshes = nodeGroup.children;
+    let nodePulse = 0; // 0..1, decays each frame; spikes on memory:* events
+    window.__orbNodePulse = function (amt) {
+      nodePulse = Math.min(1, nodePulse + (amt || 0.7));
+    };
+    // Particle visibility — base orbital motion always runs, but the
+    // alpha + scale ride __orbVoiceLevel so they densify when she speaks.
+    const particleBaseScale = 1;
 
     const t0 = performance.now();
     function frame() {
       resize();
       const t = (performance.now() - t0) / 1000;
-      const v = Math.max(0, Math.min(1, window.__orbVoiceLevel || 0));
-      const state = currentStateName();
-      const mul = state === 'listening' ? 2 :
-                  state === 'thinking'  ? 1.5 :
-                  state === 'speaking'  ? (1 + v * 1.5) : 1;
+      // Smoothed voice level (low-pass on raw FFT mean).
+      const vRaw = Math.max(0, Math.min(1, window.__orbVoiceLevel || 0));
+      vSmoothed += (vRaw - vSmoothed) * 0.25; // EMA, ~4-frame time constant
+      const v = vSmoothed;
 
-      // Per-ring boosts driven by real backend signals (SSE). Each band's
-      // boost decays toward 0 over ~800ms. ai:call:start raises 'inner'
-      // and holds it until ai:call:end. memory:* blips 'middle'. claspion
-      // blips 'outer'. window.__orbRingBoost is written by the SSE handler
-      // below; we never invent activity here.
+      const state = currentStateName();
+      // Per-state speed multiplier. `creating` matches `listening`'s
+      // urgency; `fault` is calmer than active states; transient
+      // reading/writing barely nudge.
+      const mul =
+        state === 'listening' ? 2.0 :
+        state === 'streaming' ? 1.5 :
+        state === 'speaking'  ? (1 + v * 1.5) :
+        state === 'creating'  ? 1.8 :
+        state === 'reading'   ? 1.2 :
+        state === 'writing'   ? 1.25 :
+        state === 'fault'     ? 0.6 :
+        1.0; // idle
+
+      // Per-ring boosts driven by real backend signals (SSE). The values
+      // live in window.__orbRingBoost and are written by SSE handlers
+      // exclusively — this loop only READS and decays them.
       const rb = window.__orbRingBoost || (window.__orbRingBoost = { outer: 0, middle: 0, inner: 0 });
       const aiOpen = window.__orbAiCallActive ? 1 : 0;
-      const outerBoost  = 1 + rb.outer  * 2.2;
-      const middleBoost = 1 + rb.middle * 1.8;
-      const innerBoost  = 1 + Math.max(rb.inner, aiOpen) * 2.0;
+      // Effective boost = max(transient event push, idle baseline).
+      // This guarantees rings never fully stall and the motion remains
+      // continuous and predictable rather than fast-then-slow.
+      const outerEff  = Math.max(rb.outer,  RING_IDLE_FLOOR.outer);
+      const middleEff = Math.max(rb.middle, RING_IDLE_FLOOR.middle);
+      const innerEff  = Math.max(rb.inner,  RING_IDLE_FLOOR.inner, aiOpen);
+      const outerBoost  = 1 + outerEff  * 2.2;
+      const middleBoost = 1 + middleEff * 1.8;
+      const innerBoost  = 1 + innerEff  * 2.0;
       r1.rotation.x = t * 0.4 * mul * middleBoost; r1.rotation.z = t * 0.2 * mul * middleBoost;
       r2.rotation.y = t * 0.5 * mul * middleBoost; r2.rotation.z = -t * 0.3 * mul * middleBoost;
       r3.rotation.x = -t * 0.3 * mul * outerBoost; r3.rotation.y = t * 0.4 * mul * outerBoost;
       r4.rotation.z = t * 0.6 * mul * outerBoost;  r4.rotation.x = t * 0.2 * mul * outerBoost;
       r5.rotation.y = t * 0.25 * mul * innerBoost;
       r6.rotation.z = t * 0.18 * mul * innerBoost;
-      // Decay transient boosts toward 0 (~800ms half-life at 60fps).
+      // Decay transient boosts toward 0 (~800ms half-life at 60fps). The
+      // idle floor above keeps the rings moving regardless.
       rb.outer  *= 0.965;
       rb.middle *= 0.965;
       rb.inner  *= 0.965;
 
-      shell1.scale.setScalar(1 + Math.sin(t * 1.5) * 0.05 + v * 0.18);
+      // Decorative shells: sin amplitude halved from v15.14 values; the
+      // audio-reactive lift (v * X) is preserved so they breathe with
+      // speech.
+      shell1.scale.setScalar(1 + Math.sin(t * 1.5) * 0.025 + v * 0.18);
       shell1.rotation.y = t * 0.1;
-      shell2.scale.setScalar(1 + Math.sin(t * 2.2 + Math.PI / 3) * 0.08 + v * 0.22);
+      shell2.scale.setScalar(1 + Math.sin(t * 2.2 + Math.PI / 3) * 0.04 + v * 0.22);
       shell2.rotation.x = t * 0.15;
-      shell3.scale.setScalar(1 + Math.sin(t * 0.8 + (Math.PI * 2) / 3) * 0.06 + v * 0.16);
+      shell3.scale.setScalar(1 + Math.sin(t * 0.8 + (Math.PI * 2) / 3) * 0.03 + v * 0.16);
       shell3.rotation.z = t * 0.08;
 
-      const corePulse = 1 + Math.sin(t * 2) * 0.1 + v * 0.5;
+      // Core + body pulse. Decorative sin halved; voice-reactive term
+      // unchanged so speaking still drives the throb visibly.
+      const corePulse = 1 + Math.sin(t * 2) * 0.05 + v * 0.5;
       body.scale.setScalar(corePulse);
       body.rotation.y = t * 0.1 * mul;
       inner.scale.set(1.3 * corePulse, 0.7 * corePulse, 1.1 * corePulse);
@@ -2359,6 +2678,26 @@
       core.scale.setScalar(1 + v * 0.45);
       coreMat.emissiveIntensity = 2.5 + v * 3;
 
+      // Neural nodes — wired to memory:read / memory:write via the
+      // window.__orbNodePulse() bumper. Resting opacity is low; on a
+      // pulse, opacity rises and scale lifts briefly, then decays.
+      nodePulse *= 0.94;
+      for (let i = 0; i < nodeMeshes.length; i++) {
+        const n = nodeMeshes[i];
+        const phase = (t * 0.6 + i * 0.41) % (Math.PI * 2);
+        const breathe = 0.6 + Math.sin(phase) * 0.15;
+        const lift = 1 + nodePulse * 0.7;
+        n.scale.setScalar(lift);
+        if (n.material) {
+          n.material.emissiveIntensity = (breathe + nodePulse * 2.5) * 1.2;
+        }
+      }
+
+      // Particles — base orbital motion preserved (it's the "alive at
+      // idle" feel). Emission density rides __orbVoiceLevel: when she
+      // speaks, particles brighten and grow; at idle they're faint.
+      const particleAlpha = 0.25 + v * 0.75;
+      const particleScale = particleBaseScale * (1 + v * 1.6);
       for (const p of particles) {
         const ot = t * p.speed;
         p.mesh.position.set(
@@ -2366,16 +2705,29 @@
           Math.sin(ot * 2) * p.height,
           Math.sin(p.angle + ot) * p.radius
         );
+        p.mesh.scale.setScalar(particleScale);
+        if (p.mesh.material) {
+          if (p.mesh.material.transparent !== true) {
+            p.mesh.material.transparent = true;
+          }
+          p.mesh.material.opacity = particleAlpha;
+        }
       }
 
-      // Recolor lights + core to match the live state
-      const c = COLORS[state] || COLORS.idle;
-      l1.color.setHex(c.primary);
-      l2.color.setHex(c.secondary);
-      coreMat.emissive.setHex(c.primary);
-      bodyMat.emissive.setHex(c.secondary);
+      // Recolor lights + core/body emissive toward the current state's
+      // palette. Lerp rate of ~0.06 per frame at 60fps ≈ 300ms to settle.
+      const palette = COLORS[state] || COLORS.idle;
+      tmpColor.setHex(palette.primary);
+      primaryColor.lerp(tmpColor, 0.06);
+      tmpColor.setHex(palette.secondary);
+      secondaryColor.lerp(tmpColor, 0.06);
+      l1.color.copy(primaryColor);
+      l2.color.copy(secondaryColor);
+      coreMat.emissive.copy(primaryColor);
+      bodyMat.emissive.copy(secondaryColor);
 
-      root.position.y = Math.sin(t * 0.6) * 0.1;
+      // Root bob & spin — gentle base motion, half of original amplitude.
+      root.position.y = Math.sin(t * 0.6) * 0.05;
       root.rotation.y = t * 0.05;
 
       composer.render();
