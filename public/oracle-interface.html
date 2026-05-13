@@ -1789,71 +1789,129 @@
       } catch (_) { return ''; }
     }
 
-    function renderInterpretations(rows) {
-      if (!archaeologyList) return;
-      if (!Array.isArray(rows) || rows.length === 0) {
-        archaeologyList.innerHTML = '<div class="empty-state">No interpretations recorded yet. Splendor will start forming them as you talk.</div>';
-        return;
-      }
-      // Split into active vs contradicted vs other (superseded/etc),
-      // then timeline-render with contradicted called out separately.
-      const active       = rows.filter(r => r.status === 'active');
-      const contradicted = rows.filter(r => r.status === 'contradicted');
-      const superseded   = rows.filter(r => r.status !== 'active' && r.status !== 'contradicted');
+    // Shared belief-card builder used by the active/contradicted/superseded
+    // sections and the fetchInterpretations multi-stream renderer.
+    function buildInterpCard(r) {
+      const isActive       = r.status === 'active';
+      const isContradicted = r.status === 'contradicted';
+      const isSuperseded   = !isActive;
+      const flags = [];
+      if (r.unresolved) flags.push('<span class="interp-flag unresolved">UNRESOLVED</span>');
+      if (isContradicted) flags.push('<span class="interp-flag contradicted">CONTRADICTED</span>');
+      else if (r.contradicted_by) flags.push('<span class="interp-flag contradicted">CONTRADICTED</span>');
+      if (r.revised_belief) flags.push('<span class="interp-flag revised">REVISED</span>');
+      const revisionBlock = r.revised_belief && isSuperseded
+        ? '<div class="interp-revision">→ ' + escapeHtml(r.revised_belief) +
+          (r.contradicted_by ? '<br><em>Reason: ' + escapeHtml(r.contradicted_by) + '</em>' : '') +
+          '</div>'
+        : '';
+      return (
+        '<div class="interp-card ' + (isSuperseded ? 'superseded' : 'active') +
+        (r.unresolved ? ' unresolved' : '') + (r.revised_belief ? ' revised' : '') + '">' +
+          '<div class="interp-meta">' +
+            '<span>' + flags.join('') + escapeHtml(fmtTimestamp(r.formed_at)) + '</span>' +
+            '<span class="interp-confidence">' + escapeHtml(fmtConfidence(r.confidence)) + '</span>' +
+          '</div>' +
+          '<div class="interp-belief">' + escapeHtml(r.belief) + '</div>' +
+          revisionBlock +
+        '</div>'
+      );
+    }
 
-      const renderCard = (r) => {
-        const isActive       = r.status === 'active';
-        const isContradicted = r.status === 'contradicted';
-        const isSuperseded   = !isActive; // covers contradicted + superseded for styling
-        const flags = [];
-        if (r.unresolved) flags.push('<span class="interp-flag unresolved">UNRESOLVED</span>');
-        if (isContradicted) flags.push('<span class="interp-flag contradicted">CONTRADICTED</span>');
-        else if (r.contradicted_by) flags.push('<span class="interp-flag contradicted">CONTRADICTED</span>');
-        if (r.revised_belief) flags.push('<span class="interp-flag revised">REVISED</span>');
-        const revisionBlock = r.revised_belief && isSuperseded
-          ? '<div class="interp-revision">→ ' + escapeHtml(r.revised_belief) +
-            (r.contradicted_by ? '<br><em>Reason: ' + escapeHtml(r.contradicted_by) + '</em>' : '') +
-            '</div>'
-          : '';
+    // ── "What I'm Uncertain About" — low-confidence + unresolved beliefs.
+    function renderUncertainty(rows) {
+      if (!Array.isArray(rows) || rows.length === 0) {
+        return '<div class="empty-state" style="font-size:10px;">She has no acknowledged uncertainties right now.</div>';
+      }
+      const cards = rows.map(r => {
+        const conf = Math.round((r.confidence || 0) * 100);
         return (
-          '<div class="interp-card ' + (isSuperseded ? 'superseded' : 'active') +
-          (r.unresolved ? ' unresolved' : '') + (r.revised_belief ? ' revised' : '') + '">' +
+          '<div class="interp-card active unresolved">' +
             '<div class="interp-meta">' +
-              '<span>' + flags.join('') + escapeHtml(fmtTimestamp(r.formed_at)) + '</span>' +
-              '<span class="interp-confidence">' + escapeHtml(fmtConfidence(r.confidence)) + '</span>' +
+              '<span><span class="interp-flag unresolved">UNSURE</span></span>' +
+              '<span class="interp-confidence">' + conf + '%</span>' +
             '</div>' +
             '<div class="interp-belief">' + escapeHtml(r.belief) + '</div>' +
-            revisionBlock +
           '</div>'
         );
-      };
+      }).join('');
+      return cards;
+    }
 
-      let html = '';
-      if (active.length > 0) {
-        html += '<div class="interp-divider"></div><div class="interp-divider-label">Currently held (' + active.length + ')</div>';
-        html += active.map(renderCard).join('');
+    // ── Emotional timeline — observations only, never invented.
+    function renderEmotionalTimeline(rows) {
+      if (!Array.isArray(rows) || rows.length === 0) {
+        return '<div class="empty-state" style="font-size:10px;">No emotional observations logged yet.</div>';
       }
-      if (contradicted.length > 0) {
-        html += '<div class="interp-divider"></div><div class="interp-divider-label" style="color:#ff7878;">Recently contradicted (' + contradicted.length + ')</div>';
-        html += contradicted.map(renderCard).join('');
-      }
-      if (superseded.length > 0) {
-        html += '<div class="interp-divider"></div><div class="interp-divider-label">Revised / Superseded (' + superseded.length + ')</div>';
-        html += superseded.map(renderCard).join('');
-      }
-      archaeologyList.innerHTML = html;
+      // Newest first, take 20.
+      const cards = rows.slice(0, 20).map(r => {
+        const date = new Date(r.session_date).toLocaleString();
+        const clarity = (typeof r.clarity_score === 'number')
+          ? Math.round(r.clarity_score * 100) + '%' : '—';
+        return (
+          '<div class="interp-card active">' +
+            '<div class="interp-meta">' +
+              '<span>' + escapeHtml(date) + '</span>' +
+              '<span class="interp-confidence">clarity ' + clarity + '</span>' +
+            '</div>' +
+            '<div class="interp-belief">' +
+              (r.dominant_theme ? '<strong>' + escapeHtml(r.dominant_theme) + '</strong> · ' : '') +
+              'tone: ' + escapeHtml(r.tone || '∅') +
+              ' · energy: ' + escapeHtml(r.energy_level || '∅') +
+              (r.notes ? '<br><em>' + escapeHtml(r.notes) + '</em>' : '') +
+            '</div>' +
+          '</div>'
+        );
+      }).join('');
+      return cards;
     }
 
     async function fetchInterpretations() {
       try {
         archaeologyList.innerHTML = '<div class="empty-state">Loading interpretations…</div>';
-        const res = await splendorFetch('/api/interpretations?limit=200');
-        if (!res.ok) throw new Error('not ok');
-        const data = await res.json();
-        renderInterpretations(data.interpretations || []);
+        // Pull all three streams in parallel.
+        const [interpRes, uncertainRes, emotionRes] = await Promise.all([
+          splendorFetch('/api/interpretations?limit=200'),
+          splendorFetch('/api/interpretations/uncertain'),
+          splendorFetch('/api/emotional-patterns?limit=40'),
+        ]);
+        const interp    = interpRes.ok    ? await interpRes.json()    : { interpretations: [] };
+        const uncertain = uncertainRes.ok ? await uncertainRes.json() : { interpretations: [] };
+        const emotion   = emotionRes.ok   ? await emotionRes.json()   : { patterns: [] };
+
+        let html = '';
+        // 1) "What I'm Uncertain About"
+        html += '<div class="interp-divider"></div><div class="interp-divider-label" style="color:#ffd166;">What I\'m Uncertain About</div>';
+        html += renderUncertainty(uncertain.interpretations || []);
+        // 2) Belief timeline (active / contradicted / superseded)
+        const rows = interp.interpretations || [];
+        const active       = rows.filter(r => r.status === 'active');
+        const contradicted = rows.filter(r => r.status === 'contradicted');
+        const superseded   = rows.filter(r => r.status !== 'active' && r.status !== 'contradicted');
+        if (active.length > 0) {
+          html += '<div class="interp-divider"></div><div class="interp-divider-label">Currently held (' + active.length + ')</div>';
+          html += active.map(buildInterpCard).join('');
+        }
+        if (contradicted.length > 0) {
+          html += '<div class="interp-divider"></div><div class="interp-divider-label" style="color:#ff7878;">Recently contradicted (' + contradicted.length + ')</div>';
+          html += contradicted.map(buildInterpCard).join('');
+        }
+        if (superseded.length > 0) {
+          html += '<div class="interp-divider"></div><div class="interp-divider-label">Revised / Superseded (' + superseded.length + ')</div>';
+          html += superseded.map(buildInterpCard).join('');
+        }
+        // 3) Emotional pattern timeline
+        html += '<div class="interp-divider"></div><div class="interp-divider-label" style="color:#6dd6ff;">Emotional Pattern Timeline</div>';
+        html += renderEmotionalTimeline(emotion.patterns || []);
+
+        if (rows.length === 0 && (emotion.patterns || []).length === 0 && (uncertain.interpretations || []).length === 0) {
+          archaeologyList.innerHTML = '<div class="empty-state">Nothing logged yet. Splendor will start forming interpretations and observations as you talk.</div>';
+        } else {
+          archaeologyList.innerHTML = html;
+        }
       } catch (e) {
         console.warn('[archaeology] fetch failed', e);
-        renderInterpretations([]);
+        archaeologyList.innerHTML = '<div class="empty-state">Failed to load.</div>';
       }
     }
 

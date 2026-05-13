@@ -14,6 +14,7 @@ const { activityBus } = require('../lib/activity-bus');
 const { speakResponse } = require('../lib/voice');
 const { generateArt, isArtRequest } = require('../lib/art-generator');
 const { evaluateTurn: evaluateInterpretationTurn } = require('../lib/interpretation-engine');
+const { analyzeAndPersist: analyzeEmotionalPattern } = require('../lib/emotional-pattern-analyzer');
 
 const router = express.Router();
 
@@ -288,6 +289,12 @@ router.post('/turn', requireAuth, requireOwner, async (req, res) => {
         assistantResponse: assistant_text.trim(),
         surface: 'converse',
       }).catch(e => console.warn('[interp] dispatch failed:', e && e.message));
+      analyzeEmotionalPattern({
+        userId,
+        userMessage: user_text.trim(),
+        assistantResponse: assistant_text.trim(),
+        surface: 'converse',
+      }).catch(e => console.warn('[emotional] dispatch failed:', e && e.message));
     }
 
     res.json({ ok: true });
