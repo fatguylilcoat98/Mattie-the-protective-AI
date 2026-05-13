@@ -125,6 +125,7 @@ app.use('/api/governance', require('./routes/governance'));
 app.use('/api/activity', require('./routes/activity'));
 app.use('/api/converse', require('./routes/converse'));
 app.use('/api/email', require('./routes/email'));
+app.use('/api/interpretations', require('./routes/interpretations'));
 
 // Consciousness routes (if available)
 if (consciousnessRoutes) {
