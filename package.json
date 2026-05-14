@@ -1,6 +1,6 @@
 {
   "name": "splendor",
-  "version": "15.18.3",
+  "version": "15.18.4",
   "description": "Splendor — The Remarkable AI · The Good Neighbor Guard",
   "main": "server.js",
   "scripts": {
@@ -20,6 +20,7 @@
     "consciousness:inquire": "node workers/autonomous-inquiry-worker.js",
     "consciousness:communicate": "node workers/autonomous-communication-worker.js",
     "consciousness:cycle": "node lib/persistent-consciousness.js",
+    "daily:log": "node workers/daily-log-worker.js",
     "setup:consciousness": "psql $DATABASE_URL -f persistent-consciousness-schema.sql",
     "continuity:shadow": "node lib/master-continuity-engine.js",
     "continuity:worker": "node workers/continuity-worker.js",
