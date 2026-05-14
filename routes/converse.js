@@ -170,7 +170,20 @@ router.post('/token', requireAuth, requireOwner, async (req, res) => {
       console.warn('[CONVERSE] reflexive load failed:', e && e.message);
     }
 
-    const finalInstructions = CONVERSE_INSTRUCTIONS + memoryBlock + (selfReflection || '');
+    // v15.18.5 — time context. Voice sessions had no clock awareness,
+    // so Chris asking "what time is it?" got "I don't know." Fix it the
+    // same way text mode does: assert the wall-clock time openly and
+    // tell her to answer from it. Pacific-forced via OWNER_TZ.
+    const OWNER_TZ = process.env.SPLENDOR_OWNER_TIMEZONE || 'America/Los_Angeles';
+    const _now = new Date();
+    const timeBlock =
+      '\n\nWALL-CLOCK TIME (you HAVE this — when Chris asks what time or day it is, answer from here. Do NOT say "I don\'t know."):\n' +
+      'Date: ' + _now.toLocaleDateString('en-US', { timeZone: OWNER_TZ, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) + '\n' +
+      'Time: ' + _now.toLocaleTimeString('en-US', { timeZone: OWNER_TZ, hour: 'numeric', minute: '2-digit', hour12: true }) + '\n' +
+      'Timezone: ' + OWNER_TZ + ' (Chris is in Sacramento, CA)\n' +
+      '(This was captured at session start. Use it as the time anchor for the conversation.)';
+
+    const finalInstructions = CONVERSE_INSTRUCTIONS + timeBlock + memoryBlock + (selfReflection || '');
 
     const upstream = await fetch('https://api.openai.com/v1/realtime/client_secrets', {
       method: 'POST',
