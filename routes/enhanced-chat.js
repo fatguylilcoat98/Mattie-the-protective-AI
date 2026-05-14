@@ -136,7 +136,8 @@ router.post('/chat', requireAuth, requireOwner, async (req, res) => {
     const {
       message,
       sessionId = generateSessionId(),
-      workspaceId
+      workspaceId,
+      imageData                       // v15.18.3 — vision: base64 JPEG, no data: prefix
     } = req.body;
 
     const userId = req.userId;
@@ -157,18 +158,21 @@ router.post('/chat', requireAuth, requireOwner, async (req, res) => {
     }
 
     // Email-intent intercept — short-circuits the LLM with an acknowledgment
-    // when the user explicitly asks Splendor to email them.
-    const emailIntent = await handleEmailIntentForChat(userId, message);
-    if (emailIntent) {
-      return res.json({
-        success: true,
-        response: emailIntent.reply,
-        memory_stats: { factsUsed: 0, interpretationsUsed: 0, bindingRulesActive: 0, webSearchPerformed: false, webResultsCount: 0 },
-        session_id: sessionId,
-        workspace_id: workspaceId,
-        context_summary: { facts_used: 0, interpretations_used: 0, binding_rules_active: 0, web_search_performed: false, uncertainty_warnings: 0 },
-        email_handled: true,
-      });
+    // when the user explicitly asks Splendor to email them. Skip when an
+    // image is attached — that's a vision question, not an email request.
+    if (!imageData) {
+      const emailIntent = await handleEmailIntentForChat(userId, message);
+      if (emailIntent) {
+        return res.json({
+          success: true,
+          response: emailIntent.reply,
+          memory_stats: { factsUsed: 0, interpretationsUsed: 0, bindingRulesActive: 0, webSearchPerformed: false, webResultsCount: 0 },
+          session_id: sessionId,
+          workspace_id: workspaceId,
+          context_summary: { facts_used: 0, interpretations_used: 0, binding_rules_active: 0, web_search_performed: false, uncertainty_warnings: 0 },
+          email_handled: true,
+        });
+      }
     }
 
     // Process conversation with enhanced memory system
@@ -176,7 +180,8 @@ router.post('/chat', requireAuth, requireOwner, async (req, res) => {
       userId,
       message,
       sessionId,
-      workspaceId
+      workspaceId,
+      { imageData }
     );
 
     res.json({
@@ -216,7 +221,8 @@ router.post('/chat/stream', requireAuth, requireOwner, async (req, res) => {
   const {
     message,
     sessionId = generateSessionId(),
-    workspaceId
+    workspaceId,
+    imageData                         // v15.18.3 — vision: base64 JPEG, no data: prefix
   } = req.body;
 
   const userId = req.userId;
@@ -257,7 +263,9 @@ router.post('/chat/stream', requireAuth, requireOwner, async (req, res) => {
   // Art-intent intercept — happens BEFORE the email check. On a successful
   // generation, the helper emits its own token/art/done events and we end
   // the stream here. On failure, fall through to email then normal chat.
-  if (isArtRequest(message)) {
+  // Skip when an image is attached — Chris wants Splendor to LOOK at the
+  // photo, not generate a new one.
+  if (!imageData && isArtRequest(message)) {
     try {
       const handled = await handleArtStreamIntercept(send, userId, message);
       if (handled) {
@@ -273,26 +281,29 @@ router.post('/chat/stream', requireAuth, requireOwner, async (req, res) => {
 
   // Email-intent intercept — same as the non-stream path but emits as
   // a single-token SSE flush so the client renders the canned reply
-  // and stops in lockstep with regular streaming UX.
-  try {
-    const emailIntent = await handleEmailIntentForChat(userId, message);
-    if (emailIntent) {
-      if (!aborted) {
-        send('token', { text: emailIntent.reply });
-        send('done', {
-          full: emailIntent.reply,
-          memory_stats: { factsUsed: 0, interpretationsUsed: 0, bindingRulesActive: 0, webSearchPerformed: false, webResultsCount: 0 },
-          session_id: sessionId,
-          workspace_id: workspaceId,
-          email_handled: true,
-        });
+  // and stops in lockstep with regular streaming UX. Skipped when an
+  // image is attached.
+  if (!imageData) {
+    try {
+      const emailIntent = await handleEmailIntentForChat(userId, message);
+      if (emailIntent) {
+        if (!aborted) {
+          send('token', { text: emailIntent.reply });
+          send('done', {
+            full: emailIntent.reply,
+            memory_stats: { factsUsed: 0, interpretationsUsed: 0, bindingRulesActive: 0, webSearchPerformed: false, webResultsCount: 0 },
+            session_id: sessionId,
+            workspace_id: workspaceId,
+            email_handled: true,
+          });
+        }
+        clearInterval(heartbeat);
+        try { res.end(); } catch (_) {}
+        return;
       }
-      clearInterval(heartbeat);
-      try { res.end(); } catch (_) {}
-      return;
+    } catch (e) {
+      console.warn('[email-intent] stream intercept failed, falling through:', e && e.message);
     }
-  } catch (e) {
-    console.warn('[email-intent] stream intercept failed, falling through:', e && e.message);
   }
 
   try {
@@ -302,6 +313,7 @@ router.post('/chat/stream', requireAuth, requireOwner, async (req, res) => {
       sessionId,
       workspaceId,
       {
+        imageData,                    // v15.18.3 — vision
         onToken: (text) => {
           if (!aborted && text) send('token', { text });
         },

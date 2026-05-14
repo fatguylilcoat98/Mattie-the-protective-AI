@@ -1727,7 +1727,15 @@
       }).join('');
     }
 
+    // v15.18.3 — the pulse panel is SSE-driven (cognitivePushFromBus).
+    // renderEvents is now ONLY for first-paint history when the panel is
+    // still empty. Once SSE has pushed any live item, polling becomes a
+    // no-op so live transparency events (interp:*, premise:*, contradiction:*,
+    // emotional:*) stay on screen instead of getting wiped every 30s.
     function renderEvents(events) {
+      const hasLive = pulseList.children.length > 0 &&
+        !pulseList.querySelector('.empty-state');
+      if (hasLive) return; // SSE owns the panel from here on
       if (!events || events.length === 0) {
         pulseList.innerHTML = '<div class="empty-state">No live events.</div>';
         return;
@@ -2047,32 +2055,36 @@
       }
     }
 
-    async function streamChat(message) {
+    async function streamChat(message, imageData) {
+      const body = { message };
+      if (imageData) body.imageData = imageData;
       const res = await splendorFetch('/api/enhanced/chat/stream', {
         method: 'POST',
-        body: JSON.stringify({ message }),
+        body: JSON.stringify(body),
       });
       return res;
     }
 
-    async function sendMessage(text) {
+    async function sendMessage(text, options = {}) {
       if (!text || !text.trim()) return;
+      const imageData = options && options.imageData ? options.imageData : null;
       stopAudio();
-      responseBubble.textContent = 'Thinking…';
+      responseBubble.textContent = imageData ? 'Looking…' : 'Thinking…';
       // Enter the streaming state immediately; tickStreaming() resets
       // a 2s heartbeat each time a real token arrives.
       setState('streaming');
       try {
-        const streamRes = await streamChat(text);
+        const streamRes = await streamChat(text, imageData);
         if (streamRes.status === 503 || !streamRes.ok || !streamRes.body) {
           // Stream endpoint unavailable; fall back to single-shot.
           let res = await postChat('/api/enhanced/chat', {
             message: text,
+            imageData,
             include_memory: true,
             include_consciousness: true,
           });
           if (res.status === 503) {
-            res = await postChat('/api/chat', { message: text });
+            res = await postChat('/api/chat', { message: text, imageData });
           }
           if (!res.ok) throw new Error('chat ' + res.status);
           const data = await res.json();
@@ -2301,11 +2313,18 @@
       canvas.height = cameraVideo.videoHeight;
       canvas.getContext('2d').drawImage(cameraVideo, 0, 0);
       closeCamera();
-      // The enhanced-chat endpoint is text-only, so send a JSON
-      // message that tells Splendor a frame was captured. (When
-      // vision input is wired server-side we can pass the data URL
-      // along here.)
-      sendMessage('[Camera frame captured — ' + canvas.width + 'x' + canvas.height + ']');
+      // v15.18.3 — actually send the bytes to Claude vision.
+      // Anthropic expects base64 without the "data:image/jpeg;base64,"
+      // prefix, so strip it here. If the user already typed a question,
+      // use that as the prompt; otherwise default to "What do you see?".
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      const base64 = dataUrl.split(',')[1] || '';
+      let promptText = (input.value && input.value.trim()) || 'What do you see?';
+      if (input.value && input.value.trim()) {
+        input.value = '';
+        updateSendDisabled();
+      }
+      sendMessage(promptText, { imageData: base64 });
     }
 
     cameraButton.addEventListener('click', openCamera);
