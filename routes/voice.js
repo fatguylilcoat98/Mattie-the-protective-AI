@@ -44,7 +44,20 @@ The OpenAI voices (nova, alloy, shimmer, onyx) are high-quality and match your i
 Reply with ONLY the voice id followed by a single short sentence explaining your choice.
 Format: "shimmer_creative — <one short sentence>"`;
 
+// Optional deterministic override from the Render environment.
+// TTS_VOICE accepts either a voice id (e.g. "nova_conscious") or an
+// OpenAI voice name (e.g. "nova"). When set, it wins over the stored
+// Supabase value so the owner can force the voice without touching data.
+function envVoiceOverride() {
+  const env = (process.env.TTS_VOICE || '').trim();
+  if (!env) return null;
+  const match = VOICE_OPTIONS.find(v => v.id === env || v.openai_voice === env);
+  return match ? match.id : null;
+}
+
 async function readChosenVoice() {
+  const override = envVoiceOverride();
+  if (override) return override;
   try {
     const { data, error } = await supabase
       .from('splendor_config')
@@ -52,11 +65,11 @@ async function readChosenVoice() {
       .eq('config_key', 'chosen_voice')
       .maybeSingle();
 
-    if (error || !data) return 'shimmer_creative';
+    if (error || !data) return 'nova_conscious';
     return data.config_value;
   } catch (err) {
     console.error('readChosenVoice error:', err.message);
-    return 'shimmer_creative';
+    return 'nova_conscious';
   }
 }
 
