@@ -30,6 +30,20 @@ function claspionMiddleware(options = {}) {
       return next();
     }
 
+    // Memory READ whitelist: GET requests to memory endpoints (e.g.
+    // /memories/recent, /api/memory*, /api/oracle/memories/*) are safe
+    // retrieval operations, not authority mutations. They must never be
+    // blocked by the instruction-hierarchy / authority-mutation screen.
+    // Memory WRITE/DELETE/UPDATE are NOT exempted and remain fully
+    // governed (including the hierarchy violation check). The global
+    // hierarchy check is otherwise untouched.
+    if (isSafeMemoryRead(req)) {
+      if (logAll) {
+        console.log(`[CLASPION-MIDDLEWARE] ALLOW ${req.method} ${req.path} - memory read whitelist (safe retrieval)`);
+      }
+      return next();
+    }
+
     const startTime = Date.now();
     const correlationId = require('crypto').randomUUID();
 
@@ -120,6 +134,26 @@ function buildContextFromRequest(req, correlationId) {
     query: req.query,
     timestamp: new Date().toISOString()
   };
+}
+
+/**
+ * Identifies safe memory READ operations that must never be blocked by
+ * the CLASPION authority-mutation / instruction-hierarchy screen.
+ *
+ * Scope is deliberately narrow:
+ *   - Only the GET method (pure retrieval).
+ *   - Only paths touching memory endpoints, e.g.:
+ *       /memories/recent, /api/memory, /api/memory/stats,
+ *       /api/oracle/memories/recent, /api/memory/...
+ *
+ * Memory WRITE (POST/PUT) and DELETE are intentionally NOT exempt and
+ * stay fully governed, including the hierarchy violation check. The
+ * global hierarchy check is not disabled anywhere.
+ * @private
+ */
+function isSafeMemoryRead(req) {
+  if (req.method !== 'GET') return false;
+  return /\/memor(?:y|ies)\b/i.test(req.path);
 }
 
 /**
