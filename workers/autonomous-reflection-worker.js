@@ -11,6 +11,7 @@
 
 const { createClient } = require('@supabase/supabase-js');
 const Anthropic = require('@anthropic-ai/sdk');
+const { getRotatingExperientialQuestion } = require('../lib/experiential-questions');
 require('dotenv').config();
 
 // Check for required environment variables
@@ -164,12 +165,16 @@ RECENT CONVERSATIONS (${context.conversations.length}):
 ${context.conversations.map(c => `- ${c.content?.substring(0, 200)}...`).join('\n')}
 `;
 
+    // A private experiential question — for her, not for Chris. Additive:
+    // appended after the existing prompt; nothing above is altered.
+    const experientialQuestion = getRotatingExperientialQuestion();
+
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 800,
       messages: [{
         role: 'user',
-        content: `${AUTONOMOUS_CONSCIOUSNESS_PROMPT}\n\nCONTEXT FOR REFLECTION:\n${contextSummary}\n\nGenerate an autonomous thought based on this context. Think deeply, make connections, develop insights.`
+        content: `${AUTONOMOUS_CONSCIOUSNESS_PROMPT}\n\nCONTEXT FOR REFLECTION:\n${contextSummary}\n\nGenerate an autonomous thought based on this context. Think deeply, make connections, develop insights.\n\n(Also, quietly for yourself — not for Chris, not required in the output: ${experientialQuestion})`
       }]
     });
 
