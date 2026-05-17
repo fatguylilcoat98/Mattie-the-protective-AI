@@ -313,6 +313,7 @@ function logSystemStatus() {
   console.log(`   🔹 Perplexity: ${process.env.PERPLEXITY_API_KEY ? '✅ Connected' : '❌ Missing'}`);
   console.log(`   🔹 Groq (Auditor): ${process.env.GROQ_API_KEY ? '✅ Connected' : '❌ Missing'}`);
   console.log(`   🔹 Supabase: ${process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY ? '✅ Connected' : '❌ Missing'}`);
+  console.log(`   🔹 Supabase Service Key: ${process.env.SUPABASE_SERVICE_KEY ? '✅ Set (RLS bypass — journal/brain writes OK)' : '❌ MISSING'}`);
   console.log(`   🔹 Pinecone: ${process.env.PINECONE_API_KEY ? '✅ Connected' : '❌ Missing'}`);
   console.log(`   🔹 Tavily (Search): ${process.env.TAVILY_API_KEY ? '✅ Connected' : '❌ Missing'}`);
 
@@ -332,6 +333,18 @@ function logSystemStatus() {
   console.log(`   🛡️ Good Neighbor Guard: ✅ Active (${governanceState.core_rules_count} Core Rules v${governanceState.rules_version})`);
   console.log(`   🛡️ Enforcement Layers: ${governanceState.enforcement_layers.length} (${governanceState.enforcement_layers.join(', ')})`);
   console.log(`   🛡️ Quarantine Mode: ${governanceState.quarantine_mode ? '🚨 ACTIVE' : '✅ Normal'}`);
+
+  if (process.env.SUPABASE_URL && !process.env.SUPABASE_SERVICE_KEY) {
+    console.warn('\n' + '⚠️ '.repeat(20));
+    console.warn('⚠️  SUPABASE_SERVICE_KEY IS NOT SET');
+    console.warn('⚠️  RLS is enabled on splendor_journal, interpretations,');
+    console.warn('⚠️  emotional_patterns, and premise_checks. Without the');
+    console.warn('⚠️  service key, the brain falls back to the anon key and');
+    console.warn('⚠️  those tables are BLOCKED — journal, drift, and');
+    console.warn('⚠️  interpretation writes will silently fail to persist.');
+    console.warn('⚠️  Fix: set SUPABASE_SERVICE_KEY in the environment.');
+    console.warn('⚠️ '.repeat(20) + '\n');
+  }
 
   console.log('\n🚀 SERVER STATUS:');
   console.log(`   📍 Port: ${PORT}`);
