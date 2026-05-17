@@ -12,17 +12,31 @@ const path = require('path');
 const fs = require('fs');
 require('dotenv').config();
 
-// Cached oracle interface HTML with Supabase config injected at startup
+// Cached HTML with Supabase config injected at startup
 let cachedOracleHtml = null;
+let cachedConscienceHtml = null;
 
-function loadOracleHtml() {
-  const raw = fs.readFileSync(
-    path.join(__dirname, 'public/oracle-interface.html'),
-    'utf8'
-  );
-  cachedOracleHtml = raw
+function injectSupabaseConfig(raw) {
+  return raw
     .replace(/__SUPABASE_URL__/g, process.env.SUPABASE_URL || '')
     .replace(/__SUPABASE_ANON_KEY__/g, process.env.SUPABASE_ANON_KEY || '');
+}
+
+function loadOracleHtml() {
+  cachedOracleHtml = injectSupabaseConfig(
+    fs.readFileSync(path.join(__dirname, 'public/oracle-interface.html'), 'utf8')
+  );
+
+  // Visible Conscience Engine — sandbox surface, served at /conscience.
+  // Same config-injection as the oracle interface so the persisted owner
+  // session is shared on-device.
+  try {
+    cachedConscienceHtml = injectSupabaseConfig(
+      fs.readFileSync(path.join(__dirname, 'public/visible-conscience-engine.html'), 'utf8')
+    );
+  } catch (e) {
+    console.warn('[SPLENDOR] visible-conscience-engine.html not found; /conscience disabled');
+  }
 
   // Warn at startup if env vars are missing — fail loudly
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
@@ -258,6 +272,16 @@ app.post('/api/cache/clear', (req, res) => {
       memory_cache: 'Client should clear conversation memory'
     }
   });
+});
+
+// Visible Conscience Engine — sandbox surface. Explicit route so it is
+// NOT swallowed by the oracle catch-all below.
+app.get('/conscience', (req, res) => {
+  if (!cachedConscienceHtml) {
+    return res.status(404).send('Visible Conscience Engine not available.');
+  }
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(cachedConscienceHtml);
 });
 
 // Oracle Interface is the ONLY interface - serves everything
