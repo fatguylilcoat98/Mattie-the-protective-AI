@@ -348,6 +348,26 @@
       });
     }
 
+    async function tryChat(url, body, ms) {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), ms);
+      try {
+        const res = await authedFetch(url, {
+          method: 'POST',
+          body: JSON.stringify(body),
+          signal: ctrl.signal
+        });
+        clearTimeout(timer);
+        if (!res || !res.ok) return null;
+        const data = await res.json().catch(() => ({}));
+        const reply = (data.response || data.message || '').trim();
+        return reply || null;
+      } catch (_) {
+        clearTimeout(timer);
+        return null;
+      }
+    }
+
     async function postUserMessage({ text, imageData, imageDataUrl }) {
       if (imageDataUrl) addImageBubble(imageDataUrl, 'me', text);
       else addBubble(text, 'me');
@@ -356,22 +376,27 @@
         imageData ? 'Mattie is looking at your picture…' : 'Mattie is thinking…',
         'mattie', 'thinking'
       );
+      let reply = null;
       try {
-        const body = { message: text, include_memory: true, include_consciousness: true };
-        if (imageData) body.imageData = imageData;
-        const res = await authedFetch('/api/enhanced/chat', {
-          method: 'POST',
-          body: JSON.stringify(body)
-        });
-        const data = await res.json().catch(() => ({}));
-        const reply = data.response || data.message || "I'm sorry, I had trouble responding. Please try again.";
-        thinking.classList.remove('thinking');
-        thinking.textContent = reply;
-        messagesEl.scrollTop = messagesEl.scrollHeight;
-      } catch (err) {
-        thinking.classList.remove('thinking');
-        thinking.textContent = "I'm sorry, something went wrong. Please try again in a moment.";
+        if (imageData) {
+          // Vision needs the enhanced endpoint; give it longer, no basic fallback.
+          reply = await tryChat('/api/enhanced/chat',
+            { message: text, imageData, include_memory: true, include_consciousness: true },
+            60000);
+        } else {
+          reply = await tryChat('/api/enhanced/chat',
+            { message: text, include_memory: true, include_consciousness: true },
+            40000);
+          if (!reply) {
+            // Heavy memory path stalled — fall back to the lighter chat.
+            reply = await tryChat('/api/chat', { message: text }, 30000);
+          }
+        }
       } finally {
+        thinking.classList.remove('thinking');
+        thinking.textContent = reply ||
+          "I'm sorry, I'm having a little trouble answering right now. Please try again in a moment.";
+        messagesEl.scrollTop = messagesEl.scrollHeight;
         sendBtn.disabled = false; photoBtn.disabled = false;
         inputEl.focus();
       }
