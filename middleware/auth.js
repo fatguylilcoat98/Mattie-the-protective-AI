@@ -75,20 +75,47 @@ async function requireAuth(req, res, next) {
   }
 }
 
+// Resolved owner email cache. Env var wins; otherwise the value is read
+// once from the splendor_config table so deployment needs no extra secret.
+let cachedOwnerEmail = process.env.SPLENDOR_OWNER_EMAIL || null;
+
+async function resolveOwnerEmail() {
+  if (cachedOwnerEmail) return cachedOwnerEmail;
+
+  const { data, error } = await supabase
+    .from('splendor_config')
+    .select('config_value')
+    .eq('config_key', 'owner_email')
+    .single();
+
+  if (!error && data && data.config_value) {
+    cachedOwnerEmail = data.config_value;
+  }
+  return cachedOwnerEmail;
+}
+
 /**
  * Owner-only access (requires requireAuth to run first)
  */
-function requireOwner(req, res, next) {
-  const OWNER_EMAIL = process.env.SPLENDOR_OWNER_EMAIL;
+async function requireOwner(req, res, next) {
+  let ownerEmail;
+  try {
+    ownerEmail = await resolveOwnerEmail();
+  } catch (err) {
+    return res.status(500).json({
+      error: 'Server configuration error',
+      message: 'Owner verification failed'
+    });
+  }
 
-  if (!OWNER_EMAIL) {
+  if (!ownerEmail) {
     return res.status(500).json({
       error: 'Server configuration error',
       message: 'Owner email not configured'
     });
   }
 
-  if (!req.user || req.user.email !== OWNER_EMAIL) {
+  if (!req.user || req.user.email !== ownerEmail) {
     return res.status(403).json({
       error: 'Access denied',
       message: 'This system is restricted to the owner only'
