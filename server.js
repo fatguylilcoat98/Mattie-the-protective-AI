@@ -150,6 +150,7 @@ app.use('/api/continuity', require('./routes/master-continuity'));
 app.use('/api/governance', require('./routes/governance'));
 app.use('/api/activity', require('./routes/activity'));
 app.use('/api/converse', require('./routes/converse'));
+app.use('/api/companion', require('./routes/companion'));
 app.use('/api/proactive', require('./routes/proactive'));
 app.use('/api/email', require('./routes/email'));
 app.use('/api/interpretations', require('./routes/interpretations'));

@@ -379,16 +379,13 @@
       let reply = null;
       try {
         if (imageData) {
-          // Vision needs the enhanced endpoint; give it longer, no basic fallback.
-          reply = await tryChat('/api/enhanced/chat',
-            { message: text, imageData, include_memory: true, include_consciousness: true },
-            60000);
+          reply = await tryChat('/api/companion/chat',
+            { message: text, imageData }, 60000);
         } else {
-          reply = await tryChat('/api/enhanced/chat',
-            { message: text, include_memory: true, include_consciousness: true },
-            40000);
+          reply = await tryChat('/api/companion/chat',
+            { message: text }, 40000);
           if (!reply) {
-            // Heavy memory path stalled — fall back to the lighter chat.
+            // Unified path stalled — fall back to the lighter legacy chat.
             reply = await tryChat('/api/chat', { message: text }, 30000);
           }
         }
