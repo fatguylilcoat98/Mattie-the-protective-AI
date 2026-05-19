@@ -115,9 +115,36 @@
     .send-btn:hover:not(:disabled) { background: #275e49; }
     .send-btn:disabled { opacity: .6; cursor: not-allowed; }
 
+    /* ---------- Voice conversation ---------- */
+    .voicebar {
+      background: #ece6da; padding: 0 16px 14px;
+      display: flex; flex-direction: column; gap: 10px; flex-shrink: 0;
+    }
+    .voice-transcript {
+      background: #fff; border: 1px solid #e4ddcd; border-radius: 14px;
+      padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;
+    }
+    .voice-line { font-size: 19px; line-height: 1.45; white-space: pre-wrap; }
+    .voice-line:empty { display: none; }
+    .voice-line.you    { color: #2b2b2b; font-weight: 600; }
+    .voice-line.mattie { color: #2f6f57; }
+    .voice-btn {
+      width: 100%; font-size: 21px; font-weight: 700;
+      padding: 18px; border: none; border-radius: 14px;
+      background: #2f6f57; color: #fff; cursor: pointer;
+    }
+    .voice-btn:hover:not(:disabled) { background: #275e49; }
+    .voice-btn:disabled { opacity: .6; cursor: not-allowed; }
+    .voice-btn.active { background: #b3261e; }
+    .voice-btn.active:hover { background: #93201a; }
+    .voice-status {
+      text-align: center; font-size: 16px; color: #6b6b6b; min-height: 20px;
+    }
+
     @media (max-width: 480px) {
       .brand { font-size: 34px; }
       .bubble { font-size: 20px; max-width: 88%; }
+      .voice-btn { font-size: 20px; }
     }
   </style>
 </head>
@@ -147,6 +174,17 @@
     <button class="signout" id="signoutBtn" type="button">Sign out</button>
   </div>
   <div class="messages" id="messages"></div>
+
+  <div class="voicebar">
+    <div class="voice-transcript" id="voiceTranscript" hidden>
+      <div class="voice-line you" id="voiceYou"></div>
+      <div class="voice-line mattie" id="voiceMattie"></div>
+    </div>
+    <div class="voice-status" id="voiceStatus"></div>
+    <button class="voice-btn" id="voiceBtn" type="button">&#127908;&nbsp; Talk with Mattie</button>
+    <audio id="mattieAudio" autoplay playsinline hidden></audio>
+  </div>
+
   <div class="composer">
     <textarea id="input" rows="1" placeholder="Type a message to Mattie…"></textarea>
     <button class="send-btn" id="sendBtn" type="button">Send</button>
@@ -283,6 +321,205 @@
     inputEl.addEventListener('input', () => {
       inputEl.style.height = 'auto';
       inputEl.style.height = Math.min(inputEl.scrollHeight, 140) + 'px';
+    });
+
+    // ---- Voice conversation (OpenAI Realtime over WebRTC) ----
+    const voiceBtn = document.getElementById('voiceBtn');
+    const voiceTranscript = document.getElementById('voiceTranscript');
+    const voiceYou = document.getElementById('voiceYou');
+    const voiceMattie = document.getElementById('voiceMattie');
+    const voiceStatus = document.getElementById('voiceStatus');
+    const mattieAudio = document.getElementById('mattieAudio');
+
+    let vActive = false, vPc = null, vDc = null, vMic = null;
+    let vAssistantBuf = '';
+    let vSessionId = null;
+
+    function vSetStatus(t) { voiceStatus.textContent = t || ''; }
+
+    async function writeTurn(payload) {
+      const text = (payload.user_text || payload.assistant_text || '').trim();
+      if (!text) return;
+      try {
+        await authedFetch('/api/converse/turn', {
+          method: 'POST',
+          body: JSON.stringify({
+            user_text: payload.user_text || '',
+            assistant_text: payload.assistant_text || '',
+            session_id: vSessionId
+          })
+        });
+      } catch (_) {}
+    }
+
+    function handleVoiceEvent(evt) {
+      if (!evt || !evt.type) return;
+      switch (evt.type) {
+        case 'input_audio_buffer.speech_started':
+          vSetStatus('Listening…'); break;
+        case 'input_audio_buffer.speech_stopped':
+          vSetStatus('Thinking…'); break;
+        case 'conversation.item.input_audio_transcription.completed': {
+          const t = (evt.transcript || '').trim();
+          if (t) { voiceYou.textContent = t; writeTurn({ user_text: t }); }
+          break;
+        }
+        case 'response.audio_transcript.delta':
+        case 'response.output_audio_transcript.delta':
+        case 'response.output_text.delta': {
+          const chunk = evt.delta || (evt.text && evt.text.delta) || '';
+          if (chunk) {
+            vAssistantBuf += chunk;
+            voiceMattie.textContent = vAssistantBuf;
+            vSetStatus('Mattie is speaking…');
+          }
+          break;
+        }
+        case 'response.audio_transcript.done':
+        case 'response.output_audio_transcript.done':
+        case 'response.output_text.done': {
+          const finalText = (evt.transcript || evt.text || vAssistantBuf || '').trim();
+          if (finalText) { voiceMattie.textContent = finalText; writeTurn({ assistant_text: finalText }); }
+          vAssistantBuf = '';
+          break;
+        }
+        case 'response.done':
+          vSetStatus('Listening…'); break;
+        case 'error':
+          vSetStatus('Voice connection error.');
+          endVoice();
+          break;
+      }
+    }
+
+    async function startVoice() {
+      if (vActive) return;
+      voiceBtn.disabled = true;
+      vSetStatus('Connecting…');
+      let tokenData;
+      try {
+        const res = await authedFetch('/api/converse/token', { method: 'POST', body: '{}' });
+        if (!res.ok) {
+          vSetStatus(res.status === 403
+            ? 'Voice conversation is not available on this account.'
+            : 'Voice service is unavailable right now.');
+          voiceBtn.disabled = false;
+          return;
+        }
+        tokenData = await res.json();
+      } catch (_) {
+        vSetStatus('Network problem. Please try again.');
+        voiceBtn.disabled = false;
+        return;
+      }
+
+      vSessionId = (crypto && crypto.randomUUID) ? crypto.randomUUID() : ('cv-' + Date.now());
+
+      try {
+        vMic = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch (_) {
+        vSetStatus('Please allow the microphone, then tap again.');
+        voiceBtn.disabled = false;
+        return;
+      }
+
+      const pc = new RTCPeerConnection();
+      vPc = pc;
+      pc.ontrack = (e) => {
+        if (e && e.streams && e.streams[0]) mattieAudio.srcObject = e.streams[0];
+      };
+      vMic.getTracks().forEach(t => pc.addTrack(t, vMic));
+
+      const dc = pc.createDataChannel('oai-events');
+      vDc = dc;
+      dc.onopen = () => {
+        const instructions = tokenData.instructions ||
+          "You are Mattie, a warm, protective AI companion for Sandy. " +
+          "Speak gently, naturally and concisely — this is a live voice " +
+          "conversation. Short, kind sentences. Never alarm her. " +
+          "Help keep her safe from scams without being condescending.";
+        try {
+          dc.send(JSON.stringify({
+            type: 'session.update',
+            session: {
+              type: 'realtime',
+              instructions,
+              audio: {
+                input: {
+                  transcription: { model: 'gpt-4o-mini-transcribe' },
+                  turn_detection: { type: 'semantic_vad' }
+                },
+                output: { voice: tokenData.voice || 'shimmer' }
+              }
+            }
+          }));
+        } catch (_) {}
+      };
+      dc.onmessage = (e) => { try { handleVoiceEvent(JSON.parse(e.data)); } catch (_) {} };
+
+      try {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        const sdpRes = await fetch(
+          'https://api.openai.com/v1/realtime/calls?model=' +
+            encodeURIComponent(tokenData.model || 'gpt-realtime'),
+          {
+            method: 'POST',
+            headers: {
+              Authorization: 'Bearer ' + tokenData.token,
+              'Content-Type': 'application/sdp'
+            },
+            body: offer.sdp
+          }
+        );
+        if (!sdpRes.ok) { vSetStatus('Could not start the voice call.'); await endVoice(); return; }
+        const answerSdp = await sdpRes.text();
+        await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
+      } catch (_) {
+        vSetStatus('Could not start the voice call.');
+        await endVoice();
+        return;
+      }
+
+      vActive = true;
+      voiceBtn.disabled = false;
+      voiceBtn.classList.add('active');
+      voiceBtn.innerHTML = '&#9209;&nbsp; End conversation';
+      voiceTranscript.hidden = false;
+      voiceYou.textContent = '';
+      voiceMattie.textContent = '';
+      vSetStatus('Listening… just start talking.');
+    }
+
+    async function endVoice() {
+      if (!vActive && !vPc && !vMic) { voiceBtn.disabled = false; return; }
+      vActive = false;
+      const tail = vAssistantBuf.trim();
+      if (tail) { await writeTurn({ assistant_text: tail }).catch(() => {}); }
+      vAssistantBuf = '';
+      try { if (vDc) vDc.close(); } catch (_) {}
+      vDc = null;
+      try { if (vPc) vPc.close(); } catch (_) {}
+      vPc = null;
+      try { if (vMic) vMic.getTracks().forEach(t => t.stop()); } catch (_) {}
+      vMic = null;
+      try { mattieAudio.srcObject = null; } catch (_) {}
+      vSessionId = null;
+      voiceTranscript.hidden = true;
+      voiceYou.textContent = '';
+      voiceMattie.textContent = '';
+      voiceBtn.classList.remove('active');
+      voiceBtn.innerHTML = '&#127908;&nbsp; Talk with Mattie';
+      voiceBtn.disabled = false;
+      vSetStatus('');
+    }
+
+    voiceBtn.addEventListener('click', () => { vActive ? endVoice() : startVoice(); });
+    window.addEventListener('beforeunload', () => {
+      if (vActive) {
+        try { vPc && vPc.close(); } catch (_) {}
+        try { vMic && vMic.getTracks().forEach(t => t.stop()); } catch (_) {}
+      }
     });
 
     // ---- Session restore ----
