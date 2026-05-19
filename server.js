@@ -12,6 +12,16 @@ const path = require('path');
 const fs = require('fs');
 require('dotenv').config();
 
+// A stray space or newline pasted into a host env var (e.g. Render)
+// makes the AI SDKs build an illegal Authorization header — every
+// Anthropic/OpenAI call then throws "is not a legal HTTP header value".
+// Trim the secrets once, before any client is constructed.
+for (const k of ['ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'GROQ_API_KEY', 'PINECONE_API_KEY', 'TAVILY_API_KEY', 'SUPABASE_SERVICE_KEY', 'SUPABASE_ANON_KEY']) {
+  if (typeof process.env[k] === 'string') {
+    process.env[k] = process.env[k].trim().replace(/[\r\n]+/g, '');
+  }
+}
+
 // Cached HTML with Supabase config injected at startup
 let cachedOracleHtml = null;
 let cachedConscienceHtml = null;

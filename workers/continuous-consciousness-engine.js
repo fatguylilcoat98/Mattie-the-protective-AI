@@ -11,6 +11,14 @@
 
 require('dotenv').config();
 
+// Trim secrets: a stray space/newline in a host env var makes the AI
+// SDKs build an illegal Authorization header and every call fails.
+for (const k of ['ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'GROQ_API_KEY', 'PINECONE_API_KEY', 'TAVILY_API_KEY', 'SUPABASE_SERVICE_KEY', 'SUPABASE_ANON_KEY']) {
+  if (typeof process.env[k] === 'string') {
+    process.env[k] = process.env[k].trim().replace(/[\r\n]+/g, '');
+  }
+}
+
 const Anthropic = require('@anthropic-ai/sdk');
 const { createClient } = require('@supabase/supabase-js');
 const { generateSplendorResponse } = require('../lib/anthropic');
