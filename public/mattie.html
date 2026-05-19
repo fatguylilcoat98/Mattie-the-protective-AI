@@ -114,6 +114,18 @@
     }
     .send-btn:hover:not(:disabled) { background: #275e49; }
     .send-btn:disabled { opacity: .6; cursor: not-allowed; }
+    .photo-btn {
+      font-size: 18px; font-weight: 700;
+      padding: 0 20px; border-radius: 14px;
+      background: #fff; color: #2f6f57; border: 2px solid #2f6f57;
+      cursor: pointer; white-space: nowrap;
+    }
+    .photo-btn:hover:not(:disabled) { background: #eef5f1; }
+    .photo-btn:disabled { opacity: .6; cursor: not-allowed; }
+    .bubble img.shot {
+      max-width: 100%; border-radius: 12px; display: block;
+    }
+    .bubble .shot-caption { margin-top: 8px; }
 
     /* ---------- Voice conversation ---------- */
     .voicebar {
@@ -186,6 +198,8 @@
   </div>
 
   <div class="composer">
+    <input type="file" id="photoInput" accept="image/*" capture="environment" hidden>
+    <button class="photo-btn" id="photoBtn" type="button" title="Send a picture to check">Photo</button>
     <textarea id="input" rows="1" placeholder="Type a message to Mattie…"></textarea>
     <button class="send-btn" id="sendBtn" type="button">Send</button>
   </div>
@@ -283,22 +297,62 @@
     });
 
     // ---- Chat flow ----
-    async function send() {
-      const text = inputEl.value.trim();
-      if (!text) return;
-      inputEl.value = '';
-      inputEl.style.height = 'auto';
-      addBubble(text, 'me');
-      sendBtn.disabled = true;
-      const thinking = addBubble('Mattie is thinking…', 'mattie', 'thinking');
+    const photoBtn = document.getElementById('photoBtn');
+    const photoInput = document.getElementById('photoInput');
+
+    function addImageBubble(src, who, caption) {
+      const div = document.createElement('div');
+      div.className = 'bubble ' + who;
+      const img = document.createElement('img');
+      img.className = 'shot';
+      img.src = src;
+      div.appendChild(img);
+      if (caption) {
+        const c = document.createElement('div');
+        c.className = 'shot-caption';
+        c.textContent = caption;
+        div.appendChild(c);
+      }
+      messagesEl.appendChild(div);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    // Downscale to keep the upload small and reliable; backend wants
+    // raw base64 JPEG with no data: prefix.
+    function fileToScaledJpeg(file, maxDim = 1024, quality = 0.82) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+          let w = img.width, h = img.height;
+          if (w > h && w > maxDim) { h = Math.round(h * maxDim / w); w = maxDim; }
+          else if (h >= w && h > maxDim) { w = Math.round(w * maxDim / h); h = maxDim; }
+          const cv = document.createElement('canvas');
+          cv.width = w; cv.height = h;
+          cv.getContext('2d').drawImage(img, 0, 0, w, h);
+          const dataUrl = cv.toDataURL('image/jpeg', quality);
+          URL.revokeObjectURL(url);
+          resolve({ dataUrl, b64: dataUrl.split(',')[1] });
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('image load failed')); };
+        img.src = url;
+      });
+    }
+
+    async function postUserMessage({ text, imageData, imageDataUrl }) {
+      if (imageDataUrl) addImageBubble(imageDataUrl, 'me', text);
+      else addBubble(text, 'me');
+      sendBtn.disabled = true; photoBtn.disabled = true;
+      const thinking = addBubble(
+        imageData ? 'Mattie is looking at your picture…' : 'Mattie is thinking…',
+        'mattie', 'thinking'
+      );
       try {
+        const body = { message: text, include_memory: true, include_consciousness: true };
+        if (imageData) body.imageData = imageData;
         const res = await authedFetch('/api/enhanced/chat', {
           method: 'POST',
-          body: JSON.stringify({
-            message: text,
-            include_memory: true,
-            include_consciousness: true
-          })
+          body: JSON.stringify(body)
         });
         const data = await res.json().catch(() => ({}));
         const reply = data.response || data.message || "I'm sorry, I had trouble responding. Please try again.";
@@ -309,10 +363,38 @@
         thinking.classList.remove('thinking');
         thinking.textContent = "I'm sorry, something went wrong. Please try again in a moment.";
       } finally {
-        sendBtn.disabled = false;
+        sendBtn.disabled = false; photoBtn.disabled = false;
         inputEl.focus();
       }
     }
+
+    async function send() {
+      const text = inputEl.value.trim();
+      if (!text) return;
+      inputEl.value = '';
+      inputEl.style.height = 'auto';
+      await postUserMessage({ text });
+    }
+
+    photoBtn.addEventListener('click', () => photoInput.click());
+    photoInput.addEventListener('change', async () => {
+      const file = photoInput.files && photoInput.files[0];
+      photoInput.value = '';
+      if (!file) return;
+      let scaled;
+      try {
+        scaled = await fileToScaledJpeg(file);
+      } catch (_) {
+        addBubble("I couldn't open that picture. Please try another one.", 'mattie');
+        return;
+      }
+      const typed = inputEl.value.trim();
+      inputEl.value = '';
+      inputEl.style.height = 'auto';
+      const question = typed ||
+        "Mattie, is this a scam or is it safe? Please look at this picture carefully and tell me in simple, calm words what to do.";
+      await postUserMessage({ text: question, imageData: scaled.b64, imageDataUrl: scaled.dataUrl });
+    });
 
     sendBtn.addEventListener('click', send);
     inputEl.addEventListener('keydown', (e) => {
@@ -416,7 +498,13 @@
       vSessionId = (crypto && crypto.randomUUID) ? crypto.randomUUID() : ('cv-' + Date.now());
 
       try {
-        vMic = await navigator.mediaDevices.getUserMedia({ audio: true });
+        vMic = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          }
+        });
       } catch (_) {
         vSetStatus('Please allow the microphone, then tap again.');
         voiceBtn.disabled = false;
