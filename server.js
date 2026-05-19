@@ -24,7 +24,7 @@ function injectSupabaseConfig(raw) {
 
 function loadOracleHtml() {
   cachedOracleHtml = injectSupabaseConfig(
-    fs.readFileSync(path.join(__dirname, 'public/oracle-interface.html'), 'utf8')
+    fs.readFileSync(path.join(__dirname, 'public/mattie.html'), 'utf8')
   );
 
   // Visible Conscience Engine — sandbox surface, served at /conscience.
@@ -111,7 +111,9 @@ app.use(cors({
 }));
 
 app.use(express.json({ limit: '10mb' }));
-app.use(express.static('public'));
+// index:false so the stray React shell (public/index.html) is not
+// auto-served at "/"; the catch-all serves the Mattie interface instead.
+app.use(express.static('public', { index: false }));
 
 // CLASPION Enhanced Governance Middleware (Rule 19 & 23: Always on, watches every action)
 // Per Good Neighbor Guard Core Rules v1.1 - this enforces all 23 foundational rules
