@@ -1,6 +1,6 @@
 /**
- * ENHANCED CHAT ROUTE WITH COMPLETE MEMORY + TAVILY INTEGRATION
- * Replaces existing chat route with full memory system
+ * MATTIE ENHANCED CHAT ROUTE WITH SCAM PROTECTION + DAILY COMPANION
+ * Protective AI companion with full memory system and scam detection
  */
 
 const express = require('express');
@@ -9,6 +9,13 @@ const { requireAuth, requireOwner } = require('../middleware/auth.js');
 const emailModule = require('./email');
 const { getMemoriesForUser } = require('../lib/supabase');
 const { generateArt, isArtRequest } = require('../lib/art-generator');
+const { analyzeForScams, getSandyGuidance, WARNING_LEVELS } = require('../lib/scam-protection');
+const {
+  generateMorningGreeting,
+  generatePrayerListPrompt,
+  generateGentleCheckIn,
+  getTimeBasedGreeting
+} = require('../lib/daily-companion');
 const router = express.Router();
 
 // Streams the placeholder token, runs the unified art generator, then
@@ -175,13 +182,40 @@ router.post('/chat', requireAuth, requireOwner, async (req, res) => {
       }
     }
 
-    // Process conversation with enhanced memory system
+    // MATTIE'S SCAM PROTECTION - Analyze message for scam patterns
+    const scamAnalysis = analyzeForScams(message);
+
+    // If scam detected, provide immediate protection guidance
+    if (scamAnalysis.isScam && (scamAnalysis.warningLevel === WARNING_LEVELS.HIGH || scamAnalysis.warningLevel === WARNING_LEVELS.CRITICAL)) {
+      const protectionGuidance = getSandyGuidance(scamAnalysis.warningLevel, scamAnalysis.indicators);
+
+      return res.json({
+        success: true,
+        response: `🛡️ Sandy, I need to stop right here and help protect you.\n\n${scamAnalysis.analysis}\n\n${protectionGuidance}`,
+        memory_stats: { factsUsed: 0, interpretationsUsed: 0, bindingRulesActive: 1, webSearchPerformed: false, webResultsCount: 0, scamDetected: true, warningLevel: scamAnalysis.warningLevel },
+        session_id: sessionId,
+        workspace_id: workspaceId,
+        context_summary: { facts_used: 0, interpretations_used: 0, binding_rules_active: 1, web_search_performed: false, uncertainty_warnings: 0, scam_protection_activated: true },
+        scam_protection: {
+          activated: true,
+          warning_level: scamAnalysis.warningLevel,
+          indicators: scamAnalysis.indicators
+        }
+      });
+    }
+
+    // Process conversation with enhanced memory system (include scam analysis in context)
+    const conversationOptions = { imageData };
+    if (scamAnalysis.warningLevel !== WARNING_LEVELS.LOW) {
+      conversationOptions.scamAnalysis = scamAnalysis;
+    }
+
     const result = await memorySystem.processConversation(
       userId,
       message,
       sessionId,
       workspaceId,
-      { imageData }
+      conversationOptions
     );
 
     res.json({

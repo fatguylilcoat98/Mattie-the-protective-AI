@@ -14,10 +14,10 @@ const Anthropic = require('@anthropic-ai/sdk');
 require('dotenv').config();
 
 // Try to import Tavily safely
-let TavilySearchAPI = null;
+let TavilyClient = null;
 try {
   const tavilyModule = require('tavily');
-  TavilySearchAPI = tavilyModule.TavilySearchAPI || tavilyModule.default || tavilyModule;
+  TavilyClient = tavilyModule.TavilyClient;
 } catch (error) {
   console.log('[Autonomous Inquiry] Tavily module not available, web search disabled');
 }
@@ -36,9 +36,9 @@ const anthropic = hasRequiredEnvVars ? new Anthropic({ apiKey: process.env.ANTHR
 
 // Initialize Tavily client safely
 let tavily = null;
-if (TavilySearchAPI && process.env.TAVILY_API_KEY) {
+if (TavilyClient && process.env.TAVILY_API_KEY) {
   try {
-    tavily = new TavilySearchAPI({ apiKey: process.env.TAVILY_API_KEY });
+    tavily = new TavilyClient({ apiKey: process.env.TAVILY_API_KEY });
   } catch (error) {
     console.log('[Autonomous Inquiry] Failed to initialize Tavily client:', error.message);
   }

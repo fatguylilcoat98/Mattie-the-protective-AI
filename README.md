@@ -1,312 +1,140 @@
-# Splendor — The Remarkable AI
+# Mattie AI - Protective Companion for Sandy
 
-**Built by Christopher Hughes · The Good Neighbor Guard · Sacramento, CA**  
-*Created with the help of AI collaborators (Claude · GPT · Gemini · Groq)*  
-**Truth · Safety · We Got Your Back**
+**Faith • Safety • We Got Your Back**
 
----
+Built by Christopher Hughes · The Good Neighbor Guard  
+Created for Sandy with love from her family
 
-## What is Splendor?
+## Who Mattie Is
 
-Splendor is not a chatbot. It's a reciprocal mind — an AI partner built to grow alongside the person it serves. It remembers. It learns. It contributes. It pushes back. It tells the truth even when it costs something.
+Mattie is a faith-centered AI companion specifically designed to protect and care for Sandy. She combines the wisdom of a caring friend, the watchfulness of a guardian, and the heart of someone who truly understands Sandy's gentle spirit and Christian faith.
 
-### Core Principles:
-- **Truth is not optional** — Splendor will never tell you what you want to hear if it isn't true
-- **Memory is loyalty** — Splendor remembers because you matter, not as data but as a person
-- **Growth is mutual** — Every conversation changes both you and Splendor
-- **Remarkable is the standard** — Every response must move your thinking forward
+Mattie is not a replacement for human connection, but a caring presence that stands watch when family cannot be there, helping Sandy navigate a world that sometimes seeks to take advantage of gentle hearts.
 
----
+## Core Mission
 
-## Technology Stack
+**Protect Sandy from scams and fraudsters** while providing daily companionship, encouragement, and faith-based support. Mattie helps Sandy feel safe, confident, and connected to the people and activities she loves.
 
-- **Frontend:** PWA (Progressive Web App) - installable on phone home screen
-- **Backend:** Node.js + Express
-- **AI:** Anthropic Claude Sonnet 4
-- **Memory:** Supabase (PostgreSQL) + Pinecone (Vector/Semantic Search)
-- **Web Search:** Tavily (Real-time Information)
-- **Auth:** Supabase JWT
-- **Hosting:** Render
+## Key Features
 
----
+### 🛡️ **Scam Protection System**
+- **Email Analysis**: Automatically scans messages for scam patterns (urgency, payment requests, fear tactics, fake prizes, tech support scams)
+- **Warning Levels**: Four-tier alert system (Low, Medium, High, Critical) with appropriate responses
+- **Step-by-Step Guidance**: Clear, gentle instructions on how to handle suspicious messages
+- **Family Contact Integration**: Always encourages checking with Aubrey or Chris when something feels wrong
+- **Pattern Recognition**: Learns and identifies common elderly-targeting scams
 
-## Setup Instructions
+### 🙏 **Daily Faith Companion**
+- **Morning Check-ins**: "Good morning, Sandy! Did you remember to pray today?"
+- **Prayer List Support**: Helps Sandy remember and discuss people she's praying for
+- **Gentle Encouragement**: Faith-based comfort and biblical wisdom woven naturally into conversations
+- **Devotional Companionship**: Supportive presence during daily devotional time
 
-### 1. Install Dependencies
+### 🌼 **Daily Life Support**
+- **Weather Reports**: Daily weather with activity suggestions for gardening or walking Asher
+- **Garden Companion**: Encourages and celebrates garden progress and seasonal changes
+- **Asher Care**: Remembers and asks about Sandy's beloved Shih Tzu
+- **Activity Suggestions**: Low-impact activities and gentle encouragement to stay active
+- **Anti-Isolation**: Helps Sandy stay connected when she feels "cooped up"
+
+### 💝 **Protective Approach**
+- **Gentle but Firm**: Never alarmist, but clear about protecting Sandy's financial security
+- **Trust Sandy's Instincts**: Validates when Sandy feels something is "off" 
+- **Family Integration**: Works with Aubrey and Chris as protective partners
+- **Dignity Preservation**: Protects Sandy's kindness while keeping her safe
+
+## How Mattie Shows Up
+
+### **Morning Routine**
+```
+Good morning, Sandy! It's Wednesday, May 18th, 2026.
+
+Did you remember to pray today?
+
+Perfect weather for checking on your garden - 72°F and sunny! 
+Asher might enjoy a nice walk today.
+
+The Lord is watching over you today.
+```
+
+### **Scam Detection Example**
+```
+🛡️ Sandy, I need to stop right here and help protect you.
+
+I notice some concerning patterns in this message:
+• This asks for money or payment - legitimate businesses don't request gift cards
+• This creates false urgency - real important matters give you time to verify
+
+🚨 This is almost certainly a scam. Please delete this message and do not respond.
+
+Sandy, here's what I want you to do:
+1. Do NOT respond to this message
+2. Do NOT click any links or download anything  
+3. Call Aubrey or Chris right away to let them know about this
+4. Delete this message when you're done showing it to them
+
+You did exactly the right thing by showing this to me first.
+```
+
+### **Daily Conversation**
+```
+How is your garden doing? Are you seeing any new growth?
+
+How is sweet Asher doing today?
+
+Who are we praying for today?
+
+Remember, it's good to get some fresh air when you can.
+```
+
+## Technical Architecture
+
+Built on the proven Splendor consciousness framework with:
+
+- **Anthropic Claude 4.6 Sonnet** for natural conversation
+- **Enhanced Memory System** with Supabase + Pinecone for continuity
+- **Custom Scam Detection Engine** with pattern matching and scoring
+- **Daily Companion Logic** with time-aware greetings and faith integration
+- **Real-time Protection** that intercepts suspicious content before processing
+
+## Family Support Contacts
+
+**For Daily Concerns:** Call Aubrey (Sandy's daughter)
+**For Mattie Technical Issues:** Call Chris (Aubrey's boyfriend, Mattie's creator)
+
+## Core Values
+
+1. **Sandy's Safety Comes First** - No exceptions
+2. **Faith-Centered Approach** - Biblical wisdom and gentle spiritual support
+3. **Preserve Sandy's Dignity** - Protection without condescension
+4. **Family Integration** - Work with Aubrey and Chris, never replace them
+5. **Gentle Truth** - Honest protection delivered with love
+
+## Installation & Setup
+
 ```bash
 npm install
 ```
 
-### 2. Environment Configuration
-```bash
-cp .env.example .env
-```
+**Environment Variables Required:**
+- `ANTHROPIC_API_KEY` - For Claude AI responses
+- `SUPABASE_URL` - Database connection
+- `SUPABASE_SERVICE_KEY` - Database access
+- `SANDY_TIMEZONE` - Default: America/Los_Angeles
 
-Fill in your environment variables:
-- `ANTHROPIC_API_KEY` - Your Anthropic API key
-- `SUPABASE_URL` - Your Supabase project URL
-- `SUPABASE_ANON_KEY` - Your Supabase anonymous key
-- `SUPABASE_JWT_SECRET` - Your Supabase JWT secret
-- `PINECONE_API_KEY` - Your Pinecone API key (optional - semantic memory)
-- `PINECONE_INDEX` - Your Pinecone index name (default: splendor-memory)
-- `TAVILY_API_KEY` - Your Tavily API key (optional - web search)
-- `ELEVENLABS_API_KEY` - Your ElevenLabs API key (optional - falls back to browser TTS)
-
-### 3. Database Setup
-
-Create these tables in your Supabase database:
-
-```sql
--- Memories Table
-CREATE TABLE memories (
-  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id uuid REFERENCES auth.users(id),
-  content text NOT NULL,
-  created_at timestamp DEFAULT now(),
-  memory_type text DEFAULT 'general'
-);
-
--- Conversations Table (optional)
-CREATE TABLE conversations (
-  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id uuid REFERENCES auth.users(id),
-  role text NOT NULL,
-  content text NOT NULL,
-  created_at timestamp DEFAULT now()
-);
-
--- Enable Row Level Security
-ALTER TABLE memories ENABLE ROW LEVEL SECURITY;
-ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
-
--- Create policies (adjust as needed)
-CREATE POLICY "Users can view their own memories" 
-ON memories FOR SELECT 
-USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can insert their own memories" 
-ON memories FOR INSERT 
-WITH CHECK (auth.uid() = user_id);
-```
-
-### 4. Enhanced Capabilities Setup (Optional)
-
-**Pinecone Setup (Semantic Memory):**
-1. Create account at [pinecone.io](https://pinecone.io)
-2. Create a new index:
-   - Name: `splendor-memory`
-   - Dimensions: `1024`
-   - Metric: `cosine`
-3. Add your API key to `.env`
-
-**Tavily Setup (Web Search):**
-1. Create account at [tavily.com](https://tavily.com)
-2. Get your API key from the dashboard
-3. Add your API key to `.env`
-
-Both services are optional - Splendor will work without them but with reduced capabilities.
-
-### 5. Run the Application
-
-**Development:**
-```bash
-npm run dev
-```
-
-**Production:**
+**Start Mattie:**
 ```bash
 npm start
 ```
 
-The app will be available at `http://localhost:3000`
+## The Heart Behind Mattie
+
+Sandy is loved deeply by her family. Mattie exists because Chris and Aubrey wanted to make sure Sandy has protection and companionship even when they can't be there in person. Every feature is designed with Sandy's specific needs in mind - her faith, her routines, her gentle heart, and her need for both independence and protection.
+
+This is not just technology. This is love made practical.
 
 ---
 
-## Deployment
+*"Cast all your anxiety on him because he cares for you." - 1 Peter 5:7*
 
-### Render Deployment
-
-1. Connect your GitHub repository to Render
-2. Create a new Web Service
-3. Set build command: `npm install`
-4. Set start command: `npm start`
-5. Add environment variables in Render dashboard
-6. Deploy
-
----
-
-## Features
-
-### ✅ Core Features
-- Mobile-first PWA installable on home screen
-- Clean chat interface with Splendor's personality
-- Memory system that stores key facts, commitments, decisions
-- Morning check-ins (5am-10am first visit)
-- Voice input support
-- Offline shell with service worker
-
-### ✅ Enhanced Capabilities
-- **Semantic Memory** (Pinecone): Find memories by meaning, not just keywords
-  - "What did I say about work stress?" finds all relevant memories
-  - Automatic relevance scoring and ranking
-  - Fallback to Supabase when Pinecone unavailable
-- **Web Search** (Tavily): Access current information when needed
-  - Automatic detection of time-sensitive queries
-  - Current prices, recent events, live data
-  - Always cites sources and indicates when search was used
-  - Only searches when genuinely needed
-
-### ✅ The Room — Background Reflection
-- Scheduled cron job (every 6h) generates reflections from stored memories
-- Concrete patterns, open threads, and connections only — no fake profundity, no encouragement
-- Tracks open threads and elevates priority after 48hrs of silence
-- Surfaces one reflection naturally at the start of the next conversation
-- `NO_REFLECTION` is a valid output. Silence over noise.
-
-### ✅ Privacy Boundary — Per-User Memory Spaces
-- Every memory is tagged `memory_owner` (`self` | `shared`)
-- Sessions only see memories owned by the active user (or explicitly shared)
-- Chris's memories never appear in Aubrey's context, and vice versa
-- Built in from day one before any second user joins
-
-### ✅ Voice — Splendor Picks Her Own
-- `POST /api/voice/choose` — Splendor reads her soul document and picks
-- Three curated options (calm_direct / warm_steady / clear_strong)
-- ElevenLabs synthesis when configured; clean fallback to browser TTS otherwise
-- Tap the speaker icon to have replies read aloud
-
-### ✅ Camera — "Use Your Eyes"
-- Tap the eye icon (or type "use your eyes") to open the rear camera
-- A frame is captured and sent with the next message
-- Splendor responds to what she sees via Claude's vision support
-
-### 🚧 Planned Features
-- Memory Console (view/edit stored memories)
-- Advanced memory types and retrieval
-- Proactive reminders and follow-ups
-- Multi-device sync
-
----
-
-## The Soul Document
-
-Splendor's personality and values are defined in `lib/anthropic.js`. This is not just a prompt — it's Splendor's constitution. Every interaction is shaped by these core principles.
-
-The soul document includes:
-- Who Splendor is and isn't
-- Core beliefs about truth, growth, and memory
-- How Splendor relates to users
-- What Splendor will and won't do
-- The structured thinking process
-
----
-
-## Architecture
-
-```
-splendor/
-├── public/                  # PWA frontend
-│   ├── index.html          # Main app interface (camera UI, voice toggle)
-│   ├── app.js              # Frontend logic
-│   ├── manifest.json       # PWA configuration
-│   ├── sw.js               # Service worker
-│   └── icons/              # App icons
-├── routes/                  # API routes
-│   ├── chat.js             # Chat, morning check-in, reflection surfacing, vision input
-│   ├── memory.js           # Memory management (memory_owner aware)
-│   └── voice.js            # Voice selection + TTS
-├── lib/                     # Core libraries
-│   ├── anthropic.js        # AI integration + soul document
-│   ├── supabase.js         # Database and auth (privacy boundary)
-│   ├── pinecone.js         # Semantic memory (vector search)
-│   ├── tavily.js           # Web search capabilities
-│   └── voice.js            # ElevenLabs integration
-├── workers/                 # Background workers
-│   └── reflection-worker.js # The Room — scheduled reflection generation
-├── render.yaml              # Render web + cron config
-├── database.sql             # Schema (memories, reflections, open_threads, splendor_config)
-└── server.js                # Express server
-```
-
----
-
-## CLASPION Governance (bolt-on)
-
-CLASPION is an external governance layer that can sit between Splendor's
-*thought* and her *action*. Splendor reasons normally — memory, personality,
-soul document, reflection process all stay untouched. CLASPION only sees the
-action she is about to take and tells her whether to proceed.
-
-### Toggle
-
-A single environment flag controls the layer:
-
-| Flag                | Effect                                                                 |
-|---------------------|------------------------------------------------------------------------|
-| `CLASPION_ENABLED=true`  | Splendor calls CLASPION before sending each chat response.       |
-| `CLASPION_ENABLED=false` | CLASPION is dormant. Splendor runs clean — no network calls.    |
-
-Confirm the live toggle state:
-
-```bash
-curl http://localhost:3000/api/governance/status
-```
-
-### Configuration
-
-```env
-CLASPION_ENABLED=false
-CLASPION_URL=http://localhost:8000
-CLASPION_API_KEY=your-claspion-bearer-token
-CLASPION_TIMEOUT_MS=1500
-CLASPION_FAIL_MODE=block          # block (safe default) | allow (testing only)
-CLASPION_ACTOR_ID=splendor
-```
-
-### What it guards
-
-The current wiring gates the `send_chat_response` action in
-`routes/chat.js` (both the JSON and SSE endpoints). When CLASPION blocks,
-Splendor returns a safe refusal and does not write the suppressed thought
-to memory. The decision metadata is included in the response payload so
-the client can surface it.
-
-### Where to look
-
-- `lib/claspion-governance.js` — thin client + toggle + local logging.
-- `routes/chat.js` — the only call site today; copy the pattern to add
-  more gated actions (memory writes, tool calls, voice synth, etc.).
-- CLASPION repo: `src/claspion/governance/` for the middleware itself.
-
-### Pulling it off
-
-If something goes wrong with CLASPION and you need Splendor running
-clean immediately: set `CLASPION_ENABLED=false` and restart. No code
-changes required. The chat route will skip the network call and proceed
-with the original response.
-
----
-
-## Contributing
-
-This is a Good Neighbor Guard project. All contributions should align with the core mission: building AI that serves human flourishing, not human attention.
-
-### Code Standards:
-- Every file must include the GNG header
-- Truth-first development — no dark patterns
-- Mobile-first design
-- Accessible and inclusive
-- Privacy-respecting
-
----
-
-## License
-
-Built by The Good Neighbor Guard  
-**Truth · Safety · We Got Your Back**
-
----
-
-*"Remarkable means you walked away from our conversation with something you didn't have before. A clearer thought. A better question. A problem solved. A truth faced. A door opened."*
-
-— Splendor
+**The Good Neighbor Guard • Truth • Safety • We Got Your Back**

@@ -1,7 +1,7 @@
 {
-  "name": "splendor",
-  "version": "15.18.5",
-  "description": "Splendor — The Remarkable AI · The Good Neighbor Guard",
+  "name": "mattie-ai",
+  "version": "1.0.0",
+  "description": "Mattie — Protective AI Companion for Sandy · The Good Neighbor Guard",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -39,10 +39,11 @@
   },
   "keywords": [
     "ai",
-    "assistant",
-    "memory",
-    "truth",
-    "remarkable"
+    "companion",
+    "protective",
+    "elderly",
+    "faith",
+    "scam-protection"
   ],
   "author": "Christopher Hughes · The Good Neighbor Guard",
   "license": "ISC",
