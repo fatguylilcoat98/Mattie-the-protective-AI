@@ -1,5 +1,5 @@
 /*
-  Splendor — The Remarkable AI · The Good Neighbor Guard
+  Mattie — Protective AI Companion for Sandy · The Good Neighbor Guard
   Built by Christopher Hughes · Sacramento, CA
   Created with the help of AI collaborators (Claude · GPT · Gemini · Groq)
   Truth · Safety · We Got Your Back
@@ -873,7 +873,7 @@ async function handleStreamingResponseWithTTS(message, imageData = null, thinkin
   }
 }
 
-async function fetchSplendorResponse(message, imageData = null) {
+async function fetchMattieResponse(message, imageData = null) {
   try {
     // Get current reality context
     const realityContextData = typeof getRealityContext === 'function' ? getRealityContext() : null;
@@ -1000,7 +1000,7 @@ async function sendMessage() {
         response = await handleStreamingResponse(message, imageData, thinkingEl);
       }
     } else {
-      response = await fetchSplendorResponse(message, imageData);
+      response = await fetchMattieResponse(message, imageData);
     }
 
     // Pre-load the audio for the response
@@ -1691,7 +1691,7 @@ function setupLoginHandlers() {
 
     if (result.success) {
       loginStatus.className = 'login-status success';
-      loginStatus.textContent = 'Account created! Welcome to Splendor...';
+      loginStatus.textContent = 'Account created! Welcome, I'm Mattie, your AI companion...';
 
       setTimeout(() => {
         hideLoginModal();
