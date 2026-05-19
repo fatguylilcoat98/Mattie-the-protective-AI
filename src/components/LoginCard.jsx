@@ -1,5 +1,5 @@
 /*
-  Splendor — The Remarkable AI · The Good Neighbor Guard
+  Mattie — Protective AI Companion for Sandy · The Good Neighbor Guard
   Built by Christopher Hughes · Sacramento, CA
   Created with the help of AI collaborators (Claude · GPT · Gemini · Groq)
   Truth · Safety · We Got Your Back
@@ -132,7 +132,7 @@ const LoginCard = ({ onAuthStateChange }) => {
   return (
     <div className="login-card">
       <div className="login-header">
-        <div className="wordmark">SPLENDOR · THE REMARKABLE AI</div>
+        <div className="wordmark">MATTIE · YOUR AI COMPANION</div>
         <div className="section-label">AUTHENTICATE</div>
       </div>
 
