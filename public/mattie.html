@@ -254,10 +254,19 @@
       loginOverlay.classList.add('hidden');
     }
 
-    function greet() {
-      if (messagesEl.childElementCount === 0) {
-        addBubble("Hi Sandy, I'm Mattie. I'm here whenever you'd like to talk. How are you doing today?", 'mattie');
-      }
+    const FALLBACK_GREETING =
+      "Hi Sandy, I'm Mattie. I'm here whenever you'd like to talk. How are you doing today?";
+
+    async function showOpening() {
+      if (messagesEl.childElementCount > 0) return;
+      try {
+        const res = await authedFetch('/api/proactive/pending');
+        if (res && res.ok) {
+          const data = await res.json().catch(() => ({}));
+          if (data && data.message) { addBubble(data.message, 'mattie'); return; }
+        }
+      } catch (_) {}
+      addBubble(FALLBACK_GREETING, 'mattie');
     }
 
     // ---- Login flow ----
@@ -282,7 +291,7 @@
           // 404 is fine (no memories endpoint data); anything else unexpected.
         }
         hideLogin();
-        greet();
+        showOpening();
       } catch (err) {
         showMsg(err && err.message ? err.message : 'Sign in failed. Please try again.', 'error');
       } finally {
@@ -613,7 +622,7 @@
     // ---- Session restore ----
     (async () => {
       const { data: { session } } = await sb.auth.getSession();
-      if (session) { hideLogin(); greet(); }
+      if (session) { hideLogin(); showOpening(); }
       else { showLogin(); }
     })();
   </script>
