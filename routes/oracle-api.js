@@ -27,7 +27,7 @@ router.get('/memories/recent', requireAuth, requireOwner, async (req, res) => {
 
     // Fetch recent memories with full metadata
     const { data: memories, error } = await supabase
-      .from('memory_items')
+      .from('memories')
       .select('*')
       .eq('user_id', userId)
       .eq('active', true)
@@ -36,10 +36,18 @@ router.get('/memories/recent', requireAuth, requireOwner, async (req, res) => {
 
     if (error) {
       console.error('[ORACLE-API] Memory fetch error:', error);
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to fetch memories',
-        details: error.message
+      console.warn('[ORACLE-API] HARD RULE: Memory fetch failed - treating user as first-time visitor');
+      // HARD RULE: If memory fetch fails, treat as first-time visitor (return empty array)
+      return res.json({
+        success: true,
+        memories: [],
+        stats: {
+          total_memories: 0,
+          active_memories: 0,
+          last_updated: null
+        },
+        first_time_visitor: true,
+        error_note: 'Memory system unavailable - treated as new user'
       });
     }
 
@@ -81,7 +89,7 @@ router.get('/memories/stats', requireAuth, requireOwner, async (req, res) => {
 
     // Get memory counts by provenance
     const { data: provenanceStats, error: provenanceError } = await supabase
-      .from('memory_items')
+      .from('memories')
       .select('provenance')
       .eq('user_id', userId)
       .eq('active', true);
@@ -97,7 +105,7 @@ router.get('/memories/stats', requireAuth, requireOwner, async (req, res) => {
 
     // Get confidence distribution
     const { data: confidenceStats, error: confidenceError } = await supabase
-      .from('memory_items')
+      .from('memories')
       .select('confidence')
       .eq('user_id', userId)
       .eq('active', true);

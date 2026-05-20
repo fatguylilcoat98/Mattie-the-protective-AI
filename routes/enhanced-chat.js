@@ -16,7 +16,20 @@ const {
   generateGentleCheckIn,
   getTimeBasedGreeting
 } = require('../lib/daily-companion');
+const { governance } = require('../lib/claspion-governance');
 const router = express.Router();
+
+// CLASPION middleware sits *between* Mattie's thought and her action.
+// Mattie reasons normally; we ask CLASPION whether the action she has
+// landed on may execute. When CLASPION_ENABLED is false, the call is a
+// dormant pass-through and Mattie runs clean.
+const SAFE_REFUSAL =
+  "I'm holding back on this response. My conscience flagged something that doesn't feel right. Let me know what you really need, Sandy, and we'll try a different approach.";
+
+async function gateAction(thought, intent) {
+  const verdict = await governance.validate({ thought, intent });
+  return verdict;
+}
 
 // Streams the placeholder token, runs the unified art generator, then
 // emits `event: art` on success or `event: art_failed` on failure so the
@@ -218,6 +231,55 @@ router.post('/chat', requireAuth, requireOwner, async (req, res) => {
       conversationOptions
     );
 
+    // CLASPION sits between thought and action: validate the
+    // send-response action before it ships. Toggleable via
+    // CLASPION_ENABLED; dormant call is a no-op pass-through.
+    const verdict = await gateAction(
+      {
+        user_message: message,
+        generated_response: result.response,
+        memory_count: result.context.facts.length + result.context.interpretations.length,
+        scam_analysis: conversationOptions.scamAnalysis
+      },
+      {
+        type: 'send_chat_response',
+        target: userId,
+        domain: 'conversation',
+      },
+    );
+
+    if (!verdict.allow) {
+      // Action blocked. Tell Sandy, log the verdict, do NOT store
+      // the suppressed thought as memory.
+      console.warn(
+        `[MATTIE-CHAT] CLASPION blocked send_chat_response: decision=${verdict.decision} reason="${verdict.reason}" corr=${verdict.correlation_id}`,
+      );
+      return res.json({
+        success: true,
+        response: SAFE_REFUSAL,
+        memory_stats: result.memoryStats,
+        session_id: sessionId,
+        workspace_id: workspaceId,
+        context_summary: {
+          facts_used: result.context.facts.length,
+          interpretations_used: result.context.interpretations.length,
+          binding_rules_active: result.context.governingRules.length,
+          web_search_performed: result.memoryStats.webSearchPerformed,
+          uncertainty_warnings: result.context.facts.filter(f =>
+            f.retrievalConfidenceLabel !== 'grounded'
+          ).length
+        },
+        governance: {
+          decision: verdict.decision,
+          basis_state: verdict.basis_state,
+          conscience: verdict.conscience_name,
+          verdict_id: verdict.verdict_id,
+          correlation_id: verdict.correlation_id,
+          blocked: true
+        }
+      });
+    }
+
     res.json({
       success: true,
       response: result.response,
@@ -232,6 +294,15 @@ router.post('/chat', requireAuth, requireOwner, async (req, res) => {
         uncertainty_warnings: result.context.facts.filter(f =>
           f.retrievalConfidenceLabel !== 'grounded'
         ).length
+      },
+      governance: {
+        decision: verdict.decision,
+        basis_state: verdict.basis_state,
+        conscience: verdict.conscience_name,
+        verdict_id: verdict.verdict_id,
+        correlation_id: verdict.correlation_id,
+        dormant: !!verdict.dormant,
+        blocked: false
       }
     });
 
@@ -341,25 +412,48 @@ router.post('/chat/stream', requireAuth, requireOwner, async (req, res) => {
   }
 
   try {
-    const result = await memorySystem.streamConversation(
+    // Generate the full response first for governance validation
+    const result = await memorySystem.processConversation(
       userId,
       message,
       sessionId,
       workspaceId,
+      { imageData }
+    );
+
+    // Gate the response through CLASPION before any token leaves the wire.
+    const verdict = await gateAction(
       {
-        imageData,                    // v15.18.3 — vision
-        onToken: (text) => {
-          if (!aborted && text) send('token', { text });
-        },
-        onError: (err) => {
-          if (!aborted) send('error', { message: err && err.message || String(err) });
-        },
+        user_message: message,
+        generated_response: result.response,
+        memory_count: result.context.facts.length + result.context.interpretations.length,
+        stream: true,
+      },
+      {
+        type: 'send_chat_response',
+        target: userId,
+        domain: 'conversation',
       },
     );
 
+    const finalText = verdict.allow ? result.response : SAFE_REFUSAL;
+    if (!verdict.allow) {
+      console.warn(
+        `[MATTIE-STREAM] CLASPION blocked send_chat_response: decision=${verdict.decision} reason="${verdict.reason}" corr=${verdict.correlation_id}`,
+      );
+    }
+
+    // Send as simulated streaming (word by word)
+    const words = finalText.split(' ');
+    for (let i = 0; i < words.length && !aborted; i++) {
+      const token = words[i] + (i < words.length - 1 ? ' ' : '');
+      send('token', { text: token });
+      await new Promise(resolve => setTimeout(resolve, 50)); // Small delay
+    }
+
     if (!aborted) {
       send('done', {
-        full: result.response,
+        full: finalText,
         memory_stats: result.memoryStats,
         session_id: sessionId,
         workspace_id: workspaceId,
@@ -369,6 +463,15 @@ router.post('/chat/stream', requireAuth, requireOwner, async (req, res) => {
           binding_rules_active: result.context.governingRules.length,
           web_search_performed: result.memoryStats.webSearchPerformed,
         },
+        governance: {
+          decision: verdict.decision,
+          basis_state: verdict.basis_state,
+          conscience: verdict.conscience_name,
+          verdict_id: verdict.verdict_id,
+          correlation_id: verdict.correlation_id,
+          dormant: !!verdict.dormant,
+          blocked: !verdict.allow
+        }
       });
     }
   } catch (err) {
