@@ -11,7 +11,7 @@ const router = express.Router();
 const { requireAuth, requireOwner } = require('../middleware/auth');
 const { storeMemory, getMemoriesForUser } = require('../lib/supabase');
 const { generateMattieResponse } = require('../lib/anthropic');
-const { analyzeForScams, getSandyGuidance, WARNING_LEVELS } = require('../lib/scam-protection');
+const { ConfidenceInterventionEngine, INTERVENTION_MODES } = require('../lib/confidence-intervention');
 
 function persist(userId, userText, mattieText, reason) {
   storeMemory(userId, `User: ${userText}`, 'shared_history', 'user.general',
@@ -29,17 +29,28 @@ router.post('/chat', requireAuth, requireOwner, async (req, res) => {
       return res.status(400).json({ error: 'Message is required' });
     }
 
-    // Scam protection — same gentle/firm slow-down as elsewhere.
+    // Confidence-routed intervention system
     if (message) {
-      const scam = analyzeForScams(message);
-      if (scam.isScam &&
-          (scam.warningLevel === WARNING_LEVELS.HIGH ||
-           scam.warningLevel === WARNING_LEVELS.CRITICAL)) {
-        const guidance = getSandyGuidance(scam.warningLevel, scam.indicators);
-        const response =
-          `🛡️ Sandy, let's slow down for a moment.\n\n${scam.analysis}\n\n${guidance}`;
-        persist(userId, message, response, 'companion_scam');
-        return res.json({ response });
+      const interventionEngine = new ConfidenceInterventionEngine();
+      const assessment = interventionEngine.assessRisk(message, {
+        has_documentation: false,
+        has_witness: false
+      });
+
+      // Only intervene for protection, verify, and escalation modes
+      if (assessment.mode !== INTERVENTION_MODES.NORMAL) {
+        const response = assessment.response.message;
+
+        // Log the sophisticated assessment for review
+        console.log(`[INTERVENTION] Mode: ${assessment.mode}, Risk: ${assessment.combined_risk.toFixed(2)}, Reason: ${assessment.reasoning}`);
+        console.log(`[INTERVENTION] Scores:`, assessment.confidence_scores);
+
+        persist(userId, message, response, `companion_${assessment.mode}`);
+        return res.json({
+          response,
+          intervention_mode: assessment.mode,
+          confidence_assessment: assessment.confidence_scores
+        });
       }
     }
 
