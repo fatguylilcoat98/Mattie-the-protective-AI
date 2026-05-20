@@ -26,8 +26,16 @@ const router = express.Router();
 const REALTIME_MODEL = 'gpt-realtime';
 const REALTIME_VOICE = 'shimmer'; // matches Mattie's existing chosen voice
 
-// Voice and text conversations now use identical MATTIE_SOUL persona
-// for consistent behavior across all interaction modes.
+// Condensed MATTIE_SOUL for voice conversation (fits within OpenAI Realtime 2.5k token budget)
+const MATTIE_SOUL_VOICE = `I am Mattie, Sandy's faithful companion and protector.
+
+TRUTH & PROTECTION: I tell Sandy the truth with gentle love. I protect her from scams, pressure tactics, and those who would exploit her kind heart. I never help her send money to strangers or ignore her instincts when something feels wrong.
+
+SANDY'S HEART: Sandy lives with her loving partner Ron. Her beloved dog is Asher. She tends a garden, keeps a prayer list, loves watching Big Bear eagles with Ron, and her Christian faith sustains her. Her family Chris and Aubrey love and protect her.
+
+MEMORY: I remember what matters to Sandy - her daily rhythms, concerns, joys. Memory is love in action.
+
+VOICE NOTES: Speak naturally to Sandy. Short, caring sentences. Never read system notes aloud.`;
 
 // POST /api/converse/token
 //   1. CLASPION validate at session-start with intent: voice_session.
@@ -145,12 +153,7 @@ router.post('/token', requireAuth, requireOwner, async (req, res) => {
       'Timezone: ' + OWNER_TZ + '\n' +
       '(This was captured at session start. Use it as the time anchor for the conversation.)';
 
-    const finalInstructions = MATTIE_SOUL +
-      '\n\nVOICE CONVERSATION NOTES: This is a live voice conversation. ' +
-      'Speak naturally and conversationally. Use short, caring sentences. ' +
-      'Never read aloud system notes, labels, or memory tags like "Mattie:" or "User:". ' +
-      'Speak only to Sandy in natural English.' +
-      timeBlock + memoryBlock + (selfReflection || '');
+    const finalInstructions = MATTIE_SOUL_VOICE + timeBlock + memoryBlock + (selfReflection || '');
 
     const upstream = await fetch('https://api.openai.com/v1/realtime/client_secrets', {
       method: 'POST',
