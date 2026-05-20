@@ -7,8 +7,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { generateSplendorResponse } = require('../lib/anthropic');
-const { processSplendorBrainTurn } = require('../splendor-brain');
+const { generateMattieResponse } = require('../lib/anthropic');
 const { getMemoriesForUser, storeMemory } = require('../lib/supabase');
 const { governance } = require('../lib/claspion-governance');
 const { requireAuth, requireOwner } = require('../middleware/auth');
@@ -41,30 +40,10 @@ router.post('/', requireAuth, requireOwner, async (req, res) => {
       console.error('Memory retrieval failed:', memError);
     }
 
-    // Mattie thinks through the full cognitive pipeline: RAS salience ->
-    // Hippocampus recall -> Thalamus routing -> Amygdala affect -> Cerebellum
-    // style -> DMN reflection -> Prefrontal (GNG+CLASPION) -> Broca/Wernicke
-    // (Claude). The brain returns the final voice; the route-level CLASPION
-    // gate below remains the outer ship-gate (defense in depth).
-    let brain;
-    try {
-      brain = await processSplendorBrainTurn({
-        userId,
-        currentInput: message,
-        sessionId: req.sessionId || null,
-      });
-    } catch (brainError) {
-      console.error('[CHAT] Brain failed, falling back to direct generation:', brainError.message);
-      brain = null;
-    }
-    const response = brain
-      ? brain.response
-      : await generateSplendorResponse(message, memories, false);
+    // Generate Mattie response using MATTIE_SOUL persona
+    const response = await generateMattieResponse(message, memories, false);
 
-    if (brain && brain.meta.degradedRegions.length) {
-      console.warn(`[CHAT] Brain ran degraded: ${brain.meta.degradedRegions.join(', ')}`);
-    }
-    console.log(`[CHAT] Response generated successfully`);
+    console.log(`[CHAT] Mattie response generated successfully`);
 
     // CLASPION sits between thought and action: validate the
     // send-response action before it ships. Toggleable via
