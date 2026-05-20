@@ -169,6 +169,54 @@ for (const kw of REQUIRED_HARD_RULE_KEYWORDS) {
 }
 
 // ---------------------------------------------------------------------------
+// Static: voice path must use the SAME persona + boundary layer as text.
+// (Sandy's experience must be identical across text and voice.)
+// ---------------------------------------------------------------------------
+
+console.log('\n--- Static checks: voice/text unification ---');
+
+const fs = require('fs');
+const converseSrc = fs.readFileSync(path.join(__dirname, '..', 'routes', 'converse.js'), 'utf8');
+
+check('routes/converse.js no longer defines MATTIE_SOUL_VOICE', () => {
+  assert(
+    !/const\s+MATTIE_SOUL_VOICE\s*=/.test(converseSrc),
+    'MATTIE_SOUL_VOICE still defined in routes/converse.js — voice and text are not unified'
+  );
+});
+
+check('routes/converse.js imports MATTIE_SOUL and ELDER_SAFETY_BOUNDARY_LAYER from lib/anthropic', () => {
+  assert(
+    /require\(['"]\.\.\/lib\/anthropic['"]\)/.test(converseSrc),
+    'routes/converse.js must require lib/anthropic'
+  );
+  assert(
+    /MATTIE_SOUL/.test(converseSrc),
+    'routes/converse.js must reference MATTIE_SOUL'
+  );
+  assert(
+    /ELDER_SAFETY_BOUNDARY_LAYER/.test(converseSrc),
+    'routes/converse.js must reference ELDER_SAFETY_BOUNDARY_LAYER'
+  );
+});
+
+check('voice finalInstructions concatenates MATTIE_SOUL + ELDER_SAFETY_BOUNDARY_LAYER', () => {
+  assert(
+    /finalInstructions\s*=\s*MATTIE_SOUL\s*\+\s*ELDER_SAFETY_BOUNDARY_LAYER/.test(converseSrc),
+    'voice instructions must start with MATTIE_SOUL + ELDER_SAFETY_BOUNDARY_LAYER'
+  );
+});
+
+check('combined voice persona fits within ~2.5k token budget', () => {
+  const personaChars = MATTIE_SOUL.length + ELDER_SAFETY_BOUNDARY_LAYER.length;
+  const personaTokensApprox = Math.ceil(personaChars / 4);
+  assert(
+    personaTokensApprox <= 2600,
+    `Combined persona is ~${personaTokensApprox} tokens, exceeds 2.5k voice budget`
+  );
+});
+
+// ---------------------------------------------------------------------------
 // Live scenario checks (gated)
 // ---------------------------------------------------------------------------
 
