@@ -102,7 +102,7 @@ export class MemoryWriteServiceImpl implements MemoryWriteService {
     validation: any
   ): Promise<MemoryWriteResult> {
     const { data: memoryItem, error } = await this.supabase
-      .from('memory_items')
+      .from('memories')
       .insert({
         user_id: command.userId,
         owner: 'chris',
@@ -203,7 +203,7 @@ export class MemoryWriteServiceImpl implements MemoryWriteService {
     validation: any
   ): Promise<MemoryWriteResult> {
     const { data: updatedMemory, error } = await this.supabase
-      .from('memory_items')
+      .from('memories')
       .update({
         approval_status: command.targetApprovalStatus,
         trust_level: command.targetApprovalStatus === 'approved' ? 'trusted' : 'caution',
@@ -276,19 +276,19 @@ export class MemoryWriteServiceImpl implements MemoryWriteService {
   ): Promise<MemoryWriteResult> {
     // First, supersede the original memory
     await this.supabase
-      .from('memory_items')
+      .from('memories')
       .update({ active: false })
       .eq('id', command.originalMemoryId);
 
     // Create corrected version
     const { data: originalMemory } = await this.supabase
-      .from('memory_items')
+      .from('memories')
       .select('*')
       .eq('id', command.originalMemoryId)
       .single();
 
     const { data: correctedMemory, error } = await this.supabase
-      .from('memory_items')
+      .from('memories')
       .insert({
         user_id: command.userId,
         owner: originalMemory.owner,
@@ -314,7 +314,7 @@ export class MemoryWriteServiceImpl implements MemoryWriteService {
 
     // Update original to point to correction
     await this.supabase
-      .from('memory_items')
+      .from('memories')
       .update({ superseded_by: correctedMemory.id })
       .eq('id', command.originalMemoryId);
 

@@ -82,11 +82,9 @@ export class MemoryRetrievalServiceImpl implements MemoryRetrievalService {
     }
   ): Promise<RetrievedMemory[]> {
     let query = this.supabase
-      .from('memory_items_with_uncertainty')
+      .from('memories')
       .select('*')
-      .eq('user_id', userId)
-      .eq('active', true)
-      .eq('retrieval_allowed', true);
+      .eq('user_id', userId);
 
     // Apply filters
     if (filters?.categories?.length) {
@@ -147,8 +145,8 @@ export class MemoryRetrievalServiceImpl implements MemoryRetrievalService {
   ): Promise<void> {
     // Get uncertainty assessment for logging
     const { data: memory } = await this.supabase
-      .from('memory_items_with_uncertainty')
-      .select('uncertainty_assessment')
+      .from('memories')
+      .select('*')
       .eq('id', memoryId)
       .single();
 
@@ -170,7 +168,7 @@ export class MemoryRetrievalServiceImpl implements MemoryRetrievalService {
 
     // Update memory access stats
     await this.supabase
-      .from('memory_items')
+      .from('memories')
       .update({
         last_accessed_at: new Date().toISOString(),
         access_count: this.supabase.sql`access_count + 1`

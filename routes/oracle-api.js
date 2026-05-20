@@ -30,8 +30,7 @@ router.get('/memories/recent', requireAuth, requireOwner, async (req, res) => {
       .from('memories')
       .select('*')
       .eq('user_id', userId)
-      .eq('active', true)
-      .order('created_at', { ascending: false })
+            .order('created_at', { ascending: false })
       .limit(limit);
 
     if (error) {
@@ -91,8 +90,7 @@ router.get('/memories/stats', requireAuth, requireOwner, async (req, res) => {
     const { data: provenanceStats, error: provenanceError } = await supabase
       .from('memories')
       .select('provenance')
-      .eq('user_id', userId)
-      .eq('active', true);
+      .eq('user_id', userId);
 
     if (provenanceError) throw provenanceError;
 
@@ -107,8 +105,7 @@ router.get('/memories/stats', requireAuth, requireOwner, async (req, res) => {
     const { data: confidenceStats, error: confidenceError } = await supabase
       .from('memories')
       .select('confidence')
-      .eq('user_id', userId)
-      .eq('active', true);
+      .eq('user_id', userId);
 
     if (confidenceError) throw confidenceError;
 

@@ -37,12 +37,11 @@ export class MemoryValidationRulesImpl implements MemoryValidationRules {
   ) {
     // Basic conflict detection
     const { data: existingMemories } = await this.supabase
-      .from('memory_items')
+      .from('memories')
       .select('id, content')
       .eq('user_id', userId)
       .eq('category', category)
-      .eq('memory_type', memoryType)
-      .eq('active', true);
+      .eq('memory_type', memoryType);
 
     const conflicts = existingMemories?.filter(memory =>
       this.calculateSimilarity(memory.content, newContent) > 0.8

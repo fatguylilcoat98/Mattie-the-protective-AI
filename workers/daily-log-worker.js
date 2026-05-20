@@ -40,9 +40,9 @@ function pacificDateLabel(d = new Date()) {
 async function gatherActivity(supabase, userId) {
   const sinceISO = new Date(Date.now() - WINDOW_HOURS * 60 * 60 * 1000).toISOString();
 
-  // Conversations (memory_items shared_history)
+  // Conversations (memories shared_history)
   const { data: turns } = await supabase
-    .from('memory_items')
+    .from('memories')
     .select('content, memory_type, source_type, created_at')
     .eq('user_id', userId)
     .eq('memory_type', 'shared_history')
