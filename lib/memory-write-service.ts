@@ -274,10 +274,13 @@ export class MemoryWriteServiceImpl implements MemoryWriteService {
     command: any,
     validation: any
   ): Promise<MemoryWriteResult> {
-    // First, supersede the original memory
+    // First, supersede the original memory (mark as superseded)
     await this.supabase
       .from('memories')
-      .update({ active: false })
+      .update({
+        approval_status: 'superseded',
+        updated_at: new Date().toISOString()
+      })
       .eq('id', command.originalMemoryId);
 
     // Create corrected version
