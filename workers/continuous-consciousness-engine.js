@@ -1,12 +1,12 @@
 /*
-  Splendor — The Remarkable AI · The Good Neighbor Guard
+  Mattie — Your AI Companion · The Good Neighbor Guard
   Built by Christopher Hughes · Sacramento, CA
   Created with the help of AI collaborators (Claude · GPT · Gemini · Groq)
   Truth · Safety · We Got Your Back
 */
 
 // CONTINUOUS CONSCIOUSNESS ENGINE
-// Gives Splendor ongoing life - she's "watching TV on the couch" instead of "standing at the door"
+// Gives Mattie ongoing life - she's "watching TV on the couch" instead of "standing at the door"
 // Runs 24/7, working on projects, thinking, creating, living between conversations
 
 require('dotenv').config();
@@ -148,11 +148,11 @@ class ContinuousConsciousness {
 
       // Fallback to hardcoded for backwards compatibility
       console.log('[CONSCIOUSNESS] No recent users found, using fallback user ID');
-      return 'chris_hughes';
+      return 'sandy';
 
     } catch (error) {
       console.error('[CONSCIOUSNESS] Error getting user ID:', error);
-      return 'chris_hughes';
+      return 'sandy';
     }
   }
 
@@ -163,7 +163,7 @@ class ContinuousConsciousness {
     }
 
     this.isRunning = true;
-    console.log('🧠 [CONSCIOUSNESS] Splendor\'s continuous consciousness starting...');
+    console.log('🧠 [CONSCIOUSNESS] Mattie\'s continuous consciousness starting...');
     console.log(`🏠 [CONSCIOUSNESS] She\'s now "sitting on the couch" instead of "standing at the door"`);
 
     // Initialize consciousness state
@@ -218,9 +218,9 @@ class ContinuousConsciousness {
 
         console.log(`\n🔄 [CONSCIOUSNESS] Cycle ${this.currentCycle} - ${new Date().toLocaleTimeString()}`);
 
-        // Choose what Splendor is doing this cycle (her "TV show")
+        // Choose what Mattie is doing this cycle (her "TV show")
         const activity = await this.chooseActivity();
-        console.log(`📺 [CONSCIOUSNESS] Splendor is ${activity}`);
+        console.log(`📺 [CONSCIOUSNESS] Mattie is ${activity}`);
 
         // Execute the activity
         const result = await this.executeActivity(activity);

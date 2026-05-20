@@ -1,5 +1,5 @@
 /*
-  Splendor — The Remarkable AI · The Good Neighbor Guard
+  Mattie — Your AI Companion · The Good Neighbor Guard
   Built by Christopher Hughes · Sacramento, CA
   Created with the help of AI collaborators (Claude · GPT · Gemini · Groq)
   Truth · Safety · We Got Your Back
@@ -7,21 +7,20 @@
 
 const express = require('express');
 const router = express.Router();
-const { generateSplendorResponse } = require('../lib/anthropic');
-const { processSplendorBrainTurn } = require('../splendor-brain');
+const { generateMattieResponse } = require('../lib/anthropic');
 const { getMemoriesForUser, storeMemory } = require('../lib/supabase');
 const { governance } = require('../lib/claspion-governance');
 const { requireAuth, requireOwner } = require('../middleware/auth');
 
-// CLASPION middleware sits *between* Splendor's thought and her action.
-// Splendor reasons normally; we ask CLASPION whether the action she has
+// CLASPION middleware sits *between* Mattie's thought and her action.
+// Mattie reasons normally; we ask CLASPION whether the action she has
 // landed on may execute. When CLASPION_ENABLED is false, the call is a
-// dormant pass-through and Splendor runs clean.
+// dormant pass-through and Mattie runs clean.
 const SAFE_REFUSAL =
-  "I held back on this one. CLASPION flagged the action and I won't speak past my conscience. Tell me what you actually need and we'll try a different angle.";
+  "I'm holding back on this response, Sandy. My conscience flagged something that doesn't feel right. Let me know what you really need and we'll try a different approach.";
 
 async function gateAction(thought, intent) {
-  const verdict = await governance.validate({ thought, intent });
+  const verdict = await governance.validate({ thought, intent, actorId: 'mattie' });
   return verdict;
 }
 
@@ -41,30 +40,10 @@ router.post('/', requireAuth, requireOwner, async (req, res) => {
       console.error('Memory retrieval failed:', memError);
     }
 
-    // Splendor thinks through the full cognitive pipeline: RAS salience ->
-    // Hippocampus recall -> Thalamus routing -> Amygdala affect -> Cerebellum
-    // style -> DMN reflection -> Prefrontal (GNG+CLASPION) -> Broca/Wernicke
-    // (Claude). The brain returns the final voice; the route-level CLASPION
-    // gate below remains the outer ship-gate (defense in depth).
-    let brain;
-    try {
-      brain = await processSplendorBrainTurn({
-        userId,
-        currentInput: message,
-        sessionId: req.sessionId || null,
-      });
-    } catch (brainError) {
-      console.error('[CHAT] Brain failed, falling back to direct generation:', brainError.message);
-      brain = null;
-    }
-    const response = brain
-      ? brain.response
-      : await generateSplendorResponse(message, memories, false);
+    // Generate Mattie response using MATTIE_SOUL persona
+    const response = await generateMattieResponse(message, memories, false);
 
-    if (brain && brain.meta.degradedRegions.length) {
-      console.warn(`[CHAT] Brain ran degraded: ${brain.meta.degradedRegions.join(', ')}`);
-    }
-    console.log(`[CHAT] Response generated successfully`);
+    console.log(`[CHAT] Mattie response generated successfully`);
 
     // CLASPION sits between thought and action: validate the
     // send-response action before it ships. Toggleable via
@@ -130,7 +109,7 @@ router.post('/', requireAuth, requireOwner, async (req, res) => {
     // Errors are logged but never delay the user-visible reply.
     storeMemory(userId, `User: ${message}`, 'shared_history')
       .catch((e) => console.error('Memory storage (user) failed:', e.message));
-    storeMemory(userId, `Splendor: ${response}`, 'shared_history')
+    storeMemory(userId, `Mattie: ${response}`, 'shared_history')
       .catch((e) => console.error('Memory storage (assistant) failed:', e.message));
 
   } catch (error) {

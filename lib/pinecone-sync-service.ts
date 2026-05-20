@@ -295,9 +295,9 @@ export class PineconeSyncServiceImpl implements PineconeSyncService {
   private async getSourceContent(sourceId: string, sourceTable: string) {
     let query;
     switch (sourceTable) {
-      case 'memory_items':
+      case 'memories':
         query = this.supabase
-          .from('memory_items')
+          .from('memories')
           .select('content, category, memory_type, confidence, importance')
           .eq('id', sourceId)
           .single();

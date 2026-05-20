@@ -75,7 +75,7 @@ router.post('/memories/:memoryId/approve', async (req, res) => {
     const result = await services.write.writeMemory({
       type: 'promote_memory',
       userId,
-      sourceTable: 'memory_items',
+      sourceTable: 'memories',
       sourceId: memoryId,
       targetApprovalStatus: 'approved',
       promotedBy: approvedBy,
@@ -108,7 +108,7 @@ router.post('/memories/:memoryId/reject', async (req, res) => {
     const result = await services.write.writeMemory({
       type: 'promote_memory',
       userId,
-      sourceTable: 'memory_items',
+      sourceTable: 'memories',
       sourceId: memoryId,
       targetApprovalStatus: 'rejected',
       promotedBy: rejectedBy,
@@ -187,7 +187,7 @@ router.put('/memories/:memoryId', async (req, res) => {
 
     // Mark Pinecone record as stale if memory was updated
     if (result.success) {
-      await services.pinecone.markStale(result.userId, 'memory_items', memoryId);
+      await services.pinecone.markStale(result.userId, 'memories', memoryId);
     }
 
     res.json({
@@ -209,7 +209,7 @@ router.delete('/memories/:memoryId', async (req, res) => {
     const { userId } = req.body;
 
     // Delete from Pinecone first
-    await services.pinecone.deleteRecord(userId, 'memory_items', memoryId);
+    await services.pinecone.deleteRecord(userId, 'memories', memoryId);
 
     // Mark as inactive in Supabase
     const result = await deleteMemory(memoryId);
@@ -345,8 +345,8 @@ async function getMemoryStats(userId: string) {
     { count: bindingDecisions },
     { count: memoryConflicts }
   ] = await Promise.all([
-    supabase.from('memory_items').select('*', { count: 'exact', head: true }).eq('user_id', userId).eq('active', true),
-    supabase.from('memory_items').select('*', { count: 'exact', head: true }).eq('user_id', userId).eq('approval_status', 'pending'),
+    supabase.from('memories').select('*', { count: 'exact', head: true }).eq('user_id', userId),
+    supabase.from('memories').select('*', { count: 'exact', head: true }).eq('user_id', userId).eq('approval_status', 'pending'),
     supabase.from('uncertain_memories').select('*', { count: 'exact', head: true }).eq('user_id', userId),
     supabase.from('active_workspaces').select('*', { count: 'exact', head: true }).eq('user_id', userId).eq('status', 'active'),
     supabase.from('splendor_decisions').select('*', { count: 'exact', head: true }).eq('user_id', userId).eq('status', 'active').eq('binding', true),
@@ -368,7 +368,7 @@ async function getPendingMemories(userId: string, type: string, limit: number) {
   const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!);
 
   let query = supabase
-    .from('memory_items_with_uncertainty')
+    .from('memories')
     .select('*')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
@@ -403,7 +403,7 @@ async function searchMemoriesForAdmin(userId: string, filters: any) {
   const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!);
 
   let query = supabase
-    .from('memory_items_with_uncertainty')
+    .from('memories')
     .select('*')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
@@ -438,7 +438,7 @@ async function indexApprovedMemory(memoryId: string) {
   const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!);
 
   const { data: memory } = await supabase
-    .from('memory_items')
+    .from('memories')
     .select('*')
     .eq('id', memoryId)
     .single();
@@ -446,7 +446,7 @@ async function indexApprovedMemory(memoryId: string) {
   if (memory && memory.approval_status === 'approved') {
     await services.pinecone.indexMemory(
       memory.user_id,
-      'memory_items',
+      'memories',
       memory.id,
       memory.content,
       {
@@ -464,7 +464,7 @@ async function updateMemory(memoryId: string, updates: any) {
   const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!);
 
   const { data: memory, error } = await supabase
-    .from('memory_items')
+    .from('memories')
     .update({
       ...updates,
       updated_at: new Date().toISOString()
@@ -484,11 +484,8 @@ async function deleteMemory(memoryId: string) {
   const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!);
 
   const { error } = await supabase
-    .from('memory_items')
-    .update({
-      active: false,
-      updated_at: new Date().toISOString()
-    })
+    .from('memories')
+    .delete()
     .eq('id', memoryId);
 
   return {

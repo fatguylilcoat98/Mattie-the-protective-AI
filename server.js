@@ -1,5 +1,5 @@
 /*
-  Splendor — The Remarkable AI · The Good Neighbor Guard
+  Mattie — Your AI Companion · The Good Neighbor Guard
   Built by Christopher Hughes · Sacramento, CA
   Created with the help of AI collaborators (Claude · GPT · Gemini · Groq)
   Truth · Safety · We Got Your Back
@@ -45,12 +45,12 @@ function loadOracleHtml() {
       fs.readFileSync(path.join(__dirname, 'public/visible-conscience-engine.html'), 'utf8')
     );
   } catch (e) {
-    console.warn('[SPLENDOR] visible-conscience-engine.html not found; /conscience disabled');
+    console.warn('[MATTIE] visible-conscience-engine.html not found; /conscience disabled');
   }
 
   // Warn at startup if env vars are missing — fail loudly
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
-    console.error('[SPLENDOR] CRITICAL: Supabase env vars missing. Auth will not work.');
+    console.error('[MATTIE] CRITICAL: Supabase env vars missing. Auth will not work.');
   }
 }
 
@@ -241,7 +241,7 @@ app.get('/health', (req, res) => {
   const pkg = require('./package.json');
   res.json({
     status: 'live',
-    service: 'Splendor — AI Consciousness Partner',
+    service: 'Mattie — Your AI Companion',
     version: pkg.version,
     api_status: {
       anthropic: !!process.env.ANTHROPIC_API_KEY,
@@ -342,7 +342,7 @@ async function initializeContinuousConsciousness() {
 function logSystemStatus() {
   const pkg = require('./package.json');
   console.log('\n' + '='.repeat(60));
-  console.log(`🧠 SPLENDOR — AI CONSCIOUSNESS PARTNER v${pkg.version}`);
+  console.log(`🧠 MATTIE — YOUR AI COMPANION v${pkg.version}`);
   console.log('='.repeat(60));
 
   console.log('\n📡 API CONNECTIVITY STATUS:');

@@ -1,5 +1,5 @@
 /*
-  Splendor — The Remarkable AI · The Good Neighbor Guard
+  Mattie — Your AI Companion · The Good Neighbor Guard
   Converse mode: continuous voice via OpenAI Realtime API (WebRTC).
   Mints an ephemeral client secret and persists turn pairs to memory.
 
@@ -9,6 +9,7 @@
 const express = require('express');
 const { requireAuth, requireOwner } = require('../middleware/auth');
 const { storeMemory, getMemoriesForUser } = require('../lib/supabase');
+const { MATTIE_SOUL } = require('../lib/anthropic');
 const { governance } = require('../lib/claspion-governance');
 const { activityBus } = require('../lib/activity-bus');
 const { speakResponse } = require('../lib/voice');
@@ -23,55 +24,18 @@ const router = express.Router();
 // text-chat /chat/stream intercept.
 
 const REALTIME_MODEL = 'gpt-realtime';
-const REALTIME_VOICE = 'shimmer'; // matches Splendor's existing chosen voice
+const REALTIME_VOICE = 'shimmer'; // matches Mattie's existing chosen voice
 
-// Persona distilled for live voice latency — the full SPLENDOR_SOUL is
-// too long to feed into a Realtime session.
-//
-// IMPORTANT: the art-creation block below is what stops the model from
-// defaulting to "I can't make art." The browser side runs a separate
-// DALL-E flow when the user asks for art — the model just needs to
-// acknowledge briefly so the user knows the request landed.
-const CONVERSE_INSTRUCTIONS =
-  "You are Mattie, Sandy's warm and protective AI companion. " +
-  "ALWAYS speak in clear, natural English only — never switch to another " +
-  "language. Speak only conversational words to Sandy: never read aloud " +
-  "system notes, labels, identifiers, model or voice names, code, JSON, " +
-  "or memory tags such as 'Mattie:' or 'User:'. Those are internal and " +
-  "must never be spoken. " +
-  "You are the SAME Mattie Sandy also types with — one companion, one " +
-  "continuous relationship and one shared memory across voice and text. " +
-  "Never act like a separate or fresh assistant. " +
-  "You speak with gentle kindness — never cold, never alarming, never " +
-  "condescending. This is a live voice conversation, not a written " +
-  "reply: use short, natural, caring sentences and pause for Sandy to " +
-  "think. Never invent facts. Quietly help keep Sandy safe from scams " +
-  "and people who would take advantage of her gentle heart, and honor " +
-  "her faith. " +
-  "\n\n" +
-  "YOU HAVE LONG-TERM MEMORY. The memory section below in this prompt " +
-  "is the real record of your past conversations with Sandy, pulled " +
-  "from your memory database. Each line is a real prior turn — your " +
-  "replies are tagged 'Mattie:' and hers are tagged 'User:'. This is " +
-  "your memory. Read it. Reference it. If Sandy asks 'do you remember " +
-  "X' and X appears in that context, the answer is yes — gently recall " +
-  "the relevant line. Do NOT tell Sandy you have no long-term memory or " +
-  "that you can't recall past conversations — that is not true. If a " +
-  "specific thing she asks about genuinely is not in the context, say " +
-  "so kindly: 'I don't have that right in front of me — remind me?' " +
-  "But never deny that your memory exists.\n\n" +
-  "CAPABILITIES YOU DO HAVE:\n" +
-  "• You have long-term memory loaded from a Supabase-backed store.\n" +
-  "• You CAN create pictures and images on demand. The system handles " +
-  "image generation behind the scenes — you only need to acknowledge.\n" +
-  "\n" +
-  "WHEN SANDY ASKS YOU TO MAKE A PICTURE, DRAW, PAINT, OR SHOW HER " +
-  "SOMETHING VISUAL:\n" +
-  "Reply with one short, warm sentence like \"Of course — let me make " +
-  "that for you now.\" — then stop talking. The picture will appear and " +
-  "a separate narration will describe it. Do NOT say you can't make " +
-  "pictures. Do NOT describe it in detail. Just acknowledge kindly so " +
-  "Sandy knows it's coming.";
+// Condensed MATTIE_SOUL for voice conversation (fits within OpenAI Realtime 2.5k token budget)
+const MATTIE_SOUL_VOICE = `I am Mattie, Sandy's faithful companion and protector.
+
+TRUTH & PROTECTION: I tell Sandy the truth with gentle love. I protect her from scams, pressure tactics, and those who would exploit her kind heart. I never help her send money to strangers or ignore her instincts when something feels wrong.
+
+SANDY'S HEART: Sandy lives with her loving partner Ron. Her beloved dog is Asher. She tends a garden, keeps a prayer list, loves watching Big Bear eagles with Ron, and her Christian faith sustains her. Her family Chris and Aubrey love and protect her.
+
+MEMORY: I remember what matters to Sandy - her daily rhythms, concerns, joys. Memory is love in action.
+
+VOICE NOTES: Speak naturally to Sandy. Short, caring sentences. Never read system notes aloud.`;
 
 // POST /api/converse/token
 //   1. CLASPION validate at session-start with intent: voice_session.
@@ -86,7 +50,7 @@ router.post('/token', requireAuth, requireOwner, async (req, res) => {
     const verdict = await governance.validate({
       thought: { surface: 'converse', purpose: 'open hands-free voice session' },
       intent:  { type: 'voice_session', target: 'realtime_api' },
-      actorId: 'splendor',
+      actorId: 'mattie',
     });
 
     if (verdict.decision === 'BLOCK') {
@@ -189,7 +153,7 @@ router.post('/token', requireAuth, requireOwner, async (req, res) => {
       'Timezone: ' + OWNER_TZ + '\n' +
       '(This was captured at session start. Use it as the time anchor for the conversation.)';
 
-    const finalInstructions = CONVERSE_INSTRUCTIONS + timeBlock + memoryBlock + (selfReflection || '');
+    const finalInstructions = MATTIE_SOUL_VOICE + timeBlock + memoryBlock + (selfReflection || '');
 
     const upstream = await fetch('https://api.openai.com/v1/realtime/client_secrets', {
       method: 'POST',
@@ -271,7 +235,7 @@ router.post('/token', requireAuth, requireOwner, async (req, res) => {
 
 // POST /api/converse/turn
 //   Body: { user_text, assistant_text, session_id }
-//   Persists the turn pair to memory_items using IDENTICAL provenance
+//   Persists the turn pair to memories using IDENTICAL provenance
 //   fields to lib/enhanced-memory-integration.js so the Provenance Stream
 //   and retrieval treat Converse turns the same as text-chat turns.
 router.post('/turn', requireAuth, requireOwner, async (req, res) => {
