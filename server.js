@@ -12,6 +12,16 @@ const path = require('path');
 const fs = require('fs');
 require('dotenv').config();
 
+// A stray space or newline pasted into a host env var (e.g. Render)
+// makes the AI SDKs build an illegal Authorization header — every
+// Anthropic/OpenAI call then throws "is not a legal HTTP header value".
+// Trim the secrets once, before any client is constructed.
+for (const k of ['ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'GROQ_API_KEY', 'PINECONE_API_KEY', 'TAVILY_API_KEY', 'SUPABASE_SERVICE_KEY', 'SUPABASE_ANON_KEY']) {
+  if (typeof process.env[k] === 'string') {
+    process.env[k] = process.env[k].trim().replace(/[\r\n]+/g, '');
+  }
+}
+
 // Cached HTML with Supabase config injected at startup
 let cachedOracleHtml = null;
 let cachedConscienceHtml = null;
@@ -24,7 +34,7 @@ function injectSupabaseConfig(raw) {
 
 function loadOracleHtml() {
   cachedOracleHtml = injectSupabaseConfig(
-    fs.readFileSync(path.join(__dirname, 'public/oracle-interface.html'), 'utf8')
+    fs.readFileSync(path.join(__dirname, 'public/mattie.html'), 'utf8')
   );
 
   // Visible Conscience Engine — sandbox surface, served at /conscience.
@@ -111,7 +121,9 @@ app.use(cors({
 }));
 
 app.use(express.json({ limit: '10mb' }));
-app.use(express.static('public'));
+// index:false so the stray React shell (public/index.html) is not
+// auto-served at "/"; the catch-all serves the Mattie interface instead.
+app.use(express.static('public', { index: false }));
 
 // CLASPION Enhanced Governance Middleware (Rule 19 & 23: Always on, watches every action)
 // Per Good Neighbor Guard Core Rules v1.1 - this enforces all 23 foundational rules
@@ -138,6 +150,8 @@ app.use('/api/continuity', require('./routes/master-continuity'));
 app.use('/api/governance', require('./routes/governance'));
 app.use('/api/activity', require('./routes/activity'));
 app.use('/api/converse', require('./routes/converse'));
+app.use('/api/companion', require('./routes/companion'));
+app.use('/api/proactive', require('./routes/proactive'));
 app.use('/api/email', require('./routes/email'));
 app.use('/api/interpretations', require('./routes/interpretations'));
 app.use('/api/emotional-patterns', require('./routes/emotional-patterns'));
