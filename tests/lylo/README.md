@@ -1,12 +1,12 @@
-# Lylo — Privacy & RLS matrix tests (synthetic schema)
+# Lylo — Privacy & RLS matrix tests (synthetic schema, v3 hardened)
 
 **Owner:** project lead. **Reviewer:** owner.
 
 This suite is the **binding RLS / privacy contract** that PR E will
-implement against the live database. Every policy, trigger, and
-constraint in `fixtures/synthetic-schema.sql` mirrors the production
-shape PR E ships. If the live policies diverge from this contract,
-the live policies are wrong.
+implement against the live database. Every policy, trigger, function,
+and constraint in `fixtures/synthetic-schema.sql` mirrors the production
+shape PR E ships. If the live policies diverge from this contract, the
+live policies are wrong.
 
 No production DB connection. The harness refuses to run if
 `SYNTHETIC_DATABASE_URL` looks like production.
@@ -15,59 +15,44 @@ No production DB connection. The harness refuses to run if
 
 | File | What |
 |---|---|
-| `rls-matrix.test.js` | Core role × visibility matrix from the privacy model doc §5.1. Includes the system-role compose-context carve-out and the family default-deny invariant. |
-| `cross-pilot-isolation.test.js` | A senior of pilot A cannot see pilot B rows. Family, caregiver, admin all confirmed. Spoofed pilot scope cannot escalate. |
-| `insert-update-restrictions.test.js` | Senior can insert / update their own rows. Family / caregiver / admin / system cannot. |
-| `audit-forgery.test.js` | Audit-log INSERT requires `actor_user_id = current_session_user_id()` and `actor_role = current_session_role()`. Admin cannot forge as senior. |
-| `audit-append-only.test.js` | UPDATE and DELETE on the audit log are silently filtered to 0 rows for every role. |
-| `vault-lockout.test.js` | 5 failed PIN attempts triggers lockout; 6th session insert is refused by trigger. Successful unlock resets counter. |
-| `rls-content-immunity.test.js` | Memory content containing prompt-injection or SQL-injection payloads does not change RLS evaluation. |
-| `inheritance.test.js` | Derived rows (episodes, summaries, reflection_archive) inherit the most restrictive source visibility. `outbound_messages` for private content must be addressed to the owning senior. |
-| `visibility-change-audit.test.js` | Every `visibility_level` change writes a `visibility_changed` audit row. Same-value updates do not write. Senior can see audit rows about their own memories. |
-| `senior-sees-own-only.test.js` | Senior's unqualified `SELECT` returns only their own active rows in their own pilot. |
-| `no-fabrication.test.js` | (Scaffolded; filled in by PR F's response auditor work.) |
+| `rls-matrix.test.js` | Core role × visibility matrix; family default-deny. |
+| `cross-pilot-isolation.test.js` | Senior of pilot A cannot see pilot B; spoofed scope cannot escalate. |
+| `cross-pilot-orphan.test.js` | (C2) Composite FKs refuse rows whose owner/contact/user is in a different pilot. |
+| `compose-context.test.js` | (C1, H7) Compose-context GUC alone is insufficient; only a granted `compose_authorizations` row + audit row enables system access to a target senior's `private` rows. Non-system roles cannot grant; cross-pilot grants refused; expired grants refused. |
+| `outbound-target.test.js` | (C3, C4) Family/caregiver targets can SELECT family_shared drafts addressed to them; private/locked drafts must target the owning senior (with sources) or the session user (without sources). |
+| `admin-vault-redaction.test.js` | (C5) Admin has zero direct SELECT access to `memory_vaults` and `memory_vault_sessions`. |
+| `lookup-leak.test.js` | (H1, H2) `family_contacts` and `users` lookups are narrowed beyond "everyone in pilot". |
+| `insert-update-restrictions.test.js` | Senior INSERT / UPDATE on own rows; family/caregiver/admin/system cannot write. (H3) Senior cannot UPDATE soft-deleted (`active = false`) rows. |
+| `audit-forgery.test.js` | Audit-log INSERT requires `actor_user_id = self` and `actor_role = self`. Admin cannot forge as senior. |
+| `audit-append-only.test.js` | UPDATE and DELETE on the audit log are filtered to 0 rows. |
+| `vault-lockout.test.js` | (H4 + H6) 5 failed attempts trigger lockout; 6th refused; lockout revokes active sessions; success resets counter. |
+| `concurrent-vault-sessions.test.js` | (M4) Multiple concurrent active vault sessions per user are allowed. |
+| `rls-content-immunity.test.js` | Memory content containing injection payloads cannot change RLS evaluation. |
+| `inheritance.test.js` | Derived rows inherit the most-restrictive source visibility. Outbound drafts with private/locked content must target the owning senior. |
+| `inheritance-recompute.test.js` | (H5) Soft-delete or hard-delete of a source memory marks derived rows `requires_recompute = true`. |
+| `visibility-change-audit.test.js` | Every visibility change writes a row; same-value updates write nothing; senior reads own-memory audit rows. (M1) Trigger fail-closes if session GUCs are missing. |
+| `senior-sees-own-only.test.js` | Senior unqualified SELECT returns only their own active rows in their own pilot. |
+| `caregiver-default-deny.test.js` | (M2) Caregiver with empty `permission_scope` sees zero `family_shared` rows. |
+| `no-fabrication.test.js` | (Scaffolded; filled in by PR F.) |
 
 ## How to run
 
-The suite needs a throwaway Postgres. Easiest is Docker:
-
 ```sh
-docker run --rm -d --name lylo-test-pg -p 55432:5432 \
-  -e POSTGRES_PASSWORD=test postgres:15
+docker run --rm -d --name lylo-test-pg -p 55432:5432 -e POSTGRES_PASSWORD=test postgres:15
 export SYNTHETIC_DATABASE_URL='postgres://postgres:test@localhost:55432/postgres'
 node --test tests/lylo/
 docker stop lylo-test-pg
 ```
-
-The harness lazily `require()`s `pg`; if it is not installed, tests
-skip with a clear message. We intentionally do not add `pg` to the
-project's `package.json` in this PR.
-
-## Production-DB guard
-
-`fixtures/test-harness.js` refuses to connect if
-`SYNTHETIC_DATABASE_URL`:
-
-- contains `supabase.co`, `supabase.io`, `render.com`, `onrender.com`,
-  `rds.amazonaws.com`, `azure.com`, `gcp.cloudsql`, `production`,
-  `prod-`
-- contains a user fragment matching production roles
-  (`supabase_admin`, `service_role`, `authenticator`, `postgres@`)
-- overlaps with the host portion of a set `SUPABASE_URL`
-- does not point at localhost / 127.0.0.1 / ::1 / `host.docker.internal`
-
-The guard is intentionally conservative. If it false-positives on
-your local URL, fix the URL; do not edit the guard.
 
 ## Session context (GUCs the suite reads)
 
 | GUC | Set by | Purpose |
 |---|---|---|
 | `app.user_role` | `withRole(client, who, fn)` | one of `senior`, `family`, `caregiver`, `admin`, `system`, `seeder` |
-| `app.user_id` | same | the requesting user's UUID |
-| `app.pilot_instance_id` | same | the pilot scope; every policy filters on it |
-| `app.compose_target_user_id` | `withRole(..., { composeTargetUserId })` | the optional carve-out for the `system` role to read a senior's `private` memory while composing a senior-addressed outbound message |
-| `app.visibility_change_reason` | same | optional free-text picked up by the visibility-change audit trigger |
+| `app.user_id` | same | requesting user's UUID |
+| `app.pilot_instance_id` | same | pilot scope; every policy filters on it |
+| `app.compose_target_user_id` | `withRole(..., { composeTargetUserId })` | optional system-role compose target. **Alone insufficient — system also needs a granted `compose_authorizations` row.** |
+| `app.visibility_change_reason` | `withRole(..., { visibilityChangeReason })` | optional free-text picked up by the visibility-change audit trigger |
 
 ## Production divergence to expect
 
@@ -75,29 +60,37 @@ Production (PR E) will use **real Postgres roles** with
 `SET LOCAL session_authorization` and the same policy `USING` clauses
 keyed on GUCs that the auth middleware sets. The synthetic suite uses
 a single superuser connection with `FORCE ROW LEVEL SECURITY` on every
-table so the policies fire against the GUC values directly. The policy
-logic is the same; the plumbing differs by one `SET LOCAL` flavor.
+table so the policies fire against the GUC values directly.
 
-## What scaffolded tests still cover
+Production must also:
 
-`no-fabrication.test.js` is scaffolded because the no-fabrication
-guard ships with PR F. The other previously-scaffolded test files
-(`cross-pilot-isolation`, `inheritance`, `audit-append-only`) are
-now live and asserting real behavior against the hardened schema.
+- restrict who can `SET LOCAL app.compose_target_user_id` (today the
+  GUC is unauthenticated; the policy gate is `compose_authorizations`,
+  but a defense-in-depth grant should sit at the auth layer too);
+- write a `vault_session_expired` audit row when a session expires
+  past its `expires_at` (synthetic provides `expire_vault_sessions()`
+  as a helper; production schedules it);
+- enforce serializable / `SELECT ... FOR UPDATE` on the unlock path
+  so failed-attempt counting cannot race with session creation (the
+  synthetic trigger already uses `FOR UPDATE`).
 
 ## Mapping to the privacy model
 
 | Test file | Privacy model section |
 |---|---|
-| `rls-matrix.test.js` | §5.1 reads & writes access matrix |
-| `cross-pilot-isolation.test.js` | (tenant scoping; cross-cuts §5) |
-| `insert-update-restrictions.test.js` | §5.2 writes |
-| `audit-forgery.test.js` | §3.4 + §5 |
-| `audit-append-only.test.js` | §3.4 append-only invariant |
-| `vault-lockout.test.js` | §2.3 + §3.2 + §9 |
-| `rls-content-immunity.test.js` | §5.1 (content is data, not control) |
-| `inheritance.test.js` | §3.6 |
-| `visibility-change-audit.test.js` | §4.3 |
-| `senior-sees-own-only.test.js` | §5.1 senior row |
+| `rls-matrix.test.js` | §5.1 |
+| `cross-pilot-isolation.test.js` + `cross-pilot-orphan.test.js` | (tenant scoping) |
+| `compose-context.test.js` | §5.1 system carve-out |
+| `outbound-target.test.js` | §3.6 + outbound rules |
+| `admin-vault-redaction.test.js` | §3.2 vault material |
+| `lookup-leak.test.js` | (defense in depth) |
+| `insert-update-restrictions.test.js` | §5.2 + retention semantics |
+| `audit-forgery.test.js` + `audit-append-only.test.js` | §3.4 |
+| `vault-lockout.test.js` + `concurrent-vault-sessions.test.js` | §2.3 + §3.2 |
+| `rls-content-immunity.test.js` | §5.1 |
+| `inheritance.test.js` + `inheritance-recompute.test.js` | §3.6 |
+| `visibility-change-audit.test.js` | §4.3 + §3.4 |
+| `senior-sees-own-only.test.js` | §5.1 |
+| `caregiver-default-deny.test.js` | §5.1 |
 
 — End of Lylo test-suite README.
