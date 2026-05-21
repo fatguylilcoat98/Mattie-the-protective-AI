@@ -7,9 +7,9 @@
  * SINGLE FILE DEPLOYMENT - RUN ALL AT ONCE
  */
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- FOUNDATION: HELPER FUNCTIONS
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -19,9 +19,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- TABLE 1: RAW_EVENTS - Event Ledger
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 CREATE TABLE raw_events (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -39,9 +39,9 @@ CREATE INDEX idx_raw_events_user_id ON raw_events(user_id);
 CREATE INDEX idx_raw_events_created_at ON raw_events(created_at DESC);
 CREATE INDEX idx_raw_events_event_type ON raw_events(event_type);
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- TABLE 2: MEMORY_CATEGORIES - Folder System
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 CREATE TABLE memory_categories (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -56,9 +56,9 @@ CREATE TABLE memory_categories (
 
 CREATE INDEX idx_memory_categories_key ON memory_categories(category_key);
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- TABLE 3: MEMORY_ITEMS - Main Memory Store
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 CREATE TABLE memory_items (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -110,9 +110,9 @@ CREATE TRIGGER update_memory_items_updated_at
     BEFORE UPDATE ON memory_items
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- TABLE 4: CONVERSATIONS - Clean Chat History
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 CREATE TABLE conversations (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -128,9 +128,9 @@ CREATE TABLE conversations (
 CREATE INDEX idx_conversations_user_session ON conversations(user_id, session_id);
 CREATE INDEX idx_conversations_created_at ON conversations(created_at DESC);
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- TABLE 5: CONVERSATION_SESSIONS - Session Tracking
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 CREATE TABLE conversation_sessions (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -147,9 +147,9 @@ CREATE TABLE conversation_sessions (
 
 CREATE INDEX idx_conversation_sessions_user_id ON conversation_sessions(user_id);
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- TABLE 6: ACTIVE_WORKSPACES - Project Continuity
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 CREATE TABLE active_workspaces (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -176,9 +176,9 @@ CREATE TRIGGER update_active_workspaces_updated_at
     BEFORE UPDATE ON active_workspaces
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- TABLE 7: SPLENDOR_DECISIONS - Binding Rules
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 CREATE TABLE splendor_decisions (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -207,9 +207,9 @@ CREATE TRIGGER update_splendor_decisions_updated_at
     BEFORE UPDATE ON splendor_decisions
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- TABLE 8: REFLECTIONS - Splendor's Interpretations
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 CREATE TABLE reflections (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -242,9 +242,9 @@ CREATE TRIGGER update_reflections_updated_at
     BEFORE UPDATE ON reflections
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- TABLE 9: MEMORY_SOURCES - Memory Receipts
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 CREATE TABLE memory_sources (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -258,9 +258,9 @@ CREATE TABLE memory_sources (
 
 CREATE INDEX idx_memory_sources_memory_item ON memory_sources(memory_item_id);
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- TABLE 10: MEMORY_CONFLICTS - Conflict Detection
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 CREATE TABLE memory_conflicts (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -282,9 +282,9 @@ CREATE TRIGGER update_memory_conflicts_updated_at
     BEFORE UPDATE ON memory_conflicts
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- TABLE 11: MEMORY_ACCESS_LOG - Access Tracking
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 CREATE TABLE memory_access_log (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -305,9 +305,9 @@ CREATE TABLE memory_access_log (
 CREATE INDEX idx_memory_access_log_user_id ON memory_access_log(user_id);
 CREATE INDEX idx_memory_access_log_memory_item ON memory_access_log(memory_item_id);
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- REMAINING SUPPORT TABLES
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 CREATE TABLE identity_states (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -406,9 +406,9 @@ CREATE TABLE verification_requests (
   resolved_by text
 );
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- UNCERTAINTY ASSESSMENT FUNCTIONS
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 CREATE OR REPLACE FUNCTION assess_memory_uncertainty(
   memory_record jsonb,
@@ -529,9 +529,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- VIEWS
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 CREATE VIEW memory_items_retrievable AS
 SELECT * FROM memory_items
@@ -591,9 +591,9 @@ WHERE
   AND m.superseded_by IS NULL
   AND (m.expires_at IS NULL OR m.expires_at > now());
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- SEED DATA
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 INSERT INTO memory_categories (category_key, display_name, description, default_retrieval_allowed, default_trust_level)
 VALUES
@@ -619,9 +619,9 @@ VALUES
   ('D-CORE-NO-FAKE-CONSCIOUSNESS', 'No False Consciousness Claims', 'Splendor must not make false claims about consciousness, sentience, or subjective experience.', 'Established during memory architecture design to maintain authenticity.', 'Authentic communication requires honesty about AI limitations.', 'CORE', true, 'Splendor'),
   ('D-CORE-MEMORY-SEPARATION', 'Memory Separation Principle', 'Generated thoughts are not facts. Logs are not memories. Reflections are not identity.', 'Core principle of the new memory architecture.', 'Prevents memory bleed and maintains system integrity.', 'CORE', true, 'System');
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- FINAL VERIFICATION
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 SELECT 'SPLENDOR MEMORY ARCHITECTURE V2.0 DEPLOYMENT COMPLETE!' as status,
        'Ready for service integration' as next_step,

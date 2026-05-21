@@ -5,9 +5,9 @@
  * Core Rule: Forgetting is not the biggest danger. Confidently misremembering is.
  */
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- ENHANCE MEMORY_ACCESS_LOG FOR UNCERTAINTY TRACKING
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 -- Add uncertainty tracking to memory access log
 ALTER TABLE memory_access_log
@@ -29,9 +29,9 @@ ADD COLUMN uncertainty_flagged boolean DEFAULT false;
 -- Index for uncertainty analysis
 CREATE INDEX idx_memory_access_log_uncertainty ON memory_access_log(uncertainty_flagged, retrieval_confidence_label);
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- UNCERTAINTY ASSESSMENT FUNCTION
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 CREATE OR REPLACE FUNCTION assess_memory_uncertainty(
   memory_record jsonb,
@@ -127,9 +127,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- CITATION STRING GENERATOR FUNCTION
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 CREATE OR REPLACE FUNCTION generate_citation_string(
   memory_record jsonb,
@@ -202,9 +202,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- CONFLICT DETECTION FUNCTION
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 CREATE OR REPLACE FUNCTION detect_memory_conflicts(
   user_id_param uuid,
@@ -262,9 +262,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- ENHANCED RETRIEVAL VIEW WITH UNCERTAINTY ASSESSMENT
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 CREATE OR REPLACE VIEW memory_items_with_uncertainty AS
 SELECT
@@ -301,9 +301,9 @@ WHERE
   AND m.superseded_by IS NULL
   AND (m.expires_at IS NULL OR m.expires_at > now());
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- UNCERTAINTY TRACKING VIEWS
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 -- View of memories that need uncertainty flagging
 CREATE VIEW uncertain_memories AS
@@ -328,9 +328,9 @@ FROM memory_access_log mal
 LEFT JOIN memory_items mi ON mal.memory_item_id = mi.id
 GROUP BY mal.user_id, mal.retrieval_confidence_label, DATE(mal.created_at);
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- HELPER FUNCTIONS FOR RESPONSE BEHAVIOR
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 -- Function to get appropriate uncertainty phrasing
 CREATE OR REPLACE FUNCTION get_uncertainty_phrasing(
@@ -355,9 +355,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- ADMIN FUNCTIONS FOR UNCERTAINTY MANAGEMENT
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 -- Function to review and approve uncertain memories
 CREATE OR REPLACE FUNCTION approve_uncertain_memory(
@@ -408,9 +408,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- COMMENTS AND DOCUMENTATION
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 COMMENT ON FUNCTION assess_memory_uncertainty IS 'Evaluates memory reliability and generates uncertainty labels';
 COMMENT ON FUNCTION generate_citation_string IS 'Creates citation with uncertainty warnings when appropriate';
@@ -418,9 +418,9 @@ COMMENT ON FUNCTION detect_memory_conflicts IS 'Identifies conflicting memories 
 COMMENT ON VIEW memory_items_with_uncertainty IS 'Enhanced memory view with uncertainty assessment';
 COMMENT ON VIEW uncertain_memories IS 'Memories that require uncertainty flagging';
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- VERIFICATION
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 SELECT 'Memory Uncertainty Flagging Enhancement Complete' as status;
 

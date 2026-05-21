@@ -7,10 +7,10 @@
  * Shadow Mode Implementation - No Autonomous Surfacing
  */
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- INTERACTIONS TABLE
 -- Stores normalized interaction records for reflection analysis
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 CREATE TABLE IF NOT EXISTS interactions (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -31,10 +31,10 @@ CREATE TABLE IF NOT EXISTS interactions (
   CONSTRAINT interactions_content_length CHECK (length(content) > 0)
 );
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- REFLECTIONS TABLE
 -- Stores candidate reflections in staging (Shadow Mode)
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 CREATE TABLE IF NOT EXISTS reflections (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -99,10 +99,10 @@ CREATE TABLE IF NOT EXISTS reflections (
   )
 );
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- REFLECTION CONFLICTS TABLE
 -- Tracks conflicts between reflections or between reflections and new evidence
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 CREATE TABLE IF NOT EXISTS reflection_conflicts (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -126,10 +126,10 @@ CREATE TABLE IF NOT EXISTS reflection_conflicts (
   status text DEFAULT 'unresolved' CHECK (status IN ('unresolved', 'resolved', 'dismissed'))
 );
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- REFLECTION EVALUATION TABLE
 -- Tracks how well surfaced reflections performed (for future Shadow Mode testing)
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 CREATE TABLE IF NOT EXISTS reflection_evaluations (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -155,10 +155,10 @@ CREATE TABLE IF NOT EXISTS reflection_evaluations (
   created_at timestamptz DEFAULT now()
 );
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- SYSTEM HEALTH TABLE
 -- Tracks overall reflection system health and performance
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 CREATE TABLE IF NOT EXISTS reflection_system_health (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -193,9 +193,9 @@ CREATE TABLE IF NOT EXISTS reflection_system_health (
   system_status text DEFAULT 'healthy' CHECK (system_status IN ('healthy', 'warning', 'degraded', 'disabled'))
 );
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- INDEXES FOR PERFORMANCE
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 -- Interactions indexes
 CREATE INDEX IF NOT EXISTS idx_interactions_user_timestamp ON interactions(user_id, timestamp DESC);
@@ -228,9 +228,9 @@ CREATE INDEX IF NOT EXISTS idx_evaluations_surfaced ON reflection_evaluations(su
 CREATE INDEX IF NOT EXISTS idx_system_health_user_timestamp ON reflection_system_health(user_id, timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_system_health_status ON reflection_system_health(system_status);
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- ROW LEVEL SECURITY
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 ALTER TABLE interactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reflections ENABLE ROW LEVEL SECURITY;

@@ -11,9 +11,9 @@
  * are NOT automatically migrated. Manual review required.
  */
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- PHASE 1: BACKUP EXISTING DATA
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 -- Create backup tables with timestamp
 DO $$
@@ -47,9 +47,9 @@ BEGIN
 END
 $$;
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- PHASE 2: EXPORT PINECONE METADATA
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 -- Create export table for Pinecone vector IDs that need to be deleted
 CREATE TABLE IF NOT EXISTS pinecone_cleanup_export (
@@ -85,9 +85,9 @@ SELECT
 FROM pinecone_index_records
 WHERE sync_status != 'deleted';
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- PHASE 3: ANALYSIS OF EXISTING DATA
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 -- Analyze existing memory types for migration planning
 CREATE TEMPORARY VIEW migration_analysis AS
@@ -135,9 +135,9 @@ SELECT
 FROM migration_analysis
 ORDER BY table_name, record_count DESC;
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- PHASE 4: SAFE MIGRATION OF CLEAN DATA
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 -- Migrate clean conversations (actual user/assistant exchanges)
 INSERT INTO conversations (
@@ -241,9 +241,9 @@ SELECT
 FROM memory_items mi
 WHERE mi.source_type = 'imported_memory';
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- PHASE 5: ARCHIVE CONTAMINATED DATA
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 -- Create archive tables for consciousness test data
 CREATE TABLE consciousness_tests_archive AS
@@ -272,9 +272,9 @@ SELECT
   'review_for_binding_decisions' as archive_reason
 FROM autonomous_decisions_backup_XXXXXX; -- Replace with actual backup table name
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- PHASE 6: SETUP CLEAN WORKSPACES
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 -- Create initial workspace for the memory rebuild project
 INSERT INTO active_workspaces (
@@ -300,9 +300,9 @@ FROM conversations
 WHERE user_id IS NOT NULL
 LIMIT 1; -- Assuming single user for now
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- PHASE 7: PINECONE CLEANUP PREPARATION
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 -- Generate Pinecone cleanup script
 CREATE OR REPLACE FUNCTION generate_pinecone_cleanup_commands()
@@ -324,9 +324,9 @@ $$ LANGUAGE plpgsql;
 -- Show Pinecone cleanup commands
 SELECT cleanup_command FROM generate_pinecone_cleanup_commands();
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- PHASE 8: VALIDATION AND VERIFICATION
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 -- Validate migration results
 WITH migration_summary AS (
@@ -383,9 +383,9 @@ SELECT
       '✅ PASS: All migrated memories require approval'
   END as result;
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- PHASE 9: DROP OLD TABLES (ONLY AFTER BACKUP VERIFICATION)
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 -- WARNING: Only run this after verifying backups are complete and valid
 -- UNCOMMENT ONLY WHEN READY TO COMPLETE MIGRATION
@@ -409,9 +409,9 @@ DROP FUNCTION IF EXISTS get_consciousness_tests(uuid) CASCADE;
 DROP FUNCTION IF EXISTS clean_old_consciousness_tests(integer) CASCADE;
 */
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- PHASE 10: POST-MIGRATION SETUP
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 -- Update memory categories for the current user
 UPDATE memory_categories
@@ -435,9 +435,9 @@ SELECT
 FROM auth.users
 WHERE NOT EXISTS (SELECT 1 FROM identity_states WHERE user_id = auth.users.id);
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- COMPLETION AND NEXT STEPS
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 -- Final migration report
 SELECT

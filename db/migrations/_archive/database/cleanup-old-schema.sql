@@ -4,9 +4,9 @@
  * Run this FIRST before deploying new schema
  */
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- PHASE 1: BACKUP EXISTING DATA
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 -- Create timestamp for backup tables
 DO $$
@@ -121,9 +121,9 @@ BEGIN
 END
 $$;
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- PHASE 2: DROP OLD VIEWS FIRST (to avoid dependency issues)
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 -- Drop views that might depend on tables we're about to drop
 DROP VIEW IF EXISTS consciousness_test_summary CASCADE;
@@ -135,18 +135,18 @@ DROP VIEW IF EXISTS latest_identity_states CASCADE;
 DROP VIEW IF EXISTS active_binding_decisions CASCADE;
 DROP VIEW IF EXISTS memory_items_retrievable CASCADE;
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- PHASE 3: DROP OLD FUNCTIONS
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 -- Drop old functions that might have dependencies
 DROP FUNCTION IF EXISTS get_consciousness_tests(uuid) CASCADE;
 DROP FUNCTION IF EXISTS clean_old_consciousness_tests(integer) CASCADE;
 DROP FUNCTION IF EXISTS update_updated_at_column() CASCADE;
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- PHASE 4: DROP OLD TABLES (order matters due to foreign key constraints)
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 -- Drop tables in reverse dependency order to avoid foreign key conflicts
 
@@ -174,16 +174,16 @@ DROP TABLE IF EXISTS splendor_config CASCADE;
 -- Drop any remaining related tables
 DROP TABLE IF EXISTS open_threads CASCADE;
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- PHASE 5: CLEAN UP ORPHANED TYPES AND SEQUENCES
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 -- Clean up any custom types that might have been created
 -- (Add any custom types here if they exist)
 
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 -- VERIFICATION
--- ═══════════════════════════════════════════════════════════════════════════════
+-- ═════════════════════════════════════════════════════════════════════════════
 
 -- Show remaining tables (should not include old memory tables)
 SELECT
