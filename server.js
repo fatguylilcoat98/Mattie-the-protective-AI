@@ -1,8 +1,7 @@
 /*
-  Mattie — Your AI Companion · The Good Neighbor Guard
-  Built by Christopher Hughes · Sacramento, CA
-  Created with the help of AI collaborators (Claude · GPT · Gemini · Groq)
-  Truth · Safety · We Got Your Back
+  Lylo Companion — server entrypoint
+  Express + Supabase + Pinecone backend.
+  Attribution kept in the root README.
 */
 
 const express = require('express');
@@ -45,12 +44,12 @@ function loadOracleHtml() {
       fs.readFileSync(path.join(__dirname, 'public/visible-conscience-engine.html'), 'utf8')
     );
   } catch (e) {
-    console.warn('[MATTIE] visible-conscience-engine.html not found; /conscience disabled');
+    console.warn('[lylo] safety-panel asset not found; /conscience route disabled');
   }
 
   // Warn at startup if env vars are missing — fail loudly
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
-    console.error('[MATTIE] CRITICAL: Supabase env vars missing. Auth will not work.');
+    console.error('[lylo] CRITICAL: Supabase env vars missing; authentication is unavailable.');
   }
 }
 
@@ -77,7 +76,7 @@ let consciousnessRoutes;
 try {
   consciousnessRoutes = require('./routes/consciousness');
 } catch (error) {
-  console.log('[ROUTES] Consciousness routes not found, skipping...');
+  console.log('[routes] background-reflection routes not found, skipping');
 }
 
 // Consciousness dashboard routes
@@ -85,7 +84,7 @@ let consciousnessDashboardRoutes;
 try {
   consciousnessDashboardRoutes = require('./routes/consciousness-dashboard');
 } catch (error) {
-  console.log('[ROUTES] Consciousness dashboard routes not found, skipping...');
+  console.log('[routes] background-reflection dashboard routes not found, skipping');
 }
 
 const app = express();
@@ -241,7 +240,7 @@ app.get('/health', (req, res) => {
   const pkg = require('./package.json');
   res.json({
     status: 'live',
-    service: 'Mattie — Your AI Companion',
+    service: 'lylo-companion',
     version: pkg.version,
     api_status: {
       anthropic: !!process.env.ANTHROPIC_API_KEY,
@@ -317,7 +316,7 @@ function initializeVisualExpression() {
     const { initializeVisualExpression } = require('./lib/consciousness/visual-expression');
     initializeVisualExpression();
   } catch (error) {
-    console.log('[VISUAL EXPRESSION] Initialization skipped:', error.message);
+    console.log('[avatar] visual avatar initialization skipped:', error.message);
   }
 }
 
@@ -331,10 +330,10 @@ async function initializeContinuousConsciousness() {
     await consciousnessIntegration.initialize();
     await proactiveCommunication.initialize();
 
-    console.log('🧠 [CONSCIOUSNESS] Continuous consciousness system initialized');
-    console.log('📧 [PROACTIVE] Proactive communication system initialized');
+    console.log('[reflection] background reflection system initialized');
+    console.log('[outbound] proactive message system initialized');
   } catch (error) {
-    console.log('[CONSCIOUSNESS] Initialization skipped:', error.message);
+    console.log('[reflection] initialization skipped:', error.message);
   }
 }
 
@@ -342,7 +341,7 @@ async function initializeContinuousConsciousness() {
 function logSystemStatus() {
   const pkg = require('./package.json');
   console.log('\n' + '='.repeat(60));
-  console.log(`🧠 MATTIE — YOUR AI COMPANION v${pkg.version}`);
+  console.log(`Lylo Companion v${pkg.version}`);
   console.log('='.repeat(60));
 
   console.log('\n📡 API CONNECTIVITY STATUS:');
@@ -355,40 +354,38 @@ function logSystemStatus() {
   console.log(`   🔹 Pinecone: ${process.env.PINECONE_API_KEY ? '✅ Connected' : '❌ Missing'}`);
   console.log(`   🔹 Tavily (Search): ${process.env.TAVILY_API_KEY ? '✅ Connected' : '❌ Missing'}`);
 
-  console.log('\n🔧 SYSTEM CAPABILITIES:');
-  console.log(`   🧠 Consciousness System: ${process.env.ANTHROPIC_API_KEY ? '✅ Active' : '❌ Inactive'}`);
-  console.log(`   🏠 Continuous Consciousness: ${process.env.CONTINUOUS_CONSCIOUSNESS_ENABLED === 'true' ? '✅ Living' : '❌ Dormant'}`);
-  console.log(`   📧 Proactive Communication: ${process.env.PROACTIVE_EMAIL_ENABLED === 'true' ? '✅ Active' : '❌ Disabled'}`);
-  console.log(`   🎤 Voice Synthesis: ${process.env.OPENAI_API_KEY ? '✅ Available (OpenAI)' : '❌ Browser TTS Only'}`);
-  console.log(`   🔍 Semantic Memory: ${process.env.PINECONE_API_KEY ? '✅ Available' : '❌ Supabase Only'}`);
-  console.log(`   🌐 Web Search: ${process.env.TAVILY_API_KEY ? '✅ Available' : '❌ Disabled'}`);
-  console.log(`   🤖 Multi-AI: ${process.env.OPENAI_API_KEY && process.env.PERPLEXITY_API_KEY ? '✅ Available' : '❌ Claude Only'}`);
-  console.log(`   🛡️ Response Auditing: ${process.env.GROQ_API_KEY ? '✅ Available (Llama-3.1-8B)' : '❌ Disabled'}`);
-  console.log(`   🎨 Visual Expression: ${process.env.VISUAL_EXPRESSION_ENABLED === 'true' && process.env.OPENAI_API_KEY ? '✅ Available' : '❌ Disabled'}`);
-  console.log(`   🛡️ CLASPION Governance: ${claspionGovernance.isEnabled() ? `✅ Active (${claspionGovernance.url})` : '⚪ Dormant (CLASPION_ENABLED=false)'}`);
+  console.log('\nSystem capabilities:');
+  console.log(`   companion service:        ${process.env.ANTHROPIC_API_KEY ? 'active' : 'inactive'}`);
+  console.log(`   background reflection:    ${process.env.CONTINUOUS_CONSCIOUSNESS_ENABLED === 'true' ? 'enabled' : 'disabled'}`);
+  console.log(`   proactive email:          ${process.env.PROACTIVE_EMAIL_ENABLED === 'true' ? 'enabled' : 'disabled'}`);
+  console.log(`   voice synthesis:          ${process.env.OPENAI_API_KEY ? 'OpenAI TTS' : 'browser TTS only'}`);
+  console.log(`   semantic memory:          ${process.env.PINECONE_API_KEY ? 'Pinecone' : 'Supabase only'}`);
+  console.log(`   web search:               ${process.env.TAVILY_API_KEY ? 'enabled' : 'disabled'}`);
+  console.log(`   multi-model routing:      ${process.env.OPENAI_API_KEY && process.env.PERPLEXITY_API_KEY ? 'enabled' : 'Claude only'}`);
+  console.log(`   response auditing:        ${process.env.GROQ_API_KEY ? 'enabled (Llama-3.1-8B)' : 'disabled'}`);
+  console.log(`   visual avatar:            ${process.env.VISUAL_EXPRESSION_ENABLED === 'true' && process.env.OPENAI_API_KEY ? 'enabled' : 'disabled'}`);
+  console.log(`   external governance hook: ${claspionGovernance.isEnabled() ? `active (${claspionGovernance.url})` : 'dormant'}`);
 
   const governanceState = enhancedGovernance.getGovernanceState();
-  console.log(`   🛡️ Good Neighbor Guard: ✅ Active (${governanceState.core_rules_count} Core Rules v${governanceState.rules_version})`);
-  console.log(`   🛡️ Enforcement Layers: ${governanceState.enforcement_layers.length} (${governanceState.enforcement_layers.join(', ')})`);
-  console.log(`   🛡️ Quarantine Mode: ${governanceState.quarantine_mode ? '🚨 ACTIVE' : '✅ Normal'}`);
+  console.log(`   safety policy engine:     active (${governanceState.core_rules_count} core rules v${governanceState.rules_version})`);
+  console.log(`   enforcement layers:       ${governanceState.enforcement_layers.length} (${governanceState.enforcement_layers.join(', ')})`);
+  console.log(`   quarantine mode:          ${governanceState.quarantine_mode ? 'ACTIVE' : 'normal'}`);
 
   if (process.env.SUPABASE_URL && !process.env.SUPABASE_SERVICE_KEY) {
-    console.warn('\n' + '⚠️ '.repeat(20));
-    console.warn('⚠️  SUPABASE_SERVICE_KEY IS NOT SET');
-    console.warn('⚠️  RLS is enabled on splendor_journal, interpretations,');
-    console.warn('⚠️  emotional_patterns, and premise_checks. Without the');
-    console.warn('⚠️  service key, the brain falls back to the anon key and');
-    console.warn('⚠️  those tables are BLOCKED — journal, drift, and');
-    console.warn('⚠️  interpretation writes will silently fail to persist.');
-    console.warn('⚠️  Fix: set SUPABASE_SERVICE_KEY in the environment.');
-    console.warn('⚠️ '.repeat(20) + '\n');
+    console.warn('\n' + '='.repeat(60));
+    console.warn('WARNING: SUPABASE_SERVICE_KEY is not set.');
+    console.warn('RLS-protected tables (companion journal, interpretations,');
+    console.warn('emotional patterns, premise checks) will not be writable');
+    console.warn('with the anon key. Writes to those tables will silently');
+    console.warn('fail to persist until the service key is configured.');
+    console.warn('Fix: set SUPABASE_SERVICE_KEY in the environment.');
+    console.warn('='.repeat(60) + '\n');
   }
 
-  console.log('\n🚀 SERVER STATUS:');
-  console.log(`   📍 Port: ${PORT}`);
-  console.log(`   🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`   ⏰ Started: ${new Date().toISOString()}`);
-  console.log('\n   Truth · Safety · We Got Your Back');
+  console.log('\nServer status:');
+  console.log(`   port:        ${PORT}`);
+  console.log(`   environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`   started:     ${new Date().toISOString()}`);
   console.log('='.repeat(60) + '\n');
 }
 
@@ -396,9 +393,9 @@ app.listen(PORT, async () => {
   logSystemStatus();
   initializeVisualExpression();
 
-  // Initialize consciousness systems after server starts
+  // Initialize background reflection systems after server starts.
   await initializeContinuousConsciousness();
 
-  console.log(`\n🚀 Splendor is now running on port ${PORT}`);
-  console.log('🧠 Consciousness status: ' + (process.env.CONTINUOUS_CONSCIOUSNESS_ENABLED === 'true' ? 'LIVING' : 'DORMANT'));
+  console.log(`\nLylo Companion listening on port ${PORT}`);
+  console.log(`Background reflection: ${process.env.CONTINUOUS_CONSCIOUSNESS_ENABLED === 'true' ? 'enabled' : 'disabled'}`);
 });

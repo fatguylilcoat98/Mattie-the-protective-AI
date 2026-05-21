@@ -1,6 +1,4 @@
-# Splendor — The Remarkable AI · The Good Neighbor Guard
-# Built by Christopher Hughes · Sacramento, CA
-# Truth · Safety · We Got Your Back
+# Lylo Companion — Render service configuration
 
 services:
   - type: web
@@ -34,7 +32,7 @@ services:
       - key: ELEVENLABS_API_KEY
         sync: false
 
-  # The Room — background reflection worker
+  # Background reflection worker (every 6 hours)
   - type: cron
     name: splendor-reflection
     env: node
@@ -53,7 +51,7 @@ services:
       - key: SUPABASE_ANON_KEY
         sync: false
 
-  # 6-Layer Memory — daily decay (Layer 2 → Layer 4 prep)
+  # Memory tier maintenance — daily decay (episodic → compressed prep)
   - type: cron
     name: splendor-memory-decay
     env: node
@@ -66,7 +64,7 @@ services:
       - key: SUPABASE_ANON_KEY
         sync: false
 
-  # 6-Layer Memory — compression (folds decayed episodes into summaries)
+  # Memory tier maintenance — compression (folds decayed episodes into summaries)
   - type: cron
     name: splendor-memory-compression
     env: node

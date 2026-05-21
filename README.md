@@ -1,9 +1,11 @@
-# Mattie AI - Protective Companion for Sandy
+# Lylo Companion
 
-**Faith • Safety • We Got Your Back**
+An elder-care AI companion platform. Each pilot configures its own
+companion (named at setup) for a senior user, with safety guardrails,
+provenance-tracked memory, family contacts, and operator oversight.
 
-Built by Christopher Hughes · The Good Neighbor Guard  
-Created for Sandy with love from her family
+Built by Christopher Hughes. Sandy's instance was the original reference
+deployment and is the basis for the pilot template.
 
 ## Who Mattie Is
 
@@ -135,6 +137,4 @@ This is not just technology. This is love made practical.
 
 ---
 
-*"Cast all your anxiety on him because he cares for you." - 1 Peter 5:7*
-
-**The Good Neighbor Guard • Truth • Safety • We Got Your Back**
+Lylo — Love Your Loved One.
