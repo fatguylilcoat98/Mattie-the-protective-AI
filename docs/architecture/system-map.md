@@ -8,6 +8,33 @@ A single-page map of the Lylo runtime, intended to give an
 outside engineer or reviewer enough context to follow the rest
 of the documentation.
 
+## Current state vs target state
+
+This document describes the **target state** after the eight-PR
+execution plan (PR #17) is complete: a fully governed companion
+platform with RLS-enforced privacy, role-scoped DB clients,
+locked Setup Mode profiles, and a Legacy Mode skeleton.
+
+Where the diagram annotates `(PR X)` or `(post-PR X)`, that piece
+does not yet exist on `master`; the annotation names the PR that
+brings it in.
+
+For the **current state**, two things differ from the diagram:
+
+1. The active read/write path against Postgres uses a single
+   service-key Supabase client (`lib/supabase.js`), not the
+   role-scoped clients shown. This will change in PR E.
+2. There is no Setup Mode, no Legacy Mode, no Lylo CLI for new
+   pilot creation. Those land with PRs B, F, and G respectively.
+
+Everything else in the diagram — the route surface, the
+background workers, the governance middleware — maps to what is
+actually running today. The naming differs (`Mattie/Splendor` in
+logs and code, `Lylo Companion` in the cleaned-up surface);
+language cleanup landed in PR #15.
+
+## Diagram
+
 ```
   Browser / device
         |
@@ -142,5 +169,8 @@ of the documentation.
   `src/companions/persona-builder` (execution plan PR Step 7).
 - The pre-PR-E single-service-key Postgres client. It still
   runs today and will be removed after the RLS shadow period.
+- The operator workstation and admin browser session — see
+  `docs/security/threat-model.md` §4 for the
+  workstation-trust-boundary discussion.
 
 — End of system map.

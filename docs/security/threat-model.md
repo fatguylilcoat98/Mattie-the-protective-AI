@@ -23,11 +23,18 @@ exhaustive; intended to keep the highest-impact risks visible.
 - **The companion prompt and persona** — the system prompt
   itself, the `MATTIE_SOUL` / `companion_persona_templates`
   content. Behavior-defining.
-- **The Render env vars** — API keys, service-role tokens,
-  sender credentials.
+- **The host provider's env vars** — API keys, service-role
+  tokens, sender credentials.
 - **The Pinecone index** — vector mirror of approved memories.
 - **The chat surface** — the public-facing companion
   endpoint(s).
+- **Voice recordings** (Legacy Mode only). Optional opt-in
+  audio capture; sensitive due to biometric content and
+  potential synthesis re-use. See §4 voice-recording threats.
+- **The operator's workstation** (laptop, console session).
+  Holds the credentials, scripts, and access tokens needed to
+  create / pause / delete pilots and to fulfill DSARs. See
+  §4 operator-workstation threats.
 
 ## 2. Actors and trust
 
@@ -56,6 +63,9 @@ exhaustive; intended to keep the highest-impact risks visible.
 - **Background worker ↔ Postgres.** `lylo_system` role.
 - **Operator dashboard ↔ Postgres.** `lylo_admin` role +
   redacted view.
+- **Operator workstation ↔ production.** SSH / CLI / browser-
+  based admin surfaces. The workstation itself is the trust
+  boundary; see §4.
 
 ## 4. Threats (STRIDE)
 
@@ -70,18 +80,33 @@ exhaustive; intended to keep the highest-impact risks visible.
   Legacy mode response auditor adversarially tests for this.
 - **Admin spoofing.** Mitigation: admin role is gated by an
   operator account with 2FA; no shared admin credentials.
+- **Voice-clone impersonation.** A family member's voice
+  recording could be used by a third party to synthesize
+  speech and re-injected into a phishing campaign targeting
+  the senior. Mitigation: voice recordings are stored
+  encrypted at rest; access is restricted to the Legacy
+  archive surface; the senior receives an export-event audit
+  notification whenever their voice files are accessed.
 
 ### Tampering
 
 - **Audit-log mutation.** Mitigation: RLS policy on
   `audit_log` and `memory_visibility_audit_log` denies UPDATE
   and DELETE to every role except a one-off migration role.
+- **Audit-log forgery (cross-attribution).** Mitigation:
+  INSERT policy requires `actor_user_id = current session's
+  user_id` and `actor_role = current session's role`. Tested
+  in `tests/lylo/audit-forgery.test.js`.
 - **Visibility-level downgrade.** Only the senior (or an
   explicitly delegated guardian, v2) can change visibility.
   Application layer rejects writes; RLS enforces; every change
   writes to the audit log.
 - **`safety_policies` tampering.** Only owner role can modify;
   changes write to `audit_log`.
+- **Voice-file tampering.** Mitigation: voice blobs are
+  content-addressed (storage key = hash of content). Any
+  modification changes the address and is visible to the
+  reconciliation worker.
 
 ### Repudiation
 
@@ -91,12 +116,17 @@ exhaustive; intended to keep the highest-impact risks visible.
 - **"I didn't change that visibility."** Mitigation:
   visibility changes are signed by the actor user id and
   recorded with before/after state and a user-supplied reason.
+- **"I didn't run that operator script."** Mitigation:
+  operator scripts (`create-pilot-instance.js`,
+  `delete-pilot-instance.js`, `dsar-export.js`,
+  `dsar-delete.js`) write an `audit_log` row before any
+  destructive step, attributed to the authenticated operator.
 
 ### Information disclosure
 
 - **Cross-pilot data leak.** Mitigation: every row carries
-  `pilot_instance_id`; RLS policies key on it; tested in PR E
-  matrix tests.
+  `pilot_instance_id`; RLS policies key on it; tested in
+  `tests/lylo/cross-pilot-isolation.test.js`.
 - **Family seeing `private` memory.** Mitigation: RLS makes
   the row invisible to the `lylo_family` role. Not masked —
   invisible.
@@ -106,13 +136,28 @@ exhaustive; intended to keep the highest-impact risks visible.
 - **Prompt-injection extraction.** Mitigation: tested
   adversarially in `tests/lylo/`; the companion's foundational
   rules include "do not disclose other users' private content."
-- **LLM provider exposure.** Accepted residual risk: any
-  memory used in a prompt is visible to the provider for the
-  duration of the request. Mitigation: minimize per-prompt
-  retrieval volume; never include `password_locked` content in
-  a worker-initiated prompt.
+- **LLM provider exposure.** Accepted residual risk with
+  bounded mitigation: any memory used in a prompt is visible
+  to the provider for the duration of the request. Mitigation
+  budget: no more than 40 memory rows in a single prompt;
+  `password_locked` content is never included in a
+  worker-initiated prompt; the daily-log worker uses the
+  compose-target carve-out and is audited per use.
 - **Backup leak.** Mitigation: encrypted at rest; key held
   outside the storage provider; rotation quarterly.
+- **Operator-workstation compromise.** A compromised operator
+  laptop running `scripts/create-pilot-instance.js --confirm`
+  births a compromised pilot. Mitigation: the operator
+  workstation must have full-disk encryption, MDM enforcement,
+  and an idle screen lock under 5 minutes. Operator
+  credentials are scoped per-pilot (no shared admin token).
+  Operator scripts require an interactive confirmation token
+  and write audit rows before any destructive step.
+- **Voice-recording exposure.** Voice blobs are stored
+  encrypted; access via the Legacy archive surface only; every
+  read writes an audit row. Voice is excluded from the LLM
+  prompt context (transcripts may be retrieved; raw audio
+  never).
 
 ### Denial of service
 
@@ -121,7 +166,7 @@ exhaustive; intended to keep the highest-impact risks visible.
   pattern; extend to chat surface).
 - **Vault brute-force.** Mitigation: 5 failed PIN attempts →
   30-minute lockout; lockout duration documented; lockouts
-  audited.
+  audited. Tested in `tests/lylo/vault-lockout.test.js`.
 - **Background-worker spam.** Mitigation:
   `MAX_REFLECTIONS_PER_HOUR` env-var ceiling.
 
@@ -139,19 +184,32 @@ exhaustive; intended to keep the highest-impact risks visible.
   handlers use role-scoped clients exclusively. Removing the
   service-key client from request handlers is the final step
   of the PR E rollout.
+- **Operator privilege escalation via shared scripts.** The
+  pilot-deletion CLI is scoped strictly by `pilot_instance_id`
+  and refuses to run if more than one pilot matches.
+  Mitigation: a separate confirmation token must be entered
+  interactively; the script audit-logs its target before
+  running.
 
 ## 5. Accepted residual risks
 
 - LLM provider sees prompt contents during request. *Accepted.*
-  Mitigation: minimize retrieval volume; honor the
-  no-`password_locked`-to-workers rule.
+  Mitigation: minimize retrieval volume per §4; honor the
+  no-`password_locked`-to-workers rule; daily-log compose
+  context is audited.
 - A senior who shares their session cookie shares their data.
   *Accepted.* Mitigation: documented in the onboarding
   walkthrough; the wizard recommends single-user sessions.
 - A family member with read access to `family_shared` memories
   could screenshot and re-share. *Accepted.* Mitigation: the
   visibility model does not attempt DRM; it documents that
-  `family_shared` content is shareable in principle.
+  `family_shared` content is shareable in principle. The
+  visibility audit log captures who accessed what and when,
+  giving post-hoc accountability even without DRM.
+- Voice content used in the Legacy archive can in principle
+  be misused to synthesize speech in other contexts.
+  *Accepted.* Mitigation: opt-in only; never used by the
+  companion as input to a TTS or voice-clone model.
 
 ## 6. Known gaps (work in progress)
 
@@ -165,6 +223,9 @@ exhaustive; intended to keep the highest-impact risks visible.
 - History rewrite of older committed secrets (e.g. the
   redacted email in pre-PR-#16 commits) is not done. Accepted
   as paper-only risk because the address was the only real
-  identifier and Render env vars are already in place.
+  identifier and host provider env vars are already in place.
+- Operator MDM / workstation enforcement is a policy item; the
+  technical enforcement (e.g. mandatory VPN, device attestation
+  on the admin surface) is out of scope for v1.
 
 — End of threat model.
