@@ -1,0 +1,4 @@
+# Tests under tests/lylo/ may emit temporary fixtures, logs, or
+# coverage artifacts to a sibling directory. Keep them out of git.
+.tmp/
+*.log
