@@ -15,20 +15,23 @@ migration, numbered sequentially.
 - **Never run a migration that has not been reviewed by the owner.**
   Migrations are reviewed in the PR that adds them, applied by the
   owner against a snapshot, and only then run against production.
-- **`archive/` contains pre-cleanup SQL** that is no longer
-  executed. Do not run anything from `archive/`. It is read-only
+- **`_archive/` contains pre-cleanup SQL** that is no longer
+  executed. Do not run anything from `_archive/`. It is read-only
   history, kept so old commits and stack traces still resolve to
-  real files.
+  real files. The underscore prefix marks it as inert: numbered
+  migrations live in this directory directly, not under `_archive/`.
 
 ## Layout
 
 ```
 db/
   schema.sql              - canonical dump of live, regenerated, read-only
+                            (owner-generated via `pg_dump --schema-only`
+                            on first migration land; not present yet)
   migrations/
     001_baseline.sql      - no-op pin
     002_*.sql ... 999_*.sql
-    archive/              - historical SQL, move-only, not executed
+    _archive/             - historical SQL, move-only, not executed
 ```
 
 ## Adding a migration
@@ -59,16 +62,16 @@ schema from migrations. The live schema is whatever it actually is.
 `db/schema.sql` is the source of truth for the baseline; migrations
 in this directory are the source of truth for everything since.
 
-## What `archive/` is
+## What `_archive/` is
 
 The pre-cleanup `database/`, `sql/`, and root-level `*.sql` files
 are moved here (via `git mv`, in a follow-up PR) so the repo's
 active surface has one place to look for SQL.
 
-Files in `archive/` are never executed. They are kept because:
+Files in `_archive/` are never executed. They are kept because:
 
 - old commits may reference them by path,
 - production stack traces and Render cron logs may name them,
 - they document the prototype-era schema evolution that led here.
 
-Do not delete files from `archive/` without explicit owner approval.
+Do not delete files from `_archive/` without explicit owner approval.

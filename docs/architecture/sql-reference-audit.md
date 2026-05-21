@@ -3,7 +3,7 @@
 **Status:** Read-only audit. **No file has been moved or modified
 by this audit.** This document inventories every reference to a
 `.sql` file in the codebase so the follow-up PR (PR A2) that
-actually `git mv`s the files into `db/migrations/archive/` can
+actually `git mv`s the files into `db/migrations/_archive/` can
 update every reference atomically in the same commit.
 
 **Scope of the audit:** every file in the repo at
@@ -41,9 +41,9 @@ Proposed post-move paths (PR A2 will rewrite these lines):
 
 | Script              | Current path                                  | Proposed path                                              |
 |---------------------|-----------------------------------------------|------------------------------------------------------------|
-| `setup:consciousness` | `persistent-consciousness-schema.sql`         | `db/migrations/archive/root/persistent-consciousness-schema.sql` |
-| `continuity:setup`    | `database/master-continuity-schema.sql`       | `db/migrations/archive/database/master-continuity-schema.sql`    |
-| `memory:deploy`       | `database/complete-fresh-deploy.sql`          | `db/migrations/archive/database/complete-fresh-deploy.sql`       |
+| `setup:consciousness` | `persistent-consciousness-schema.sql`         | `db/migrations/_archive/root/persistent-consciousness-schema.sql` |
+| `continuity:setup`    | `database/master-continuity-schema.sql`       | `db/migrations/_archive/database/master-continuity-schema.sql`    |
+| `memory:deploy`       | `database/complete-fresh-deploy.sql`          | `db/migrations/_archive/database/complete-fresh-deploy.sql`       |
 
 ### 2.2 `deploy-windows.ps1` (2 references)
 
@@ -58,7 +58,7 @@ The Windows PowerShell deployment helper references the same
 reference to one file.)
 
 Proposed post-move path:
-`db/migrations/archive/database/complete-fresh-deploy.sql`.
+`db/migrations/_archive/database/complete-fresh-deploy.sql`.
 
 ## 3. Files that do NOT reference SQL paths
 
@@ -113,8 +113,8 @@ is not lost.
 
 Using this audit as input, PR A2 will move:
 
-- **`database/*.sql`** (~25 files) → `db/migrations/archive/database/`
-- **`sql/*.sql`** (~13 files) → `db/migrations/archive/sql/`
+- **`database/*.sql`** (~25 files) → `db/migrations/_archive/database/`
+- **`sql/*.sql`** (~13 files) → `db/migrations/_archive/sql/`
 - **Root `*.sql`** (~8 files: `database.sql`,
   `complete-consciousness-database.sql`,
   `consciousness-database-update.sql`,
@@ -122,7 +122,7 @@ Using this audit as input, PR A2 will move:
   `deploy-step2-raw-events.sql`,
   `persistent-consciousness-schema.sql`,
   `setup-consciousness-user.sql`, `verify-deployment.sql`)
-  → `db/migrations/archive/root/`
+  → `db/migrations/_archive/root/`
 
 **Total:** roughly 46 files moved via `git mv`. Content
 byte-identical; only paths change.
