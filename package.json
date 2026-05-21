@@ -1,7 +1,7 @@
 {
   "name": "mattie-ai",
   "version": "1.0.0",
-  "description": "Mattie — Protective AI Companion for Sandy · The Good Neighbor Guard",
+  "description": "Lylo Companion — elder-care AI companion platform (Express + Supabase + Pinecone backend)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
