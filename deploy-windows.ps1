@@ -3,7 +3,7 @@ Write-Host "🚀 SPLENDOR ENHANCED MEMORY SYSTEM - WINDOWS DEPLOYMENT" -Foregrou
 Write-Host "=" * 60
 
 # Check if database file exists
-if (Test-Path "database/complete-fresh-deploy.sql") {
+if (Test-Path "db/migrations/_archive/database/complete-fresh-deploy.sql") {
     Write-Host "✅ Found database schema file" -ForegroundColor Green
 } else {
     Write-Host "❌ Database schema file not found!" -ForegroundColor Red
@@ -19,7 +19,7 @@ Write-Host "   • Navigate to SQL Editor"
 Write-Host "   • Copy the SQL below and paste it there"
 Write-Host ""
 Write-Host "2️⃣  COMMAND LINE (if you have psql)" -ForegroundColor Cyan
-Write-Host "   psql `$env:SUPABASE_URL -f database/complete-fresh-deploy.sql"
+Write-Host "   psql `$env:SUPABASE_URL -f db/migrations/_archive/database/complete-fresh-deploy.sql"
 Write-Host ""
 
 # Ask user which option they want
@@ -30,7 +30,7 @@ if ($choice -eq "2") {
     if ($env:SUPABASE_URL) {
         Write-Host "🔧 Attempting command line deployment..." -ForegroundColor Yellow
         try {
-            psql $env:SUPABASE_URL -f "database/complete-fresh-deploy.sql"
+            psql $env:SUPABASE_URL -f "db/migrations/_archive/database/complete-fresh-deploy.sql"
             Write-Host "✅ Database deployed successfully!" -ForegroundColor Green
         } catch {
             Write-Host "❌ Command line deployment failed. Try Dashboard option." -ForegroundColor Red
@@ -50,7 +50,7 @@ if ($choice -eq "1" -or $choice -eq "") {
     Write-Host ""
 
     # Display the SQL content
-    Get-Content "database/complete-fresh-deploy.sql" | Write-Host
+    Get-Content "db/migrations/_archive/database/complete-fresh-deploy.sql" | Write-Host
 
     Write-Host ""
     Write-Host "=" * 60 -ForegroundColor Gray
