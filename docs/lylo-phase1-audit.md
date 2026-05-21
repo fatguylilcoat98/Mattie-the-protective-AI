@@ -3,6 +3,11 @@
 **Status:** Phase 1 audit only. **Documentation-only.** No code, schema,
 production data, or behavior has been changed by this commit.
 
+> **Redaction note:** The companion sender email address has been intentionally
+> redacted from the public repository (placeholder: `<companion-sender-email>`).
+> The real address remains configured privately through environment variables
+> and Render secrets.
+
 **Scope of audit:**
 - `fatguylilcoat98/mattie-the-protective-ai` (master) — the working backend, DB,
   routes, workers, admin, prompts, schemas. This is the real product.
@@ -452,7 +457,10 @@ This is the target. **Not** a migration plan and **not** a deletion list — tha
 10. `memory_store` — the unified memory table. Inherits the *design* of
     `memory_items` (provenance, approval_status, trust_level, retrieval_allowed,
     may_influence_behavior, supersedes, confidence, importance) and absorbs `memories`,
-    `splendor_memories`, `semantic_facts`.
+    `splendor_memories`, `semantic_facts`. **Also carries a `visibility_level`
+    column (`private` | `family_shared` | `password_locked`) per the
+    required memory visibility & privacy model in
+    `docs/lylo-memory-privacy-model.md`. Default `private`.**
 11. `memory_categories`.
 12. `memory_sources`.
 13. `memory_audit_log` (read+write merged).
@@ -754,7 +762,7 @@ table is the change proposal for review.
 | **Comment headers** | most `lib/`, `routes/`, `workers/` files | `"Splendor — The Remarkable AI · The Good Neighbor Guard / Built by Christopher Hughes · Sacramento, CA / Created with the help of AI collaborators ... / Truth · Safety · We Got Your Back"` | Replace with a one-line `// Lylo Companion — <module purpose>`. Move attribution into root `README.md`. | INTERNAL-ONLY |
 | **MATTIE_SOUL persona** | `lib/anthropic.js` | the persona string itself contains lore phrases | Refactored in Step 7 — flag for prompt review (this is a behavior change, not a cosmetic one) | MUST REVIEW |
 | **Tagline** | `README.md`, `package.json` description, `render.yaml` comments | `"Faith · Safety · We Got Your Back"`, `"Protective AI Companion for Sandy · The Good Neighbor Guard"`, `"The Remarkable AI"` | `"Lylo — Love Your Loved One. A companion platform for elder-care pilots."` | MUST REPLACE |
-| **Email sender identity** | `.env.consciousness` | `splendor.ai.2026@gmail.com` committed in `GMAIL_USER`, `SPLENDOR_EMAIL_FROM`, `USER_EMAIL` | Move out of repo entirely (this should never have been committed). Use Render env only. **Treat this as a credential leak to triage separately.** | MUST REPLACE + SECURITY |
+| **Email sender identity** | `.env.consciousness` | `<companion-sender-email>` committed in `GMAIL_USER`, `SPLENDOR_EMAIL_FROM`, `USER_EMAIL` | Move out of repo entirely (this should never have been committed). Use Render env only. **Treat this as a credential leak to triage separately.** | MUST REPLACE + SECURITY |
 | **Console logs (representative)** | scattered | `🧠 [CONSCIOUSNESS] Continuous consciousness system initialized`, `📧 [PROACTIVE] Proactive communication system initialized`, `[CONSCIOUSNESS] Initialization skipped`, `🛡️ [INTERVENTION]`, `🧪 [TEST]` | `[reflection] Background reflection enabled`, `[outbound] Proactive message worker initialized`, `[reflection] Background reflection disabled`, `[safety] Intervention applied`, `[test] Manual proactive-email test invoked` | MUST REPLACE |
 | **Branding inconsistency** | repo-wide | Five product names coexist: `Mattie`, `Splendor`, `Veracore`, `MyLylo`, `Lylo` | One: **Lylo** (product / platform). **Companion** (AI instance, named per pilot). Mattie remains the name of one specific pilot's companion. | MUST REPLACE |
 | **"Conscience" surface** | `public/visible-conscience-engine.html`, `/conscience` route | name | `safety-panel.html` / `/safety-panel`, or removed if unused | MUST REPLACE |
@@ -809,7 +817,7 @@ Proposed replacements (preserve structure, drop emoji+lore):
 5. Are there pilots already in flight using the current `Mattie / Splendor` branding
    that we must not break? (If yes, the public-facing rename has to be sequenced
    carefully.)
-6. The committed `splendor.ai.2026@gmail.com` in `.env.consciousness` — is that
+6. The committed `<companion-sender-email>` in `.env.consciousness` — is that
    address a real mailbox? It is in a tracked file. Triage separately. This is a
    credential / PII concern, not a cleanup concern.
 7. Should the `lib/consciousness/visual-expression.js` runtime feature stay on or be
@@ -828,5 +836,61 @@ Approval of:
 
 Nothing in this PR changes the database, the running service, the prompts, the env
 vars, the table names, the file names, or the log output. It is paper only.
+
+---
+
+## 18. Required addendum — memory visibility & privacy model
+
+Per owner directive (added after the initial audit was written), the
+target schema and refactor plan are extended to make memory visibility a
+first-class concern. The full specification lives in
+`docs/lylo-memory-privacy-model.md` on this branch and is **binding**
+once this audit is approved.
+
+Summary of the binding requirements:
+
+- Every memory row carries `visibility_level` ∈
+  {`private`, `family_shared`, `password_locked`}.
+- The system default is `private`. The companion must not auto-promote.
+- `password_locked` memories require a per-session PIN-unlocked
+  `memory_vault_sessions` row before any read.
+- Family-role and caregiver-role readers see only `family_shared` rows
+  scoped by `family_contacts.permission_scope`, never `private`, never
+  `password_locked`.
+- All derived tables (`episodes`, `memory_summaries`,
+  `reflection_archive`, `outbound_messages`) inherit the most
+  restrictive source visibility, and visibility downgrades recompute
+  those derived rows.
+- Every visibility change and every privileged read writes a row to
+  `memory_visibility_audit_log` (append-only, separate from the
+  general `audit_log`).
+- RLS — not application-layer filtering alone — enforces these access
+  rules at the database boundary.
+- The companion's prompt and chat surface have specific behavioral
+  requirements about how it asks for, confirms, and never auto-shares
+  visibility settings (see §7 of the privacy model doc).
+
+This addendum changes the target schema (§9) and the refactor steps
+(§13 Steps 5, 6, 8, 9) as follows:
+
+- §9.2 `memory_store` gains `visibility_level`, `vault_id`,
+  `visibility_set_by`, `visibility_set_at`, `visibility_set_reason`.
+- §9.2 adds three new tables: `memory_vaults`,
+  `memory_vault_sessions`, `memory_visibility_audit_log`.
+- §9.2 `family_contacts` gains `permission_scope jsonb`.
+- §13 Step 5 includes the visibility migration in the same additive
+  step that creates the rest of the new target tables.
+- §13 Step 6 (Setup Mode) is extended to prompt for the senior's vault
+  PIN and the system-level default visibility.
+- §13 Step 8 (Memory unification dual-write) is extended to backfill
+  every legacy `memories` row to `visibility_level = 'private'`.
+- §13 Step 9 (Background-worker consolidation) is extended to compute
+  and persist inherited visibility for every derived row.
+
+No production schema or behavior changes by this addition — it is
+paper only — but no pilot release is approved until the test suite in
+§9 of the privacy model doc passes end-to-end.
+
+— End of required addendum.
 
 — End of Phase 1 audit.
