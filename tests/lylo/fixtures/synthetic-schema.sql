@@ -567,6 +567,13 @@ $$;
 -- read current_app_user_role(); the pilot comes from the GUC, which
 -- survives the SECURITY DEFINER context switch, and is checked.
 --
+-- N-2 (production): every SECURITY DEFINER function in this schema
+-- (record_failed_unlock, record_successful_unlock, expire_vault_sessions,
+-- dsar_export_memories) runs with its OWNER's privileges. In this synthetic
+-- schema the owner is the superuser that applied it. PR E MUST own these
+-- functions with a dedicated, minimal-privilege role — never a superuser —
+-- so that SECURITY DEFINER grants only the table access each function needs.
+--
 -- H6: when failed attempts cross the lockout threshold, active sessions are
 -- revoked in addition to setting lockout_until.
 CREATE FUNCTION record_failed_unlock(
@@ -981,6 +988,11 @@ USING (
 -- both SECURITY DEFINER. memory_vaults likewise has no direct UPDATE
 -- policy — its state mutates only through record_failed_unlock /
 -- record_successful_unlock.
+--
+-- N-1: the database cannot verify the vault PIN — it never receives the
+-- plaintext (only pin_hash / pin_salt are stored). The application MUST
+-- verify the PIN before inserting a session row; this policy is the final
+-- step of the unlock flow, not the PIN gate itself.
 CREATE POLICY memory_vault_sessions_senior_insert ON memory_vault_sessions FOR INSERT
 WITH CHECK (
   pilot_instance_id = current_app_pilot_instance_id()
