@@ -110,3 +110,45 @@ test('audit log write failures fail-close the originating action (TODO PR D + PR
 test('migration role can UPDATE / DELETE for retention (TODO PR E)', (t) => {
   t.skip('TODO PR E: synthetic schema must add a retention worker role');
 });
+
+test('F6: append-only is positively enforced — UPDATE/DELETE raise even for the seeder', async (t) => {
+  const conn = await connectOrSkip();
+  if (conn.skip) { t.skip(`Skipped: ${conn.reason}`); return; }
+  const { client, teardown } = conn;
+  t.after(teardown);
+
+  const ids = await seed(client);
+  // Commit one audit row.
+  await client.query(`SET search_path TO lylo_test, public`);
+  await client.query('BEGIN');
+  await client.query(`SET LOCAL ROLE lylo_seeder`);
+  await client.query(`SET LOCAL app.user_id = '00000000-0000-0000-0000-000000000000'`);
+  await client.query(`SET LOCAL app.pilot_instance_id = '00000000-0000-0000-0000-000000000000'`);
+  await client.query(
+    `INSERT INTO memory_visibility_audit_log
+       (pilot_instance_id, memory_id, event_type, actor_user_id, actor_role, outcome)
+       VALUES ($1, $2, 'visibility_read', $3, 'senior', 'allowed')`,
+    [ids.pilots.a, ids.memories.a.familyShared, ids.users.a.senior]
+  );
+  await client.query('COMMIT');
+
+  // The seeder's seeder_all policy WOULD admit the row; the append-only
+  // trigger must raise regardless, rather than silently affecting it.
+  await client.query('BEGIN');
+  await client.query(`SET LOCAL ROLE lylo_seeder`);
+  await assert.rejects(
+    client.query(`UPDATE memory_visibility_audit_log SET outcome = 'denied'`),
+    /append-only/i,
+    'the append-only trigger must raise on UPDATE'
+  );
+  await client.query('ROLLBACK');
+
+  await client.query('BEGIN');
+  await client.query(`SET LOCAL ROLE lylo_seeder`);
+  await assert.rejects(
+    client.query(`DELETE FROM memory_visibility_audit_log`),
+    /append-only/i,
+    'the append-only trigger must raise on DELETE'
+  );
+  await client.query('ROLLBACK');
+});

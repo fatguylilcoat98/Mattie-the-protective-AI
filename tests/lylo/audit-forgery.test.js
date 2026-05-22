@@ -111,3 +111,54 @@ test('truthful insert (actor_user_id = session, actor_role = session) succeeds f
     });
   }
 });
+
+test('F7: a session cannot hand-write an integrity event (visibility_changed)', async (t) => {
+  const conn = await connectOrSkip();
+  if (conn.skip) { t.skip(`Skipped: ${conn.reason}`); return; }
+  const { client, teardown } = conn;
+  t.after(teardown);
+
+  const ids = await seed(client);
+
+  await withRole(
+    client,
+    { role: 'senior', userId: ids.users.a.senior, pilotInstanceId: ids.pilots.a },
+    async (c) => {
+      await assert.rejects(
+        c.query(
+          `INSERT INTO lylo_test.memory_visibility_audit_log
+             (pilot_instance_id, memory_id, event_type, actor_user_id, actor_role,
+              old_visibility, new_visibility, outcome)
+             VALUES ($1, $2, 'visibility_changed', $3, 'senior', 'private', 'family_shared', 'allowed')`,
+          [ids.pilots.a, ids.memories.a.private, ids.users.a.senior]
+        ),
+        /new row violates|row-level security|policy/i,
+        'a direct session INSERT may not forge an integrity event'
+      );
+    }
+  );
+});
+
+test('F7: a session may still hand-write an attestation event (visibility_read)', async (t) => {
+  const conn = await connectOrSkip();
+  if (conn.skip) { t.skip(`Skipped: ${conn.reason}`); return; }
+  const { client, teardown } = conn;
+  t.after(teardown);
+
+  const ids = await seed(client);
+
+  await withRole(
+    client,
+    { role: 'senior', userId: ids.users.a.senior, pilotInstanceId: ids.pilots.a },
+    async (c) => {
+      const r = await c.query(
+        `INSERT INTO lylo_test.memory_visibility_audit_log
+           (pilot_instance_id, memory_id, event_type, actor_user_id, actor_role, outcome)
+           VALUES ($1, $2, 'visibility_read', $3, 'senior', 'allowed') RETURNING id`,
+        [ids.pilots.a, ids.memories.a.private, ids.users.a.senior]
+      );
+      assert.equal(r.rowCount, 1,
+        'visibility_read is an attestation event a session may write directly');
+    }
+  );
+});

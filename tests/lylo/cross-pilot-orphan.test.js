@@ -77,3 +77,51 @@ test('memory_vaults cross-pilot user is refused', async (t) => {
   );
   await client.query('ROLLBACK');
 });
+
+test('D3: a second senior in the same pilot is refused (one supported person per pilot)', async (t) => {
+  const conn = await connectOrSkip();
+  if (conn.skip) { t.skip(`Skipped: ${conn.reason}`); return; }
+  const { client, teardown } = conn; t.after(teardown);
+  const ids = await seed(client);
+
+  await client.query(`SET search_path TO lylo_test, public`);
+  await client.query('BEGIN');
+  await client.query(`SET LOCAL ROLE lylo_seeder`);
+  await client.query(`SET LOCAL app.user_id = '00000000-0000-0000-0000-000000000000'`);
+  await client.query(`SET LOCAL app.pilot_instance_id = '00000000-0000-0000-0000-000000000000'`);
+
+  await assert.rejects(
+    client.query(
+      `INSERT INTO users (pilot_instance_id, username, role) VALUES ($1, 'alpha-senior-2', 'senior')`,
+      [ids.pilots.a]
+    ),
+    /unique|users_one_senior_per_pilot|violates/i,
+    'a pilot may contain at most one senior (D3)'
+  );
+  await client.query('ROLLBACK');
+});
+
+test('F5: memory_store.vault_id pointing at another pilot vault is refused', async (t) => {
+  const conn = await connectOrSkip();
+  if (conn.skip) { t.skip(`Skipped: ${conn.reason}`); return; }
+  const { client, teardown } = conn; t.after(teardown);
+  const ids = await seed(client);
+
+  await client.query(`SET search_path TO lylo_test, public`);
+  await client.query('BEGIN');
+  await client.query(`SET LOCAL ROLE lylo_seeder`);
+  await client.query(`SET LOCAL app.user_id = '00000000-0000-0000-0000-000000000000'`);
+  await client.query(`SET LOCAL app.pilot_instance_id = '00000000-0000-0000-0000-000000000000'`);
+
+  await assert.rejects(
+    client.query(
+      `INSERT INTO memory_store
+         (pilot_instance_id, owning_user_id, content, provenance, visibility_level, vault_id)
+         VALUES ($1, $2, 'cross-pilot vault attempt', 'USER_STATED', 'password_locked', $3)`,
+      [ids.pilots.a, ids.users.a.senior, ids.vaults.b] // pilot A row, pilot B vault
+    ),
+    /foreign key|violates/i,
+    'the composite FK must refuse a vault_id from another pilot (F5)'
+  );
+  await client.query('ROLLBACK');
+});

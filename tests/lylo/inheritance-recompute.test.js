@@ -92,3 +92,59 @@ test('hard-deleting a source memory cascades into requires_recompute on memory_s
     }
   );
 });
+
+test('F3: changing a source memory visibility flags the derived episode for recompute', async (t) => {
+  const conn = await connectOrSkip();
+  if (conn.skip) { t.skip(`Skipped: ${conn.reason}`); return; }
+  const { client, teardown } = conn; t.after(teardown);
+  const ids = await seed(client);
+
+  const ep = await withRoleCommitted(
+    client,
+    { role: 'seeder', userId: ids.users.a.senior, pilotInstanceId: ids.pilots.a },
+    (c) => makeEpisode(c, ids, [ids.memories.a.familyShared])
+  );
+
+  // Tighten the source memory's visibility. The inherited minimum moves.
+  await withRoleCommitted(
+    client,
+    { role: 'seeder', userId: ids.users.a.senior, pilotInstanceId: ids.pilots.a },
+    (c) => c.query(`UPDATE lylo_test.memory_store SET visibility_level = 'private' WHERE id = $1`,
+      [ids.memories.a.familyShared])
+  );
+
+  // The episode is owned by the senior; after the change it inherits private,
+  // so it is read back as the senior.
+  await withRole(
+    client,
+    { role: 'senior', userId: ids.users.a.senior, pilotInstanceId: ids.pilots.a },
+    async (c) => {
+      const r = await c.query(`SELECT requires_recompute FROM lylo_test.episodes WHERE id = $1`, [ep.id]);
+      assert.equal(r.rows[0].requires_recompute, true,
+        'a source visibility change must flag the derived episode (F3)');
+    }
+  );
+});
+
+test('F2: a derived row with an unresolved source fails closed to private', async (t) => {
+  const conn = await connectOrSkip();
+  if (conn.skip) { t.skip(`Skipped: ${conn.reason}`); return; }
+  const { client, teardown } = conn; t.after(teardown);
+  const ids = await seed(client);
+
+  const ep = await withRoleCommitted(
+    client,
+    { role: 'seeder', userId: ids.users.a.senior, pilotInstanceId: ids.pilots.a },
+    (c) => c.query(
+      `INSERT INTO lylo_test.episodes
+         (pilot_instance_id, owning_user_id, summary, source_memory_ids, visibility_level)
+         VALUES ($1, $2, 'orphan-source episode',
+                 ARRAY['00000000-0000-0000-0000-0000000000aa']::uuid[], 'family_shared')
+         RETURNING id, visibility_level`,
+      [ids.pilots.a, ids.users.a.senior]
+    ).then((r) => r.rows[0])
+  );
+
+  assert.equal(ep.visibility_level, 'private',
+    'an unresolved source must fail closed to private, not family_shared (F2)');
+});

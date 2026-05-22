@@ -1,4 +1,4 @@
-# Lylo — Privacy & RLS matrix tests (synthetic schema, v4 hardened)
+# Lylo — Privacy & RLS matrix tests (synthetic schema, v5 hardened)
 
 **Owner:** project lead. **Reviewer:** owner.
 
@@ -11,30 +11,48 @@ live policies are wrong.
 No production DB connection. The harness refuses to run if
 `SYNTHETIC_DATABASE_URL` looks like production.
 
+## Scope (D4)
+
+This suite is a **visibility / RLS / audit / compose** contract. It does
+**not** model the rest of `source-of-truth-memory-policy.md`: admissibility,
+retraction, supersession, and the full authority-validation lifecycle are
+deferred to later PRs (PR-C / PR-D). Visibility enforcement here is
+necessary but **not sufficient** for the whole memory policy — a row being
+visibility-scoped does not mean it is admissible. `provenance` is the
+locked 3-class model only (`VERIFIED_FACT`, `USER_STATED`, `AI_INFERRED`);
+the lifecycle that moves a claim between classes is out of scope here.
+
+Also deferred, explicitly: derived-row creation (episodes / summaries /
+reflection) and outbound-message creation have no write policy yet — they
+are owned by PR-C / PR-F. Vault state, vault sessions, audit and compose
+authorization write paths *are* contracted here (D5).
+
 ## What it tests
 
 | File | What |
 |---|---|
 | `rls-matrix.test.js` | Core role × visibility matrix; family default-deny. |
 | `cross-pilot-isolation.test.js` | Senior of pilot A cannot see pilot B; spoofed scope cannot escalate. |
-| `cross-pilot-orphan.test.js` | (C2) Composite FKs refuse rows whose owner/contact/user is in a different pilot. |
-| `compose-context.test.js` | (C1, H7) Compose-context GUC alone is insufficient; only a granted `compose_authorizations` row + audit row enables system access to a target senior's `private` rows. Non-system roles cannot grant; cross-pilot grants refused; expired grants refused. |
+| `cross-pilot-orphan.test.js` | (C2, F5) Composite FKs refuse rows whose owner/contact/user/vault is in a different pilot. (D3) A pilot may hold at most one senior. |
+| `compose-context.test.js` | (C1, H7, F4) Compose-context GUC alone is insufficient; only a granted `compose_authorizations` row enables system access to a target senior's `private` rows. Non-system roles cannot grant; cross-pilot/expired grants refused. The `compose_context_granted` audit row is trigger-written, so a direct INSERT cannot skip it. |
 | `outbound-target.test.js` | (C3, C4) Family/caregiver targets can SELECT family_shared drafts addressed to them; private/locked drafts must target the owning senior (with sources) or the session user (without sources). |
 | `admin-vault-redaction.test.js` | (C5) Admin has zero direct SELECT access to `memory_vaults` and `memory_vault_sessions`. |
 | `lookup-leak.test.js` | (H1, H2) `family_contacts` and `users` lookups are narrowed beyond "everyone in pilot". |
 | `insert-update-restrictions.test.js` | Senior INSERT / UPDATE on own rows; family/caregiver/admin/system cannot write. (H3) Senior cannot UPDATE soft-deleted (`active = false`) rows. |
-| `audit-forgery.test.js` | Audit-log INSERT requires `actor_user_id = self` and `actor_role = self`. Admin cannot forge as senior. |
-| `audit-append-only.test.js` | UPDATE and DELETE on the audit log are filtered to 0 rows. |
+| `audit-forgery.test.js` | Audit-log INSERT requires `actor_user_id = self` and `actor_role = self`; admin cannot forge as senior. (F7) A direct session may write only attestation events; integrity events (`visibility_changed`, `vault_*`, `compose_context_*`) are trigger-authored and cannot be hand-forged. |
+| `audit-append-only.test.js` | (F6) UPDATE and DELETE on the audit log raise — append-only is positively enforced, including against the seeder. |
 | `vault-lockout.test.js` | (H4 + H6) 5 failed attempts trigger lockout; 6th refused; lockout revokes active sessions; success resets counter. |
 | `concurrent-vault-sessions.test.js` | (M4) Multiple concurrent active vault sessions per user are allowed. |
 | `rls-content-immunity.test.js` | Memory content containing injection payloads cannot change RLS evaluation. |
 | `inheritance.test.js` | Derived rows inherit the most-restrictive source visibility. Outbound drafts with private/locked content must target the owning senior. |
-| `inheritance-recompute.test.js` | (H5) Soft-delete or hard-delete of a source memory marks derived rows `requires_recompute = true`. |
+| `inheritance-recompute.test.js` | (H5, F3) Soft-delete, hard-delete, or a visibility change of a source memory marks derived rows `requires_recompute = true`. (F2) An unresolved source fails closed to `private`. |
 | `visibility-change-audit.test.js` | Every visibility change writes a row; same-value updates write nothing; senior reads own-memory audit rows. (M1) Trigger fail-closes if session GUCs are missing. |
 | `senior-sees-own-only.test.js` | Senior unqualified SELECT returns only their own active rows in their own pilot. |
 | `caregiver-default-deny.test.js` | (M2) Caregiver with empty `permission_scope` sees zero `family_shared` rows. |
 | `no-fabrication.test.js` | (Scaffolded; filled in by PR F.) |
 | `role-binding.test.js` | (D2) The actor's role derives from the database role; the legacy `app.user_role` GUC has no effect. |
+| `provenance-immutability.test.js` | (D1) Only the locked 3-class provenance values are accepted. (F1) `content` / `provenance` / identity columns are immutable on UPDATE. |
+| `dsar-export.test.js` | (F8) `dsar_export_memories()` is the explicit, audited path for a data subject to read their own memories, including soft-deleted ones; it does not widen the normal SELECT. |
 
 ## How to run
 
@@ -110,5 +128,7 @@ Production must still:
 | `senior-sees-own-only.test.js` | §5.1 |
 | `caregiver-default-deny.test.js` | §5.1 |
 | `role-binding.test.js` | (D2 — role source of truth) |
+| `provenance-immutability.test.js` | §1 (provenance classes) + §10 (immutability) |
+| `dsar-export.test.js` | §6 / §9 (retained data) + DSAR |
 
 — End of Lylo test-suite README.

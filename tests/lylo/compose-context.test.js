@@ -5,7 +5,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { connectOrSkip } = require('./fixtures/test-harness');
-const { withRole } = require('./fixtures/role-clients');
+const { withRole, withRoleCommitted } = require('./fixtures/role-clients');
 const { seed } = require('./fixtures/synthetic-data');
 
 async function countPrivate(client, ownerId) {
@@ -145,4 +145,39 @@ test('expired compose_authorization stops granting access', async (t) => {
     (c) => countPrivate(c, ids.users.a.senior)
   );
   assert.equal(n, 0, 'expired compose_authorization must not grant access');
+});
+
+test('F4: a direct compose_authorizations INSERT still produces an audit row', async (t) => {
+  const conn = await connectOrSkip();
+  if (conn.skip) { t.skip(`Skipped: ${conn.reason}`); return; }
+  const { client, teardown } = conn; t.after(teardown);
+  const ids = await seed(client);
+
+  // The system role inserts a compose_authorizations row directly, without
+  // calling grant_compose_authorization(). The F4 trigger must still write
+  // the compose_context_granted audit row.
+  await withRoleCommitted(
+    client,
+    { role: 'system', userId: ids.users.a.system, pilotInstanceId: ids.pilots.a },
+    (c) => c.query(
+      `INSERT INTO lylo_test.compose_authorizations
+         (pilot_instance_id, target_user_id, authorized_actor_id, reason, expires_at)
+         VALUES ($1, $2, $3, 'direct insert bypassing the helper', now() + interval '5 minutes')`,
+      [ids.pilots.a, ids.users.a.senior, ids.users.a.system]
+    )
+  );
+
+  await withRole(
+    client,
+    { role: 'admin', userId: ids.users.a.admin, pilotInstanceId: ids.pilots.a },
+    async (c) => {
+      const r = await c.query(
+        `SELECT count(*)::int AS n FROM lylo_test.memory_visibility_audit_log
+           WHERE event_type = 'compose_context_granted' AND target_user_id = $1`,
+        [ids.users.a.senior]
+      );
+      assert.equal(r.rows[0].n, 1,
+        'the F4 trigger writes the audit row even for a direct INSERT');
+    }
+  );
 });

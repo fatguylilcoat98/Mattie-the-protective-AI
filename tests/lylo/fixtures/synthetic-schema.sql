@@ -52,6 +52,31 @@
 --      app.user_id / app.pilot_instance_id remain GUCs: they are test
 --      inputs representing values production derives from verified auth.
 --
+-- Changes since v4 (D1, D3, D4, D5, F1-F8 — second remediation pass):
+--   D1 provenance is the locked 3-class model only: VERIFIED_FACT,
+--      USER_STATED, AI_INFERRED.
+--   D3 one supported person (senior) per pilot, enforced by a partial
+--      unique index.
+--   D5 vault state, vault sessions, audit and compose write paths are
+--      contracted (policies + SECURITY DEFINER functions + EXECUTE grants).
+--   F1 memory_store content/provenance/identity columns are immutable.
+--   F2 inherited visibility fails closed when a source does not resolve.
+--   F3 a source memory's visibility change invalidates derived rows.
+--   F4 the compose-grant audit row is written by a trigger (unbypassable).
+--   F5 memory_store.vault_id is composite-FK scoped to the same pilot.
+--   F6 the audit log is append-only by positive enforcement (UPDATE/DELETE
+--      raise), not by the absence of a policy.
+--   F7 a direct session may only hand-write attestation audit events;
+--      integrity events are trigger/function authored.
+--   F8 dsar_export_memories() is the explicit, audited soft-delete read.
+--
+-- SCOPE (D4): this schema is a visibility / RLS / audit / compose contract.
+-- It does NOT model admissibility, retraction, supersession, or the full
+-- authority-validation lifecycle from source-of-truth-memory-policy.md —
+-- those are deferred to later PRs (PR-C / PR-D). Visibility enforcement
+-- here is necessary but NOT sufficient for the whole memory policy: do not
+-- read "a row is visibility-scoped" as "a row is admissible".
+--
 -- Not for production. Do not load against a live database.
 -- ============================================================================
 
@@ -150,6 +175,11 @@ CREATE TABLE users (
   UNIQUE (pilot_instance_id, username)
 );
 
+-- D3: a pilot instance is exactly one supported person (senior) plus their
+-- approved circle. At most one user with role 'senior' per pilot.
+CREATE UNIQUE INDEX users_one_senior_per_pilot
+  ON users (pilot_instance_id) WHERE role = 'senior';
+
 CREATE TABLE family_contacts (
   id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   pilot_instance_id   UUID NOT NULL REFERENCES pilot_instances(id),
@@ -204,14 +234,13 @@ CREATE TABLE memory_store (
   pilot_instance_id   UUID NOT NULL REFERENCES pilot_instances(id),
   owning_user_id      UUID NOT NULL,
   content             TEXT NOT NULL,
+  -- D1: the locked 3-class provenance model only (governance-vocabulary-
+  -- lock.md sec B; source-of-truth-memory-policy.md sec 1).
   provenance          TEXT NOT NULL
-    CHECK (provenance IN (
-      'USER_STATED','VERIFIED_FACT','INFERRED','GENERATED',
-      'SYSTEM_EVENT','ADMIN_APPROVED'
-    )),
+    CHECK (provenance IN ('VERIFIED_FACT','USER_STATED','AI_INFERRED')),
   visibility_level    TEXT NOT NULL DEFAULT 'private'
     CHECK (visibility_level IN ('private','family_shared','password_locked')),
-  vault_id            UUID REFERENCES memory_vaults(id),
+  vault_id            UUID,
   active              BOOLEAN NOT NULL DEFAULT true,
   created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -219,6 +248,10 @@ CREATE TABLE memory_store (
   -- C2: owner lives in the same pilot.
   FOREIGN KEY (pilot_instance_id, owning_user_id)
     REFERENCES users (pilot_instance_id, id),
+  -- F5: vault_id is composite-FK scoped to the same pilot (previously a
+  -- bare single-column FK that permitted a cross-pilot vault reference).
+  FOREIGN KEY (pilot_instance_id, vault_id)
+    REFERENCES memory_vaults (pilot_instance_id, id),
   -- Allow derived-table composite FKs.
   UNIQUE (pilot_instance_id, id)
 );
@@ -249,11 +282,11 @@ CREATE TABLE memory_visibility_audit_log (
   -- C2: actor must be in the same pilot as the row.
   FOREIGN KEY (pilot_instance_id, actor_user_id)
     REFERENCES users (pilot_instance_id, id),
-  -- Shape constraint: memory events need memory_id; compose events need
-  -- target_user_id.
+  -- Shape constraint: memory events need memory_id; compose and DSAR
+  -- export events need target_user_id (F8: export_filtered is per-subject).
   CHECK (
-    (event_type IN ('visibility_changed','visibility_read','family_view','export_filtered') AND memory_id IS NOT NULL)
-    OR (event_type IN ('compose_context_granted','compose_context_revoked') AND target_user_id IS NOT NULL)
+    (event_type IN ('visibility_changed','visibility_read','family_view') AND memory_id IS NOT NULL)
+    OR (event_type IN ('compose_context_granted','compose_context_revoked','export_filtered') AND target_user_id IS NOT NULL)
     OR (event_type IN ('vault_unlock_attempt','vault_unlock_success','vault_unlock_failure','vault_session_expired'))
   )
 );
@@ -339,17 +372,32 @@ CREATE TABLE outbound_messages (
 -- 3. Inheritance helpers + triggers
 -- ============================================================================
 
+-- F2: fail closed. If any source id does not resolve to a memory_store row
+-- (e.g. the source was hard-deleted), its visibility is unknown, so the
+-- derived row inherits 'private' rather than the previous fall-through to
+-- 'family_shared' (which leaked derived rows when a source vanished).
 CREATE FUNCTION compute_inherited_visibility(p_source_memory_ids UUID[])
 RETURNS TEXT LANGUAGE plpgsql STABLE AS $$
+DECLARE
+  v_total    INT;
+  v_resolved INT;
 BEGIN
   IF p_source_memory_ids IS NULL OR array_length(p_source_memory_ids, 1) IS NULL THEN
     RETURN NULL;
   END IF;
+  -- Any password_locked source -> password_locked (most restrictive).
   IF EXISTS (
     SELECT 1 FROM lylo_test.memory_store m
     WHERE m.id = ANY(p_source_memory_ids)
       AND m.visibility_level = 'password_locked'
   ) THEN RETURN 'password_locked'; END IF;
+  -- F2: every distinct source id must resolve, or fail closed to private.
+  SELECT count(DISTINCT x) INTO v_total FROM unnest(p_source_memory_ids) x;
+  SELECT count(DISTINCT m.id) INTO v_resolved
+  FROM lylo_test.memory_store m
+  WHERE m.id = ANY(p_source_memory_ids);
+  IF v_resolved < v_total THEN RETURN 'private'; END IF;
+  -- Any private source -> private.
   IF EXISTS (
     SELECT 1 FROM lylo_test.memory_store m
     WHERE m.id = ANY(p_source_memory_ids)
@@ -446,11 +494,15 @@ CREATE TRIGGER memory_store_invalidate_derived_delete
   AFTER DELETE ON memory_store
   FOR EACH ROW EXECUTE FUNCTION trg_memory_store_invalidate_derived();
 
+-- F3: a derived row is stale if a source memory is soft-deleted OR if a
+-- source memory's visibility_level changes (the inherited minimum may move,
+-- e.g. a source tightened from family_shared to private).
 CREATE FUNCTION trg_memory_store_invalidate_derived_update() RETURNS TRIGGER
 LANGUAGE plpgsql AS $$
 DECLARE v_old_id UUID;
 BEGIN
-  IF OLD.active = true AND NEW.active = false THEN
+  IF (OLD.active = true AND NEW.active = false)
+     OR (OLD.visibility_level IS DISTINCT FROM NEW.visibility_level) THEN
     v_old_id := NEW.id;
     UPDATE lylo_test.episodes
       SET requires_recompute = true
@@ -466,8 +518,31 @@ BEGIN
 END $$;
 
 CREATE TRIGGER memory_store_invalidate_derived_soft
-  AFTER UPDATE OF active ON memory_store
+  AFTER UPDATE OF active, visibility_level ON memory_store
   FOR EACH ROW EXECUTE FUNCTION trg_memory_store_invalidate_derived_update();
+
+-- F1: provenance, content and identity columns are immutable
+-- (source-of-truth-memory-policy.md sec 10: provenance is append-only and a
+-- memory's origin never changes; sec 7: correction is supersession — a new
+-- row — not an in-place edit). visibility_level, vault_id, active and
+-- updated_at remain mutable.
+CREATE FUNCTION trg_memory_store_immutable_columns() RETURNS TRIGGER
+LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.id                 IS DISTINCT FROM OLD.id
+     OR NEW.pilot_instance_id IS DISTINCT FROM OLD.pilot_instance_id
+     OR NEW.owning_user_id    IS DISTINCT FROM OLD.owning_user_id
+     OR NEW.content           IS DISTINCT FROM OLD.content
+     OR NEW.provenance        IS DISTINCT FROM OLD.provenance
+     OR NEW.created_at        IS DISTINCT FROM OLD.created_at THEN
+    RAISE EXCEPTION 'memory_store: id, pilot_instance_id, owning_user_id, content, provenance and created_at are immutable; correct a memory by supersession, not in-place UPDATE';
+  END IF;
+  RETURN NEW;
+END $$;
+
+CREATE TRIGGER memory_store_immutable_columns
+  BEFORE UPDATE ON memory_store
+  FOR EACH ROW EXECUTE FUNCTION trg_memory_store_immutable_columns();
 
 -- ============================================================================
 -- 4. Vault helpers + lockout enforcement
@@ -483,18 +558,38 @@ LANGUAGE sql STABLE AS $$
   );
 $$;
 
--- H6: when failed attempts crosses the lockout threshold, revoke active
--- vault sessions in addition to setting lockout_until.
+-- D5: vault state has no direct UPDATE policy. record_failed_unlock and
+-- record_successful_unlock are the only contracted mutators of vault state.
+-- They are SECURITY DEFINER (so the UPDATE is not RLS-filtered to 0 rows)
+-- and EXECUTE is restricted (section 14) to the owning senior, the system
+-- worker and the test seeder. Each writes a vault_unlock_* audit row.
+-- current_user is the definer inside the body, so these functions do not
+-- read current_app_user_role(); the pilot comes from the GUC, which
+-- survives the SECURITY DEFINER context switch, and is checked.
+--
+-- H6: when failed attempts cross the lockout threshold, active sessions are
+-- revoked in addition to setting lockout_until.
 CREATE FUNCTION record_failed_unlock(
   p_vault_id UUID,
   p_max_attempts INT DEFAULT 5,
   p_lockout_minutes INT DEFAULT 30
 ) RETURNS TABLE (failed_attempt_count INT, lockout_until TIMESTAMPTZ)
-LANGUAGE plpgsql AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = lylo_test, pg_temp AS $$
 DECLARE
-  v_new_count INT;
+  v_new_count   INT;
   v_new_lockout TIMESTAMPTZ;
+  v_pilot       UUID;
+  v_user        UUID;
 BEGIN
+  SELECT pilot_instance_id, user_id INTO v_pilot, v_user
+  FROM lylo_test.memory_vaults WHERE id = p_vault_id;
+  IF v_pilot IS NULL THEN
+    RAISE EXCEPTION 'record_failed_unlock: unknown vault %', p_vault_id;
+  END IF;
+  IF v_pilot IS DISTINCT FROM lylo_test.current_app_pilot_instance_id() THEN
+    RAISE EXCEPTION 'record_failed_unlock: vault % is outside the session pilot', p_vault_id;
+  END IF;
+
   UPDATE lylo_test.memory_vaults
   SET
     failed_attempt_count = memory_vaults.failed_attempt_count + 1,
@@ -507,6 +602,11 @@ BEGIN
   WHERE id = p_vault_id
   RETURNING memory_vaults.failed_attempt_count, memory_vaults.lockout_until
     INTO v_new_count, v_new_lockout;
+
+  INSERT INTO lylo_test.memory_visibility_audit_log
+    (pilot_instance_id, event_type, actor_user_id, actor_role, outcome, reason)
+  VALUES (v_pilot, 'vault_unlock_failure', v_user, 'senior', 'denied',
+          'failed vault unlock attempt');
 
   -- H6: lockout just activated -> revoke all active sessions for this vault.
   IF v_new_lockout IS NOT NULL AND v_new_lockout > now() THEN
@@ -521,12 +621,30 @@ BEGIN
 END $$;
 
 CREATE FUNCTION record_successful_unlock(p_vault_id UUID)
-RETURNS VOID LANGUAGE plpgsql AS $$
+RETURNS VOID
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = lylo_test, pg_temp AS $$
+DECLARE
+  v_pilot UUID;
+  v_user  UUID;
 BEGIN
+  SELECT pilot_instance_id, user_id INTO v_pilot, v_user
+  FROM lylo_test.memory_vaults WHERE id = p_vault_id;
+  IF v_pilot IS NULL THEN
+    RAISE EXCEPTION 'record_successful_unlock: unknown vault %', p_vault_id;
+  END IF;
+  IF v_pilot IS DISTINCT FROM lylo_test.current_app_pilot_instance_id() THEN
+    RAISE EXCEPTION 'record_successful_unlock: vault % is outside the session pilot', p_vault_id;
+  END IF;
+
   UPDATE lylo_test.memory_vaults
   SET failed_attempt_count = 0, lockout_until = NULL,
       last_unlocked_at = now(), updated_at = now()
   WHERE id = p_vault_id;
+
+  INSERT INTO lylo_test.memory_visibility_audit_log
+    (pilot_instance_id, event_type, actor_user_id, actor_role, outcome, reason)
+  VALUES (v_pilot, 'vault_unlock_success', v_user, 'senior', 'allowed',
+          'successful vault unlock');
 END $$;
 
 -- H4: lockout-check trigger SELECTs FOR UPDATE so it serializes against
@@ -550,35 +668,48 @@ CREATE TRIGGER vault_session_lockout_check
   BEFORE INSERT ON memory_vault_sessions
   FOR EACH ROW EXECUTE FUNCTION trg_vault_session_lockout_check();
 
--- M3: production schedules a job that expires sessions past expires_at
--- and writes vault_session_expired audit rows. The synthetic helper does
--- the same on demand; the schedule itself is out of scope here.
+-- M3/D5: the retention sweep expires sessions past expires_at. It is
+-- SECURITY DEFINER (memory_vault_sessions has no UPDATE policy) and writes
+-- nothing to the audit log directly: the vault_session_revoked_audit
+-- trigger below emits vault_session_expired on the revoked_at transition,
+-- so revocation by the sweep and revocation by lockout are audited the same
+-- way. Production schedules this; the schedule is out of scope here.
 CREATE FUNCTION expire_vault_sessions() RETURNS INT
-LANGUAGE plpgsql AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = lylo_test, pg_temp AS $$
 DECLARE
-  v_row RECORD;
-  v_count INT := 0;
+  v_count INT;
 BEGIN
-  FOR v_row IN
-    SELECT s.id, s.vault_id, s.user_id, v.pilot_instance_id
-    FROM lylo_test.memory_vault_sessions s
-    JOIN lylo_test.memory_vaults v ON v.id = s.vault_id
-    WHERE s.expires_at <= now()
-      AND s.revoked_at IS NULL
-  LOOP
+  WITH expired AS (
     UPDATE lylo_test.memory_vault_sessions
     SET revoked_at = now()
-    WHERE id = v_row.id;
+    WHERE expires_at <= now()
+      AND revoked_at IS NULL
+    RETURNING id
+  )
+  SELECT count(*) INTO v_count FROM expired;
+  RETURN v_count;
+END $$;
+
+-- F7: session revocation (by the retention sweep, or by H6 lockout) is
+-- audited by this trigger on the revoked_at transition, so vault_session_
+-- expired is emitted exactly once per revocation and cannot be skipped.
+CREATE FUNCTION trg_vault_session_revoked_audit() RETURNS TRIGGER
+LANGUAGE plpgsql AS $$
+BEGIN
+  IF OLD.revoked_at IS NULL AND NEW.revoked_at IS NOT NULL THEN
     INSERT INTO lylo_test.memory_visibility_audit_log
       (pilot_instance_id, event_type, actor_user_id, actor_role, outcome, reason)
     VALUES (
-      v_row.pilot_instance_id, 'vault_session_expired',
-      v_row.user_id, 'system', 'allowed', 'expired by retention worker'
+      NEW.pilot_instance_id, 'vault_session_expired',
+      NEW.user_id, 'system', 'allowed', 'vault session revoked'
     );
-    v_count := v_count + 1;
-  END LOOP;
-  RETURN v_count;
+  END IF;
+  RETURN NEW;
 END $$;
+
+CREATE TRIGGER vault_session_revoked_audit
+  AFTER UPDATE OF revoked_at ON memory_vault_sessions
+  FOR EACH ROW EXECUTE FUNCTION trg_vault_session_revoked_audit();
 
 -- ============================================================================
 -- 5. Visibility-change audit trigger (M1: fail-closed on missing GUCs)
@@ -653,18 +784,81 @@ BEGIN
     now() + (p_ttl_minutes || ' minutes')::interval
   ) RETURNING id INTO v_auth_id;
 
+  -- F4: the compose_context_granted audit row is NOT written here. It is
+  -- written by the trg_compose_authorization_audit trigger below, so a
+  -- direct INSERT into compose_authorizations (which the system role can do
+  -- via compose_auth_system_insert_self) is audited too — the audit cannot
+  -- be bypassed by skipping this helper.
+  RETURN v_auth_id;
+END $$;
+
+-- F4: every compose_authorizations row produces exactly one
+-- compose_context_granted audit row, written by this trigger rather than by
+-- the helper, so the audit precedes the read and cannot be skipped.
+CREATE FUNCTION trg_compose_authorization_audit() RETURNS TRIGGER
+LANGUAGE plpgsql AS $$
+BEGIN
   INSERT INTO lylo_test.memory_visibility_audit_log
     (pilot_instance_id, event_type, target_user_id,
      actor_user_id, actor_role, reason, outcome)
   VALUES (
-    lylo_test.current_app_pilot_instance_id(),
-    'compose_context_granted', p_target_user_id,
-    lylo_test.current_app_user_id(),
-    lylo_test.current_app_user_role(),
-    p_reason, 'allowed'
+    NEW.pilot_instance_id, 'compose_context_granted', NEW.target_user_id,
+    NEW.authorized_actor_id, lylo_test.current_app_user_role(),
+    NEW.reason, 'allowed'
   );
+  RETURN NEW;
+END $$;
 
-  RETURN v_auth_id;
+CREATE TRIGGER compose_authorization_audit
+  AFTER INSERT ON compose_authorizations
+  FOR EACH ROW EXECUTE FUNCTION trg_compose_authorization_audit();
+
+-- ============================================================================
+-- 6b. DSAR export (F8)
+-- ============================================================================
+--
+-- F8: a soft-deleted (active = false) memory is invisible to every normal
+-- SELECT policy. A data subject must still be able to access their own
+-- retained data, including soft-deleted rows (source-of-truth-memory-policy
+-- sec 6 / sec 9; DSAR handling from PR-H2). This SECURITY DEFINER function
+-- is the explicit, audited path; it does not widen any RLS policy, so the
+-- normal senior SELECT still hides inactive rows.
+--
+-- Scope: the owning senior exporting their own data. EXECUTE is granted to
+-- lylo_senior (and the test seeder) only — see section 14. An operator /
+-- admin-run DSAR is deferred to a later PR.
+CREATE FUNCTION dsar_export_memories(p_user_id UUID)
+RETURNS TABLE (
+  id UUID, content TEXT, provenance TEXT,
+  visibility_level TEXT, active BOOLEAN, created_at TIMESTAMPTZ
+)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = lylo_test, pg_temp AS $$
+DECLARE v_pilot UUID;
+BEGIN
+  -- current_app_user_id() reads a GUC and so survives the SECURITY DEFINER
+  -- context switch; the data subject may export only their own memories.
+  IF p_user_id IS NULL
+     OR p_user_id IS DISTINCT FROM lylo_test.current_app_user_id() THEN
+    RAISE EXCEPTION 'DSAR export is limited to the data subject''s own memories';
+  END IF;
+  SELECT u.pilot_instance_id INTO v_pilot
+  FROM lylo_test.users u WHERE u.id = p_user_id;
+  IF v_pilot IS NULL THEN
+    RAISE EXCEPTION 'DSAR export: unknown user %', p_user_id;
+  END IF;
+  INSERT INTO lylo_test.memory_visibility_audit_log
+    (pilot_instance_id, event_type, target_user_id,
+     actor_user_id, actor_role, outcome, reason)
+  VALUES (
+    v_pilot, 'export_filtered', p_user_id,
+    p_user_id, 'senior', 'allowed', 'DSAR memory export'
+  );
+  RETURN QUERY
+    SELECT m.id, m.content, m.provenance,
+           m.visibility_level, m.active, m.created_at
+    FROM lylo_test.memory_store m
+    WHERE m.owning_user_id = p_user_id
+    ORDER BY m.created_at;
 END $$;
 
 -- ============================================================================
@@ -775,6 +969,20 @@ USING (
 -- C5 (consistent): memory_vault_sessions senior-only SELECT.
 CREATE POLICY memory_vault_sessions_senior_self ON memory_vault_sessions FOR SELECT
 USING (
+  pilot_instance_id = current_app_pilot_instance_id()
+  AND current_app_user_role() = 'senior'
+  AND user_id = current_app_user_id()
+);
+
+-- D5: vault-session creation is contracted to the owning senior. The
+-- BEFORE INSERT lockout-check trigger additionally refuses creation while
+-- the vault is locked. There is no session UPDATE policy: revocation
+-- happens only through record_failed_unlock (H6) and expire_vault_sessions,
+-- both SECURITY DEFINER. memory_vaults likewise has no direct UPDATE
+-- policy — its state mutates only through record_failed_unlock /
+-- record_successful_unlock.
+CREATE POLICY memory_vault_sessions_senior_insert ON memory_vault_sessions FOR INSERT
+WITH CHECK (
   pilot_instance_id = current_app_pilot_instance_id()
   AND current_app_user_role() = 'senior'
   AND user_id = current_app_user_id()
@@ -912,11 +1120,22 @@ USING (
 -- 12. memory_visibility_audit_log policies
 -- ============================================================================
 
+-- F7: a direct session INSERT (pg_trigger_depth() = 0) may only attest to
+-- events it is entitled to assert — reads, family views, DSAR exports.
+-- Integrity events (visibility_changed, vault_*, compose_context_*) are
+-- written from inside triggers / SECURITY DEFINER functions, where
+-- pg_trigger_depth() > 0 (or RLS is bypassed by the definer), so they
+-- cannot be hand-forged by a session. Actor identity is still pinned to
+-- the session in every case.
 CREATE POLICY visibility_audit_insert_self ON memory_visibility_audit_log
 FOR INSERT WITH CHECK (
   pilot_instance_id = current_app_pilot_instance_id()
   AND actor_user_id = current_app_user_id()
   AND actor_role = current_app_user_role()
+  AND (
+    pg_trigger_depth() > 0
+    OR event_type IN ('visibility_read','family_view','export_filtered')
+  )
 );
 
 CREATE POLICY visibility_audit_select_admin ON memory_visibility_audit_log
@@ -939,7 +1158,19 @@ FOR SELECT USING (
   )
 );
 
--- No UPDATE, no DELETE policy. Append-only by absence.
+-- F6: append-only is positively enforced. UPDATE and DELETE on the audit
+-- log raise, rather than relying on the absence of a policy (which silently
+-- affects 0 rows and would break the moment any UPDATE/DELETE policy were
+-- added). The trigger fires for every role, including the seeder.
+CREATE FUNCTION trg_audit_log_append_only() RETURNS TRIGGER
+LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION 'memory_visibility_audit_log is append-only; % is not permitted', TG_OP;
+END $$;
+
+CREATE TRIGGER audit_log_append_only
+  BEFORE UPDATE OR DELETE ON memory_visibility_audit_log
+  FOR EACH ROW EXECUTE FUNCTION trg_audit_log_append_only();
 
 -- ============================================================================
 -- 13. Derived-table policies
@@ -1043,6 +1274,28 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA lylo_test TO
   lylo_senior, lylo_family, lylo_caregiver, lylo_admin, lylo_system, lylo_seeder;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA lylo_test TO
   lylo_senior, lylo_family, lylo_caregiver, lylo_admin, lylo_system, lylo_seeder;
+
+-- D5: contract who may drive the security-critical write paths. The vault
+-- mutators, the retention sweep and the DSAR export are SECURITY DEFINER,
+-- so EXECUTE *is* the authorization boundary — narrow it from the blanket
+-- grant above and from the CREATE-time PUBLIC default.
+REVOKE EXECUTE ON FUNCTION
+  record_failed_unlock(UUID, INT, INT),
+  record_successful_unlock(UUID),
+  expire_vault_sessions(),
+  dsar_export_memories(UUID)
+FROM PUBLIC;
+-- record_failed_unlock / record_successful_unlock: owning senior, system, seeder.
+REVOKE EXECUTE ON FUNCTION
+  record_failed_unlock(UUID, INT, INT),
+  record_successful_unlock(UUID)
+FROM lylo_family, lylo_caregiver, lylo_admin;
+-- expire_vault_sessions: system worker + seeder only.
+REVOKE EXECUTE ON FUNCTION expire_vault_sessions()
+FROM lylo_senior, lylo_family, lylo_caregiver, lylo_admin;
+-- dsar_export_memories: the data subject (senior) + seeder only.
+REVOKE EXECUTE ON FUNCTION dsar_export_memories(UUID)
+FROM lylo_family, lylo_caregiver, lylo_admin, lylo_system;
 
 -- ============================================================================
 -- Schema ready.
