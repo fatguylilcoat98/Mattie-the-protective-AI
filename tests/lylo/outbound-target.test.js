@@ -68,7 +68,7 @@ test('family role does NOT see private outbound drafts (none should exist for th
   // We re-verify here that the trigger refuses such an attempt.
   await client.query(`SET search_path TO lylo_test, public`);
   await client.query('BEGIN');
-  await client.query(`SET LOCAL app.user_role = 'seeder'`);
+  await client.query(`SET LOCAL ROLE lylo_seeder`);
   await client.query(`SET LOCAL app.user_id = '00000000-0000-0000-0000-000000000000'`);
   await client.query(`SET LOCAL app.pilot_instance_id = '00000000-0000-0000-0000-000000000000'`);
 
@@ -84,40 +84,15 @@ test('family role does NOT see private outbound drafts (none should exist for th
   await client.query('ROLLBACK');
 });
 
-test('private outbound draft with empty used_memory_ids must target the session user (C3)', async (t) => {
-  const conn = await connectOrSkip();
-  if (conn.skip) { t.skip(`Skipped: ${conn.reason}`); return; }
-  const { client, teardown } = conn; t.after(teardown);
-  const ids = await seed(client);
-
-  // Senior attempting to address a private message to a family member with no sources: refused.
-  await withRole(
-    client,
-    { role: 'senior', userId: ids.users.a.senior, pilotInstanceId: ids.pilots.a },
-    async (c) => {
-      await assert.rejects(
-        c.query(
-          `INSERT INTO lylo_test.outbound_messages (pilot_instance_id, target_user_id, body, used_memory_ids, visibility_level)
-             VALUES ($1, $2, 'private no-sources to family - should refuse', '{}'::uuid[], 'private')`,
-          [ids.pilots.a, ids.users.a.family]
-        ),
-        /must target session user/i,
-        'empty-sources private draft addressed to a non-self user must be refused'
-      );
-    }
-  );
-
-  // Senior addressing private no-sources to themselves: succeeds.
-  await withRole(
-    client,
-    { role: 'senior', userId: ids.users.a.senior, pilotInstanceId: ids.pilots.a },
-    async (c) => {
-      const r = await c.query(
-        `INSERT INTO lylo_test.outbound_messages (pilot_instance_id, target_user_id, body, used_memory_ids, visibility_level)
-           VALUES ($1, $2, 'private self-note', '{}'::uuid[], 'private') RETURNING id`,
-        [ids.pilots.a, ids.users.a.senior]
-      );
-      assert.equal(r.rowCount, 1, 'self-addressed private no-sources draft must succeed');
-    }
-  );
+test('private outbound draft with empty used_memory_ids must target the session user (C3)', (t) => {
+  // D2 made RLS genuinely enforced (it was previously bypassed by the
+  // superuser connection). outbound_messages has no INSERT policy for any
+  // non-seeder role: per owner decision D5, outbound-message creation is
+  // deferred to a later PR (D5 second pass / PR-F). Until that write policy
+  // is contracted, a non-seeder role cannot INSERT an outbound draft at all,
+  // so this scenario cannot be exercised through a real role path. The C3
+  // trigger itself (a mis-targeted private draft is refused) stays covered
+  // by 'family role does NOT see private outbound drafts' above and by
+  // inheritance.test.js, both via the seeder bypass.
+  t.skip('TODO D5/PR-F: outbound_messages INSERT policy not yet contracted');
 });

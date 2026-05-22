@@ -1,8 +1,9 @@
 /*
   Role-scoped session helpers.
 
-  Sets:
-    app.user_role              - 'senior' | 'family' | 'caregiver' | 'admin' | 'system' | 'seeder'
+  Binds the actor's ROLE to a real, non-superuser database role via
+  SET ROLE (D2: the role is not a GUC and cannot be spoofed by a SQL
+  session). Also sets:
     app.user_id                - the requesting user's UUID
     app.pilot_instance_id      - the pilot scope for the session
     app.compose_target_user_id - (optional) the target user id when a system
@@ -22,6 +23,24 @@
 'use strict';
 
 const ROLES = ['senior', 'family', 'caregiver', 'admin', 'system', 'seeder'];
+
+// D2: each logical role maps to a real, non-superuser Postgres role. The
+// schema's current_app_user_role() reads current_user, so adopting one of
+// these via SET ROLE is the unforgeable role binding.
+const DB_ROLE = {
+  senior: 'lylo_senior',
+  family: 'lylo_family',
+  caregiver: 'lylo_caregiver',
+  admin: 'lylo_admin',
+  system: 'lylo_system',
+  seeder: 'lylo_seeder',
+};
+
+function dbRoleFor(role) {
+  const dbRole = DB_ROLE[role];
+  if (!dbRole) throw new Error(`withRole: no database role mapped for "${role}"`);
+  return dbRole;
+}
 
 function validateWho(who) {
   if (!who || typeof who !== 'object') {
@@ -48,7 +67,10 @@ function quoteUuid(s) {
 }
 
 async function setLocalsForSession(client, who) {
-  await client.query(`SET LOCAL app.user_role = '${who.role}'`);
+  await client.query(`SET LOCAL search_path TO lylo_test, public`);
+  // app.user_id / app.pilot_instance_id are test inputs only. They stand in
+  // for values production derives from verified auth. They are NOT the
+  // authority for the actor's role.
   await client.query(`SET LOCAL app.user_id = '${quoteUuid(who.userId)}'`);
   await client.query(`SET LOCAL app.pilot_instance_id = '${quoteUuid(who.pilotInstanceId)}'`);
   if (who.composeTargetUserId) {
@@ -60,7 +82,10 @@ async function setLocalsForSession(client, who) {
     const safe = String(who.visibilityChangeReason).replace(/'/g, "''");
     await client.query(`SET LOCAL app.visibility_change_reason = '${safe}'`);
   }
-  await client.query(`SET LOCAL search_path TO lylo_test, public`);
+  // D2: bind the role last. SET LOCAL ROLE is transaction-scoped and resets
+  // on COMMIT/ROLLBACK. dbRoleFor() only ever yields one of six fixed,
+  // validated identifiers, so this interpolation cannot inject.
+  await client.query(`SET LOCAL ROLE ${dbRoleFor(who.role)}`);
 }
 
 /**

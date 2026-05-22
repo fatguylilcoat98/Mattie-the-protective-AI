@@ -88,7 +88,7 @@ test('M1: visibility-change trigger raises when session GUCs are missing', async
   // No SET LOCAL of app.* (or set to NULL by leaving them unset).
   // We need a seeder bypass to even SELECT/UPDATE memory_store, so set
   // the seeder role but leave the other two GUCs unset to test the trigger.
-  await client.query(`SET LOCAL app.user_role = 'seeder'`);
+  await client.query(`SET LOCAL ROLE lylo_seeder`);
   // Intentionally NOT setting app.user_id or app.pilot_instance_id.
   await assert.rejects(
     client.query(`UPDATE memory_store SET visibility_level = 'family_shared' WHERE id = $1`, [ids.memories.a.private]),

@@ -1,4 +1,4 @@
-# Lylo — Privacy & RLS matrix tests (synthetic schema, v3 hardened)
+# Lylo — Privacy & RLS matrix tests (synthetic schema, v4 hardened)
 
 **Owner:** project lead. **Reviewer:** owner.
 
@@ -34,35 +34,52 @@ No production DB connection. The harness refuses to run if
 | `senior-sees-own-only.test.js` | Senior unqualified SELECT returns only their own active rows in their own pilot. |
 | `caregiver-default-deny.test.js` | (M2) Caregiver with empty `permission_scope` sees zero `family_shared` rows. |
 | `no-fabrication.test.js` | (Scaffolded; filled in by PR F.) |
+| `role-binding.test.js` | (D2) The actor's role derives from the database role; the legacy `app.user_role` GUC has no effect. |
 
 ## How to run
 
 ```sh
 docker run --rm -d --name lylo-test-pg -p 55432:5432 -e POSTGRES_PASSWORD=test postgres:15
 export SYNTHETIC_DATABASE_URL='postgres://postgres:test@localhost:55432/postgres'
-node --test tests/lylo/
+# --test-concurrency=1 is required: every file shares the lylo_test schema,
+# so parallel files race on DROP/CREATE SCHEMA.
+node --test --test-concurrency=1 tests/lylo/*.test.js
 docker stop lylo-test-pg
 ```
 
-## Session context (GUCs the suite reads)
+## Session context
+
+**Role — D2.** The actor's role is a real, non-superuser Postgres role
+(`lylo_senior`, `lylo_family`, `lylo_caregiver`, `lylo_admin`,
+`lylo_system`, `lylo_seeder`), adopted via `SET LOCAL ROLE` inside
+`withRole`. The schema's `current_app_user_role()` derives the role from
+`current_user`. A SQL session cannot forge `current_user` — `SET ROLE` is
+privilege-checked — so the role is the unforgeable trust source. The
+legacy `app.user_role` GUC has been removed; setting it has no effect on
+any policy (proven by `role-binding.test.js`).
+
+The remaining session values are GUCs, and they are **test inputs only** —
+they stand in for values production derives from verified auth; they are
+not the authority for the actor's role:
 
 | GUC | Set by | Purpose |
 |---|---|---|
-| `app.user_role` | `withRole(client, who, fn)` | one of `senior`, `family`, `caregiver`, `admin`, `system`, `seeder` |
-| `app.user_id` | same | requesting user's UUID |
+| `app.user_id` | `withRole(client, who, fn)` | requesting user's UUID |
 | `app.pilot_instance_id` | same | pilot scope; every policy filters on it |
 | `app.compose_target_user_id` | `withRole(..., { composeTargetUserId })` | optional system-role compose target. **Alone insufficient — system also needs a granted `compose_authorizations` row.** |
 | `app.visibility_change_reason` | `withRole(..., { visibilityChangeReason })` | optional free-text picked up by the visibility-change audit trigger |
 
 ## Production divergence to expect
 
-Production (PR E) will use **real Postgres roles** with
-`SET LOCAL session_authorization` and the same policy `USING` clauses
-keyed on GUCs that the auth middleware sets. The synthetic suite uses
-a single superuser connection with `FORCE ROW LEVEL SECURITY` on every
-table so the policies fire against the GUC values directly.
+After D2 the synthetic suite already binds the actor's role to a real,
+non-superuser Postgres role — the same mechanism production (PR E) will
+use. The harness connects once as a superuser only to apply the schema
+and seed; every assertion runs after `SET ROLE` into a non-superuser
+role, so RLS is genuinely enforced. A superuser connection bypasses RLS
+entirely, even with `FORCE ROW LEVEL SECURITY`, so running the suite
+without the `SET ROLE` step would silently make every policy a no-op.
 
-Production must also:
+Production must still:
 
 - restrict who can `SET LOCAL app.compose_target_user_id` (today the
   GUC is unauthenticated; the policy gate is `compose_authorizations`,
@@ -92,5 +109,6 @@ Production must also:
 | `visibility-change-audit.test.js` | §4.3 + §3.4 |
 | `senior-sees-own-only.test.js` | §5.1 |
 | `caregiver-default-deny.test.js` | §5.1 |
+| `role-binding.test.js` | (D2 — role source of truth) |
 
 — End of Lylo test-suite README.

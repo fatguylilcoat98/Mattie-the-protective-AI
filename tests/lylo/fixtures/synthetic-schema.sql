@@ -1,5 +1,5 @@
 -- ============================================================================
--- Lylo synthetic test schema (constitutional contract, hardened v3)
+-- Lylo synthetic test schema (constitutional contract, hardened v4)
 -- ============================================================================
 --
 -- Hardening pass per the PR #20 final adversarial review. This schema is the
@@ -41,12 +41,54 @@
 --   M4 concurrent active vault sessions per user are explicitly allowed;
 --      tested in concurrent-vault-sessions.test.js.
 --
+-- Changes since v3 (D2 — role source of truth):
+--   D2 the actor's role is bound to a real Postgres role (lylo_senior,
+--      lylo_family, lylo_caregiver, lylo_admin, lylo_system, lylo_seeder),
+--      adopted via SET ROLE. current_app_user_role() derives from
+--      current_user, not the removed app.user_role GUC. The ~25 policies
+--      are unchanged — they still call current_app_user_role() — but the
+--      role it returns can no longer be spoofed by a SQL session, because
+--      current_user cannot be set without a privilege-checked SET ROLE.
+--      app.user_id / app.pilot_instance_id remain GUCs: they are test
+--      inputs representing values production derives from verified auth.
+--
 -- Not for production. Do not load against a live database.
 -- ============================================================================
 
 DROP SCHEMA IF EXISTS lylo_test CASCADE;
 CREATE SCHEMA lylo_test;
 SET search_path TO lylo_test;
+
+-- ============================================================================
+-- 0. Database roles (D2: role authority is the DB role, not a GUC)
+-- ============================================================================
+--
+-- D2 decision: RLS must not trust a spoofable GUC for the actor's role.
+-- These are real Postgres roles. A session adopts one via SET ROLE, and
+-- current_app_user_role() (section 1) derives the logical role from
+-- current_user. A SQL session cannot forge current_user — SET ROLE is
+-- privilege-checked — so role authority is unforgeable.
+--
+-- None of these roles is a superuser. That is required for RLS to be
+-- enforced at all: a superuser bypasses RLS entirely, even with FORCE ROW
+-- LEVEL SECURITY. (Running this suite on a superuser connection without
+-- SET ROLE would silently make every policy a no-op.)
+--
+-- Roles are cluster-global, so they are created idempotently: re-applying
+-- this schema only DROPs the schema, never the roles.
+
+DO $$
+DECLARE r TEXT;
+BEGIN
+  FOREACH r IN ARRAY ARRAY[
+    'lylo_senior','lylo_family','lylo_caregiver',
+    'lylo_admin','lylo_system','lylo_seeder'
+  ] LOOP
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = r) THEN
+      EXECUTE format('CREATE ROLE %I NOLOGIN', r);
+    END IF;
+  END LOOP;
+END $$;
 
 -- ============================================================================
 -- 1. GUC accessors
@@ -57,10 +99,22 @@ LANGUAGE plpgsql STABLE AS $$
 BEGIN RETURN current_setting('app.user_id', true)::uuid;
 EXCEPTION WHEN OTHERS THEN RETURN NULL; END $$;
 
+-- D2: the actor's ROLE is bound to the database role (current_user), not a
+-- GUC. The legacy app.user_role GUC is gone; setting it has no effect on any
+-- policy. current_user cannot be changed without a privilege-checked
+-- SET ROLE, so this value is unforgeable by a SQL session.
 CREATE FUNCTION current_app_user_role() RETURNS TEXT
-LANGUAGE plpgsql STABLE AS $$
-BEGIN RETURN current_setting('app.user_role', true);
-EXCEPTION WHEN OTHERS THEN RETURN NULL; END $$;
+LANGUAGE sql STABLE AS $$
+  SELECT CASE current_user::text
+    WHEN 'lylo_senior'    THEN 'senior'
+    WHEN 'lylo_family'    THEN 'family'
+    WHEN 'lylo_caregiver' THEN 'caregiver'
+    WHEN 'lylo_admin'     THEN 'admin'
+    WHEN 'lylo_system'    THEN 'system'
+    WHEN 'lylo_seeder'    THEN 'seeder'
+    ELSE NULL
+  END;
+$$;
 
 CREATE FUNCTION current_app_pilot_instance_id() RETURNS UUID
 LANGUAGE plpgsql STABLE AS $$
@@ -972,6 +1026,23 @@ USING (
   AND current_app_user_role() = 'admin'
   AND visibility_level = 'family_shared'
 );
+
+-- ============================================================================
+-- 14. Grants (D2)
+-- ============================================================================
+--
+-- Coarse table privileges; RLS does the fine-grained per-row restriction.
+-- Every caller role may issue SELECT/INSERT/UPDATE/DELETE and the policies
+-- above decide which rows are visible/writable. lylo_seeder additionally
+-- matches the seeder_all policies. Because none of these roles is a
+-- superuser, RLS is genuinely enforced against them.
+
+GRANT USAGE ON SCHEMA lylo_test TO
+  lylo_senior, lylo_family, lylo_caregiver, lylo_admin, lylo_system, lylo_seeder;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA lylo_test TO
+  lylo_senior, lylo_family, lylo_caregiver, lylo_admin, lylo_system, lylo_seeder;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA lylo_test TO
+  lylo_senior, lylo_family, lylo_caregiver, lylo_admin, lylo_system, lylo_seeder;
 
 -- ============================================================================
 -- Schema ready.

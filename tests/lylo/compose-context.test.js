@@ -95,7 +95,7 @@ test('grant_compose_authorization writes an audit row', async (t) => {
   // Grant in one transaction (committed via withRoleCommitted-like flow).
   await client.query(`SET search_path TO lylo_test, public`);
   await client.query('BEGIN');
-  await client.query(`SET LOCAL app.user_role = 'system'`);
+  await client.query(`SET LOCAL ROLE lylo_system`);
   await client.query(`SET LOCAL app.user_id = '${ids.users.a.system}'`);
   await client.query(`SET LOCAL app.pilot_instance_id = '${ids.pilots.a}'`);
   await client.query(`SELECT lylo_test.grant_compose_authorization($1, $2, $3)`,
@@ -129,7 +129,7 @@ test('expired compose_authorization stops granting access', async (t) => {
   // Insert an already-expired authorization via the seeder bypass.
   await client.query(`SET search_path TO lylo_test, public`);
   await client.query('BEGIN');
-  await client.query(`SET LOCAL app.user_role = 'seeder'`);
+  await client.query(`SET LOCAL ROLE lylo_seeder`);
   await client.query(`SET LOCAL app.user_id = '00000000-0000-0000-0000-000000000000'`);
   await client.query(`SET LOCAL app.pilot_instance_id = '00000000-0000-0000-0000-000000000000'`);
   await client.query(

@@ -22,7 +22,7 @@ async function seed(client) {
   await client.query(`SET search_path TO lylo_test, public`);
   await client.query('BEGIN');
   try {
-    await client.query(`SET LOCAL app.user_role = 'seeder'`);
+    await client.query(`SET LOCAL ROLE lylo_seeder`);
     await client.query(`SET LOCAL app.user_id = '00000000-0000-0000-0000-000000000000'`);
     await client.query(`SET LOCAL app.pilot_instance_id = '00000000-0000-0000-0000-000000000000'`);
 

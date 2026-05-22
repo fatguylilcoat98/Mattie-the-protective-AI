@@ -43,7 +43,7 @@ test('UPDATE on memory_visibility_audit_log is silently filtered to 0 rows for e
   // role-scoped transactions below.
   await client.query(`SET search_path TO lylo_test, public`);
   await client.query('BEGIN');
-  await client.query(`SET LOCAL app.user_role = 'seeder'`);
+  await client.query(`SET LOCAL ROLE lylo_seeder`);
   await client.query(`SET LOCAL app.user_id = '00000000-0000-0000-0000-000000000000'`);
   await client.query(`SET LOCAL app.pilot_instance_id = '00000000-0000-0000-0000-000000000000'`);
   await client.query(
@@ -77,7 +77,7 @@ test('DELETE on memory_visibility_audit_log is silently filtered to 0 rows for e
   const ids = await seed(client);
   await client.query(`SET search_path TO lylo_test, public`);
   await client.query('BEGIN');
-  await client.query(`SET LOCAL app.user_role = 'seeder'`);
+  await client.query(`SET LOCAL ROLE lylo_seeder`);
   await client.query(`SET LOCAL app.user_id = '00000000-0000-0000-0000-000000000000'`);
   await client.query(`SET LOCAL app.pilot_instance_id = '00000000-0000-0000-0000-000000000000'`);
   await client.query(

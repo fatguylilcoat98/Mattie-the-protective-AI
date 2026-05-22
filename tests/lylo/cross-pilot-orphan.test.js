@@ -15,7 +15,7 @@ test('memory_store INSERT with owning_user_id from another pilot is refused by c
 
   await client.query(`SET search_path TO lylo_test, public`);
   await client.query('BEGIN');
-  await client.query(`SET LOCAL app.user_role = 'seeder'`);
+  await client.query(`SET LOCAL ROLE lylo_seeder`);
   await client.query(`SET LOCAL app.user_id = '00000000-0000-0000-0000-000000000000'`);
   await client.query(`SET LOCAL app.pilot_instance_id = '00000000-0000-0000-0000-000000000000'`);
 
@@ -39,7 +39,7 @@ test('family_contacts cross-pilot row is refused', async (t) => {
 
   await client.query(`SET search_path TO lylo_test, public`);
   await client.query('BEGIN');
-  await client.query(`SET LOCAL app.user_role = 'seeder'`);
+  await client.query(`SET LOCAL ROLE lylo_seeder`);
   await client.query(`SET LOCAL app.user_id = '00000000-0000-0000-0000-000000000000'`);
   await client.query(`SET LOCAL app.pilot_instance_id = '00000000-0000-0000-0000-000000000000'`);
 
@@ -63,7 +63,7 @@ test('memory_vaults cross-pilot user is refused', async (t) => {
 
   await client.query(`SET search_path TO lylo_test, public`);
   await client.query('BEGIN');
-  await client.query(`SET LOCAL app.user_role = 'seeder'`);
+  await client.query(`SET LOCAL ROLE lylo_seeder`);
   await client.query(`SET LOCAL app.user_id = '00000000-0000-0000-0000-000000000000'`);
   await client.query(`SET LOCAL app.pilot_instance_id = '00000000-0000-0000-0000-000000000000'`);
 
