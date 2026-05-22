@@ -1,0 +1,25 @@
+{
+  "$comment": "Known pre-existing references to db/migrations/_archive/ in executable command surfaces. These are tracked debt, NOT approved practice. The archive-execution guard reports each as a WARNING and does not fail the build for them; it FAILS for any reference not listed here. Do not add entries to silence a new violation -- remove the violation instead. Emptying this file (then deleting it) is a prerequisite for promoting the guard to enforcement mode. See docs/readiness/baseline-ci-plan.md.",
+  "entries": [
+    {
+      "surface": "package.json",
+      "id": "scripts.setup:consciousness",
+      "reference": "db/migrations/_archive/root/persistent-consciousness-schema.sql"
+    },
+    {
+      "surface": "package.json",
+      "id": "scripts.continuity:setup",
+      "reference": "db/migrations/_archive/database/master-continuity-schema.sql"
+    },
+    {
+      "surface": "package.json",
+      "id": "scripts.memory:deploy",
+      "reference": "db/migrations/_archive/database/complete-fresh-deploy.sql"
+    },
+    {
+      "surface": "deploy-windows.ps1",
+      "id": "deploy-windows.ps1",
+      "reference": "db/migrations/_archive/database/complete-fresh-deploy.sql"
+    }
+  ]
+}

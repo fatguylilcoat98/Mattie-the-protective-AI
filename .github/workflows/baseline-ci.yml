@@ -1,0 +1,88 @@
+name: Baseline CI
+
+# Baseline governance CI for the Lylo Companion refactor.
+# Infrastructure only: every job runs either a detect-and-report guard
+# or a skipped test scaffold. No job mutates the repo, the database, or
+# any deployment. See docs/readiness/baseline-ci-plan.md.
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: baseline-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-format:
+    name: Lint / format baseline
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Syntax-check CI scripts and scaffold tests
+        run: find scripts/ci tests/lylo -name '*.js' -print0 | xargs -0 -r -n1 node --check
+      - name: Format baseline check
+        run: node scripts/ci/check-format.js
+
+  migration-discovery:
+    name: Migration discovery validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validate migration numbering and discovery
+        run: node scripts/ci/check-migrations.js
+
+  archive-execution-guard:
+    name: Forbidden archive execution detection
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Detect executable references into the migration archive
+        run: node scripts/ci/check-archive-execution.js
+
+  rls-isolation-tests:
+    name: RLS isolation test runner (scaffold)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Run RLS isolation scaffolds
+        run: node --test tests/lylo/scaffold/cross-subject-isolation.test.js tests/lylo/scaffold/forbidden-cross-domain-query.test.js
+
+  flag-off-parity:
+    name: Feature-flag-off parity (scaffold)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Run feature-flag-off parity scaffold
+        run: node --test tests/lylo/feature-flag-off-parity.test.js
+
+  audit-log-required:
+    name: Audit-log-required (scaffold)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Run audit-log-required scaffold
+        run: node --test tests/lylo/scaffold/audit-log-required.test.js
